@@ -1,0 +1,1880 @@
+{
+  "meta": {
+    "startedAt": "2026-08-07T09:14:22.113Z",
+    "finishedAt": "2026-08-07T09:18:41.882Z",
+    "axeVersion": "4.10.2",
+    "viewport": {
+      "width": 390,
+      "height": 844,
+      "isMobile": true
+    },
+    "label": "baseline"
+  },
+  "insureon": {
+    "home": {
+      "url": "https://www.insureon.com/",
+      "violations": [
+        {
+          "id": "label",
+          "impact": "critical",
+          "n": 2,
+          "sample": [
+            {
+              "t": [
+                "#react-select-2-input"
+              ],
+              "h": "<input class=\"\" autocapitalize=\"none\" autocomplete=\"off\" autocorrect=\"off\" id=\"react-select-2-input\" spellchec"
+            }
+          ]
+        },
+        {
+          "id": "landmark-one-main",
+          "impact": "moderate",
+          "n": 1,
+          "sample": [
+            {
+              "t": [
+                "html"
+              ],
+              "h": "<html lang=\"en\" class=\"q221-body\">"
+            }
+          ]
+        },
+        {
+          "id": "link-in-text-block",
+          "impact": "serious",
+          "n": 1,
+          "sample": [
+            {
+              "t": [
+                ".info_ezXpO > a[href=\"/\"][rel=\"\"][target=\"\"]"
+              ],
+              "h": "<a href=\"/\" title=\"Insureon: Online Business Insurance Agency\" target=\"\" rel=\"\">Insureon</a>"
+            }
+          ]
+        },
+        {
+          "id": "region",
+          "impact": "moderate",
+          "n": 40,
+          "sample": [
+            {
+              "t": [
+                "h1"
+              ],
+              "h": "<h1 class=\"headline_MdbQg darkText_MdbQg\" data-test-id=\"mobileHeroHeadline\"><div>The #1 digital agency for sma"
+            }
+          ]
+        }
+      ],
+      "namelessButtons": [],
+      "namelessLinks": [],
+      "emptyHref": [],
+      "hasMain": false,
+      "phantomMenu": {
+        "transform": "matrix(1, 0, 0, 1, -324, 0)",
+        "display": "block",
+        "visibility": "visible",
+        "ariaHidden": null,
+        "inert": false,
+        "pointerEvents": "none",
+        "exposedInTree": true,
+        "links": 68,
+        "buttons": 0,
+        "focusable": 68,
+        "tabbable": 68
+      }
+    },
+    "policy": {
+      "url": "https://www.insureon.com/small-business-insurance/general-liability",
+      "violations": [
+        {
+          "id": "heading-order",
+          "impact": "moderate",
+          "n": 1,
+          "sample": [
+            {
+              "t": [
+                ".text"
+              ],
+              "h": "<h3 class=\"text title_WFhZg\">General liability insurance</h3>"
+            }
+          ]
+        },
+        {
+          "id": "label",
+          "impact": "critical",
+          "n": 2,
+          "sample": [
+            {
+              "t": [
+                "#react-select-2-input"
+              ],
+              "h": "<input class=\"\" autocapitalize=\"none\" autocomplete=\"off\" autocorrect=\"off\" id=\"react-select-2-input\" spellchec"
+            }
+          ]
+        },
+        {
+          "id": "landmark-one-main",
+          "impact": "moderate",
+          "n": 1,
+          "sample": [
+            {
+              "t": [
+                "html"
+              ],
+              "h": "<html lang=\"en\">"
+            }
+          ]
+        },
+        {
+          "id": "link-in-text-block",
+          "impact": "serious",
+          "n": 117,
+          "sample": [
+            {
+              "t": [
+                "a[title=\"Business liability insurance\"]"
+              ],
+              "h": "<a href=\"/small-business-insurance/liability\" title=\"Business liability insurance\">business liability insuranc"
+            }
+          ]
+        },
+        {
+          "id": "region",
+          "impact": "moderate",
+          "n": 53,
+          "sample": [
+            {
+              "t": [
+                ".title_4glYu"
+              ],
+              "h": "<div class=\"title_4glYu h1 headingWithTrustPilot_4glYu\"><div>General Liability Insurance</div></div>"
+            }
+          ]
+        }
+      ],
+      "namelessButtons": [],
+      "namelessLinks": [],
+      "emptyHref": [],
+      "hasMain": false,
+      "phantomMenu": {
+        "transform": "matrix(1, 0, 0, 1, -324, 0)",
+        "display": "block",
+        "visibility": "visible",
+        "ariaHidden": null,
+        "inert": false,
+        "pointerEvents": "none",
+        "exposedInTree": true,
+        "links": 68,
+        "buttons": 0,
+        "focusable": 68,
+        "tabbable": 68
+      }
+    },
+    "major": {
+      "url": "https://www.insureon.com/construction-contracting-business-insurance",
+      "violations": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "n": 7,
+          "sample": [
+            {
+              "t": [
+                ".card_nJ6LA[data-test-id=\"Policy-Card-Quote\"]:nth-child(1) > .bestForWrap_nJ6LA > .bestForHead_nJ6LA"
+              ],
+              "h": "<div class=\"bestForHead_nJ6LA\">BEST FOR </div>"
+            }
+          ]
+        },
+        {
+          "id": "label",
+          "impact": "critical",
+          "n": 2,
+          "sample": [
+            {
+              "t": [
+                "#react-select-2-input"
+              ],
+              "h": "<input class=\"\" autocapitalize=\"none\" autocomplete=\"off\" autocorrect=\"off\" id=\"react-select-2-input\" spellchec"
+            }
+          ]
+        },
+        {
+          "id": "landmark-one-main",
+          "impact": "moderate",
+          "n": 1,
+          "sample": [
+            {
+              "t": [
+                "html"
+              ],
+              "h": "<html lang=\"en\">"
+            }
+          ]
+        },
+        {
+          "id": "link-in-text-block",
+          "impact": "serious",
+          "n": 27,
+          "sample": [
+            {
+              "t": [
+                ".textWrap_9-8Wt > div:nth-child(1) > p > a"
+              ],
+              "h": "<a href=\"/construction-contracting-business-insurance/cost\" title=\"How much does construction and contractor i"
+            }
+          ]
+        },
+        {
+          "id": "region",
+          "impact": "moderate",
+          "n": 45,
+          "sample": [
+            {
+              "t": [
+                ".title_4glYu"
+              ],
+              "h": "<div class=\"title_4glYu headingWithTrustPilot_4glYu\"><h1>Construction Business Insurance</h1></div>"
+            }
+          ]
+        }
+      ],
+      "namelessButtons": [],
+      "namelessLinks": [],
+      "emptyHref": [],
+      "hasMain": false,
+      "phantomMenu": {
+        "transform": "matrix(1, 0, 0, 1, -324, 0)",
+        "display": "block",
+        "visibility": "visible",
+        "ariaHidden": null,
+        "inert": false,
+        "pointerEvents": "none",
+        "exposedInTree": true,
+        "links": 68,
+        "buttons": 0,
+        "focusable": 68,
+        "tabbable": 68
+      }
+    },
+    "minor": {
+      "url": "https://www.insureon.com/construction-contracting-business-insurance/carpenters",
+      "violations": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "n": 6,
+          "sample": [
+            {
+              "t": [
+                ".card_nJ6LA[data-test-id=\"Policy-Card-Quote\"]:nth-child(1) > .bestForWrap_nJ6LA > .bestForHead_nJ6LA"
+              ],
+              "h": "<div class=\"bestForHead_nJ6LA\">BEST FOR </div>"
+            }
+          ]
+        },
+        {
+          "id": "heading-order",
+          "impact": "moderate",
+          "n": 1,
+          "sample": [
+            {
+              "t": [
+                "h4"
+              ],
+              "h": "<h4 class=\"heading_VG8Qq\">Find the right coverage</h4>"
+            }
+          ]
+        },
+        {
+          "id": "label",
+          "impact": "critical",
+          "n": 2,
+          "sample": [
+            {
+              "t": [
+                "#react-select-2-input"
+              ],
+              "h": "<input class=\"\" autocapitalize=\"none\" autocomplete=\"off\" autocorrect=\"off\" id=\"react-select-2-input\" spellchec"
+            }
+          ]
+        },
+        {
+          "id": "landmark-one-main",
+          "impact": "moderate",
+          "n": 1,
+          "sample": [
+            {
+              "t": [
+                "html"
+              ],
+              "h": "<html lang=\"en\">"
+            }
+          ]
+        },
+        {
+          "id": "link-in-text-block",
+          "impact": "serious",
+          "n": 60,
+          "sample": [
+            {
+              "t": [
+                "p:nth-child(1) > a[href$=\"start-quote\"][title=\"Get quotes today!\"]"
+              ],
+              "h": "<a href=\"/start-quote\" title=\"Get quotes today!\">easy online application</a>"
+            }
+          ]
+        },
+        {
+          "id": "region",
+          "impact": "moderate",
+          "n": 39,
+          "sample": [
+            {
+              "t": [
+                ".title_4glYu"
+              ],
+              "h": "<div class=\"title_4glYu headingWithTrustPilot_4glYu\"><h1>Carpenter Insurance</h1></div>"
+            }
+          ]
+        }
+      ],
+      "namelessButtons": [],
+      "namelessLinks": [],
+      "emptyHref": [],
+      "hasMain": false,
+      "phantomMenu": {
+        "transform": "matrix(1, 0, 0, 1, -324, 0)",
+        "display": "block",
+        "visibility": "visible",
+        "ariaHidden": null,
+        "inert": false,
+        "pointerEvents": "none",
+        "exposedInTree": true,
+        "links": 68,
+        "buttons": 0,
+        "focusable": 68,
+        "tabbable": 68
+      }
+    },
+    "article": {
+      "url": "https://www.insureon.com/blog",
+      "violations": [
+        {
+          "id": "aria-hidden-focus",
+          "impact": "serious",
+          "n": 4,
+          "sample": [
+            {
+              "t": [
+                "div[data-index=\"1\"]"
+              ],
+              "h": "<div data-index=\"1\" class=\"slick-slide\" tabindex=\"-1\" aria-hidden=\"true\" style=\"outline: none; width: 320px;\">"
+            }
+          ]
+        },
+        {
+          "id": "label",
+          "impact": "critical",
+          "n": 2,
+          "sample": [
+            {
+              "t": [
+                "#react-select-4-input"
+              ],
+              "h": "<input class=\"\" autocapitalize=\"none\" autocomplete=\"off\" autocorrect=\"off\" id=\"react-select-4-input\" spellchec"
+            }
+          ]
+        },
+        {
+          "id": "landmark-one-main",
+          "impact": "moderate",
+          "n": 1,
+          "sample": [
+            {
+              "t": [
+                "html"
+              ],
+              "h": "<html lang=\"en\">"
+            }
+          ]
+        },
+        {
+          "id": "link-in-text-block",
+          "impact": "serious",
+          "n": 1,
+          "sample": [
+            {
+              "t": [
+                ".info_ezXpO > a[href=\"/\"][rel=\"\"][target=\"\"]"
+              ],
+              "h": "<a href=\"/\" title=\"Insureon: Online Business Insurance Agency\" target=\"\" rel=\"\">Insureon</a>"
+            }
+          ]
+        },
+        {
+          "id": "region",
+          "impact": "moderate",
+          "n": 27,
+          "sample": [
+            {
+              "t": [
+                ".title_4glYu"
+              ],
+              "h": "<div class=\"title_4glYu headingWithTrustPilot_4glYu\"><h1>Insureon Small Business Blog</h1></div>"
+            }
+          ]
+        }
+      ],
+      "namelessButtons": [],
+      "namelessLinks": [],
+      "emptyHref": [],
+      "hasMain": false,
+      "phantomMenu": {
+        "transform": "matrix(1, 0, 0, 1, -324, 0)",
+        "display": "block",
+        "visibility": "visible",
+        "ariaHidden": null,
+        "inert": false,
+        "pointerEvents": "none",
+        "exposedInTree": true,
+        "links": 68,
+        "buttons": 0,
+        "focusable": 68,
+        "tabbable": 68
+      }
+    },
+    "resources": {
+      "url": "https://www.insureon.com/insurance-glossary",
+      "violations": [
+        {
+          "id": "heading-order",
+          "impact": "moderate",
+          "n": 1,
+          "sample": [
+            {
+              "t": [
+                "#a-b > h4"
+              ],
+              "h": "<h4 class=\"\">A - B</h4>"
+            }
+          ]
+        },
+        {
+          "id": "landmark-one-main",
+          "impact": "moderate",
+          "n": 1,
+          "sample": [
+            {
+              "t": [
+                "html"
+              ],
+              "h": "<html lang=\"en\">"
+            }
+          ]
+        },
+        {
+          "id": "link-in-text-block",
+          "impact": "serious",
+          "n": 2,
+          "sample": [
+            {
+              "t": [
+                "a[href$=\"start-quote\"]"
+              ],
+              "h": "<a href=\"/start-quote\">online application</a>"
+            }
+          ]
+        },
+        {
+          "id": "region",
+          "impact": "moderate",
+          "n": 19,
+          "sample": [
+            {
+              "t": [
+                "#business-insurance-glossary"
+              ],
+              "h": "<div data-test-id=\"LegalPage-Heading\" id=\"business-insurance-glossary\" class=\"block Heading contain_Hf2As\"><h1"
+            }
+          ]
+        }
+      ],
+      "namelessButtons": [],
+      "namelessLinks": [],
+      "emptyHref": [],
+      "hasMain": false,
+      "phantomMenu": {
+        "transform": "matrix(1, 0, 0, 1, -324, 0)",
+        "display": "block",
+        "visibility": "visible",
+        "ariaHidden": null,
+        "inert": false,
+        "pointerEvents": "none",
+        "exposedInTree": true,
+        "links": 68,
+        "buttons": 0,
+        "focusable": 68,
+        "tabbable": 68
+      }
+    },
+    "about": {
+      "url": "https://www.insureon.com/about-us",
+      "violations": [
+        {
+          "id": "heading-order",
+          "impact": "moderate",
+          "n": 1,
+          "sample": [
+            {
+              "t": [
+                "#explore-expert-policy-recommendations > h4"
+              ],
+              "h": "<h4 class=\"\">Explore expert policy recommendations.</h4>"
+            }
+          ]
+        },
+        {
+          "id": "label",
+          "impact": "critical",
+          "n": 1,
+          "sample": [
+            {
+              "t": [
+                "#react-select-2-input"
+              ],
+              "h": "<input class=\"\" autocapitalize=\"none\" autocomplete=\"off\" autocorrect=\"off\" id=\"react-select-2-input\" spellchec"
+            }
+          ]
+        },
+        {
+          "id": "landmark-one-main",
+          "impact": "moderate",
+          "n": 1,
+          "sample": [
+            {
+              "t": [
+                "html"
+              ],
+              "h": "<html lang=\"en\">"
+            }
+          ]
+        },
+        {
+          "id": "link-in-text-block",
+          "impact": "serious",
+          "n": 8,
+          "sample": [
+            {
+              "t": [
+                "a[href$=\"start-quote\"]"
+              ],
+              "h": "<a href=\"/start-quote\" title=\"Get free quotes today!\">apply for quotes with Insureon</a>"
+            }
+          ]
+        },
+        {
+          "id": "region",
+          "impact": "moderate",
+          "n": 19,
+          "sample": [
+            {
+              "t": [
+                ".image_fMC5J"
+              ],
+              "h": "<div class=\"image_fMC5J\">"
+            }
+          ]
+        }
+      ],
+      "namelessButtons": [],
+      "namelessLinks": [],
+      "emptyHref": [],
+      "hasMain": false,
+      "phantomMenu": {
+        "transform": "matrix(1, 0, 0, 1, -324, 0)",
+        "display": "block",
+        "visibility": "visible",
+        "ariaHidden": null,
+        "inert": false,
+        "pointerEvents": "none",
+        "exposedInTree": true,
+        "links": 68,
+        "buttons": 0,
+        "focusable": 68,
+        "tabbable": 68
+      }
+    },
+    "contact": {
+      "url": "https://www.insureon.com/contact-us",
+      "violations": [
+        {
+          "id": "landmark-one-main",
+          "impact": "moderate",
+          "n": 1,
+          "sample": [
+            {
+              "t": [
+                "html"
+              ],
+              "h": "<html lang=\"en\">"
+            }
+          ]
+        },
+        {
+          "id": "link-in-text-block",
+          "impact": "serious",
+          "n": 7,
+          "sample": [
+            {
+              "t": [
+                "a[title=\"Insureon's leadership team\"]"
+              ],
+              "h": "<a href=\"/about-us/leadership-team\" title=\"Insureon's leadership team\">has a leadership team</a>"
+            }
+          ]
+        },
+        {
+          "id": "region",
+          "impact": "moderate",
+          "n": 19,
+          "sample": [
+            {
+              "t": [
+                "#contact-us"
+              ],
+              "h": "<div data-test-id=\"LegalPage-Heading\" id=\"contact-us\" class=\"block Heading contain_Hf2As\"><h1 class=\"\">Contact"
+            }
+          ]
+        }
+      ],
+      "namelessButtons": [],
+      "namelessLinks": [],
+      "emptyHref": [],
+      "hasMain": false,
+      "phantomMenu": {
+        "transform": "matrix(1, 0, 0, 1, -324, 0)",
+        "display": "block",
+        "visibility": "visible",
+        "ariaHidden": null,
+        "inert": false,
+        "pointerEvents": "none",
+        "exposedInTree": true,
+        "links": 68,
+        "buttons": 0,
+        "focusable": 68,
+        "tabbable": 68
+      }
+    },
+    "legal": {
+      "url": "https://www.insureon.com/legal/privacy-policy",
+      "violations": [
+        {
+          "id": "landmark-one-main",
+          "impact": "moderate",
+          "n": 1,
+          "sample": [
+            {
+              "t": [
+                "html"
+              ],
+              "h": "<html lang=\"en\">"
+            }
+          ]
+        },
+        {
+          "id": "link-in-text-block",
+          "impact": "serious",
+          "n": 3,
+          "sample": [
+            {
+              "t": [
+                "p:nth-child(2) > a[href=\"/\"]"
+              ],
+              "h": "<a href=\"/\">www.insureon.com</a>"
+            }
+          ]
+        },
+        {
+          "id": "region",
+          "impact": "moderate",
+          "n": 1,
+          "sample": [
+            {
+              "t": [
+                ".copy"
+              ],
+              "h": "<div class=\"copy\">"
+            }
+          ]
+        }
+      ],
+      "namelessButtons": [],
+      "namelessLinks": [],
+      "emptyHref": [],
+      "hasMain": false,
+      "phantomMenu": {
+        "transform": "matrix(1, 0, 0, 1, -324, 0)",
+        "display": "block",
+        "visibility": "visible",
+        "ariaHidden": null,
+        "inert": false,
+        "pointerEvents": "none",
+        "exposedInTree": true,
+        "links": 68,
+        "buttons": 0,
+        "focusable": 68,
+        "tabbable": 68
+      }
+    },
+    "a11y-stmt": {
+      "url": "https://www.insureon.com/legal/accessibility-statement",
+      "violations": [
+        {
+          "id": "landmark-one-main",
+          "impact": "moderate",
+          "n": 1,
+          "sample": [
+            {
+              "t": [
+                "html"
+              ],
+              "h": "<html lang=\"en\">"
+            }
+          ]
+        },
+        {
+          "id": "link-in-text-block",
+          "impact": "serious",
+          "n": 2,
+          "sample": [
+            {
+              "t": [
+                "a[href=\"mailto:reception@insureon.com\"]"
+              ],
+              "h": "<a href=\"mailto:reception@insureon.com\">reception@insureon.com</a>"
+            }
+          ]
+        },
+        {
+          "id": "region",
+          "impact": "moderate",
+          "n": 1,
+          "sample": [
+            {
+              "t": [
+                ".copy"
+              ],
+              "h": "<div class=\"copy\">"
+            }
+          ]
+        }
+      ],
+      "namelessButtons": [],
+      "namelessLinks": [],
+      "emptyHref": [],
+      "hasMain": false,
+      "phantomMenu": {
+        "transform": "matrix(1, 0, 0, 1, -324, 0)",
+        "display": "block",
+        "visibility": "visible",
+        "ariaHidden": null,
+        "inert": false,
+        "pointerEvents": "none",
+        "exposedInTree": true,
+        "links": 68,
+        "buttons": 0,
+        "focusable": 68,
+        "tabbable": 68
+      }
+    }
+  },
+  "techinsurance": {
+    "home": {
+      "url": "https://www.techinsurance.com/",
+      "violations": [
+        {
+          "id": "button-name",
+          "impact": "critical",
+          "n": 5,
+          "sample": [
+            {
+              "t": [
+                ".subMenu--c5eCQ:nth-child(2) > .nav--CYYVi > .backButton--CYYVi"
+              ],
+              "h": "<button class=\"backButton--CYYVi\"></button>"
+            }
+          ]
+        },
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "n": 3,
+          "sample": [
+            {
+              "t": [
+                ".card--Mr\\+8E:nth-child(1) > .subhead--Mr\\+8E"
+              ],
+              "h": "<div class=\"subhead--Mr+8E\">FAST</div>"
+            }
+          ]
+        },
+        {
+          "id": "landmark-one-main",
+          "impact": "moderate",
+          "n": 1,
+          "sample": [
+            {
+              "t": [
+                "html"
+              ],
+              "h": "<html lang=\"en\">"
+            }
+          ]
+        },
+        {
+          "id": "link-in-text-block",
+          "impact": "serious",
+          "n": 1,
+          "sample": [
+            {
+              "t": [
+                "a[href$=\"www.techinsurance.com\"][title=\"\"][target=\"\"]"
+              ],
+              "h": "<a href=\"https://www.techinsurance.com\" title=\"\" target=\"\" rel=\"\">TechInsurance</a>"
+            }
+          ]
+        },
+        {
+          "id": "link-name",
+          "impact": "serious",
+          "n": 1,
+          "sample": [
+            {
+              "t": [
+                ".escape--s\\+X-e"
+              ],
+              "h": "<a href=\"\" class=\"escape--s+X-e\"></a>"
+            }
+          ]
+        },
+        {
+          "id": "region",
+          "impact": "moderate",
+          "n": 52,
+          "sample": [
+            {
+              "t": [
+                ".imageWrapper--rHa6b"
+              ],
+              "h": "<div class=\"imageWrapper--rHa6b\"><img alt=\"Computer-generated background.\" width=\"320\" height=\"379\" title=\"Com"
+            }
+          ]
+        }
+      ],
+      "namelessButtons": [
+        "<button class=\"backButton--CYYVi\"></button>",
+        "<button class=\"backButton--CYYVi\"></button>"
+      ],
+      "namelessLinks": [
+        "<a href=\"\" class=\"escape--s+X-e\"></a>"
+      ],
+      "emptyHref": [
+        "<a href=\"\" class=\"escape--s+X-e\"></a>"
+      ],
+      "hasMain": false,
+      "phantomMenu": {
+        "transform": "matrix(1, 0, 0, 1, -320, 0)",
+        "display": "block",
+        "visibility": "visible",
+        "ariaHidden": null,
+        "inert": false,
+        "pointerEvents": "none",
+        "exposedInTree": true,
+        "links": 64,
+        "buttons": 5,
+        "focusable": 69,
+        "tabbable": 69
+      }
+    },
+    "policy": {
+      "url": "https://www.techinsurance.com/general-liability-insurance",
+      "violations": [
+        {
+          "id": "button-name",
+          "impact": "critical",
+          "n": 5,
+          "sample": [
+            {
+              "t": [
+                ".subMenu--c5eCQ:nth-child(2) > .nav--CYYVi > .backButton--CYYVi"
+              ],
+              "h": "<button class=\"backButton--CYYVi\"></button>"
+            }
+          ]
+        },
+        {
+          "id": "heading-order",
+          "impact": "moderate",
+          "n": 1,
+          "sample": [
+            {
+              "t": [
+                ".text"
+              ],
+              "h": "<h3 class=\"text title--2n3yq\">General liability insurance</h3>"
+            }
+          ]
+        },
+        {
+          "id": "label",
+          "impact": "critical",
+          "n": 1,
+          "sample": [
+            {
+              "t": [
+                "#react-select-13298-input"
+              ],
+              "h": "<input class=\"\" style=\"label:input;color:inherit;background:0;opacity:1;width:100%;grid-area:1 / 2;font:inheri"
+            }
+          ]
+        },
+        {
+          "id": "landmark-one-main",
+          "impact": "moderate",
+          "n": 1,
+          "sample": [
+            {
+              "t": [
+                "html"
+              ],
+              "h": "<html lang=\"en\">"
+            }
+          ]
+        },
+        {
+          "id": "link-in-text-block",
+          "impact": "serious",
+          "n": 66,
+          "sample": [
+            {
+              "t": [
+                "div:nth-child(4) > div:nth-child(2) > .body--twrlA.BodyText.list-style > p:nth-child(1) > a:nth-child(1)"
+              ],
+              "h": "<a href=\"/small-business-insurance/liability-insurance\" title=\"Small business liability insurance\">liability i"
+            }
+          ]
+        },
+        {
+          "id": "link-name",
+          "impact": "serious",
+          "n": 1,
+          "sample": [
+            {
+              "t": [
+                ".escape--s\\+X-e"
+              ],
+              "h": "<a href=\"\" class=\"escape--s+X-e\"></a>"
+            }
+          ]
+        },
+        {
+          "id": "region",
+          "impact": "moderate",
+          "n": 65,
+          "sample": [
+            {
+              "t": [
+                ".imageWrapper--PoSVP"
+              ],
+              "h": "<div class=\"imageWrapper--PoSVP\">"
+            }
+          ]
+        }
+      ],
+      "namelessButtons": [
+        "<button class=\"backButton--CYYVi\"></button>",
+        "<button class=\"backButton--CYYVi\"></button>"
+      ],
+      "namelessLinks": [
+        "<a href=\"\" class=\"escape--s+X-e\"></a>"
+      ],
+      "emptyHref": [
+        "<a href=\"\" class=\"escape--s+X-e\"></a>"
+      ],
+      "hasMain": false,
+      "phantomMenu": {
+        "transform": "matrix(1, 0, 0, 1, -320, 0)",
+        "display": "block",
+        "visibility": "visible",
+        "ariaHidden": null,
+        "inert": false,
+        "pointerEvents": "none",
+        "exposedInTree": true,
+        "links": 64,
+        "buttons": 5,
+        "focusable": 69,
+        "tabbable": 69
+      }
+    },
+    "major": {
+      "url": "https://www.techinsurance.com/errors-omissions-insurance",
+      "violations": [
+        {
+          "id": "button-name",
+          "impact": "critical",
+          "n": 5,
+          "sample": [
+            {
+              "t": [
+                ".subMenu--c5eCQ:nth-child(2) > .nav--CYYVi > .backButton--CYYVi"
+              ],
+              "h": "<button class=\"backButton--CYYVi\"></button>"
+            }
+          ]
+        },
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "n": 1,
+          "sample": [
+            {
+              "t": [
+                ".intro--9J\\+Kk"
+              ],
+              "h": "<div class=\"intro--9J+Kk\">You may also like</div>"
+            }
+          ]
+        },
+        {
+          "id": "heading-order",
+          "impact": "moderate",
+          "n": 1,
+          "sample": [
+            {
+              "t": [
+                ".text"
+              ],
+              "h": "<h3 class=\"text title--2n3yq\">Errors and omissions insurance</h3>"
+            }
+          ]
+        },
+        {
+          "id": "label",
+          "impact": "critical",
+          "n": 1,
+          "sample": [
+            {
+              "t": [
+                "#react-select-12547-input"
+              ],
+              "h": "<input class=\"\" style=\"label:input;color:inherit;background:0;opacity:1;width:100%;grid-area:1 / 2;font:inheri"
+            }
+          ]
+        },
+        {
+          "id": "landmark-one-main",
+          "impact": "moderate",
+          "n": 1,
+          "sample": [
+            {
+              "t": [
+                "html"
+              ],
+              "h": "<html lang=\"en\">"
+            }
+          ]
+        },
+        {
+          "id": "link-in-text-block",
+          "impact": "serious",
+          "n": 67,
+          "sample": [
+            {
+              "t": [
+                "div:nth-child(4) > div:nth-child(2) > .body--twrlA.BodyText.list-style > p:nth-child(1) > a"
+              ],
+              "h": "<a href=\"/professional-liability-insurance\">professional liability insurance</a>"
+            }
+          ]
+        },
+        {
+          "id": "link-name",
+          "impact": "serious",
+          "n": 1,
+          "sample": [
+            {
+              "t": [
+                ".escape--s\\+X-e"
+              ],
+              "h": "<a href=\"\" class=\"escape--s+X-e\"></a>"
+            }
+          ]
+        },
+        {
+          "id": "region",
+          "impact": "moderate",
+          "n": 78,
+          "sample": [
+            {
+              "t": [
+                ".imageWrapper--PoSVP"
+              ],
+              "h": "<div class=\"imageWrapper--PoSVP\">"
+            }
+          ]
+        }
+      ],
+      "namelessButtons": [
+        "<button class=\"backButton--CYYVi\"></button>",
+        "<button class=\"backButton--CYYVi\"></button>"
+      ],
+      "namelessLinks": [
+        "<a href=\"\" class=\"escape--s+X-e\"></a>"
+      ],
+      "emptyHref": [
+        "<a href=\"\" class=\"escape--s+X-e\"></a>"
+      ],
+      "hasMain": false,
+      "phantomMenu": {
+        "transform": "matrix(1, 0, 0, 1, -320, 0)",
+        "display": "block",
+        "visibility": "visible",
+        "ariaHidden": null,
+        "inert": false,
+        "pointerEvents": "none",
+        "exposedInTree": true,
+        "links": 64,
+        "buttons": 5,
+        "focusable": 69,
+        "tabbable": 69
+      }
+    },
+    "minor": {
+      "url": "https://www.techinsurance.com/errors-omissions-insurance/technology-errors-omissions-coverage",
+      "violations": [
+        {
+          "id": "button-name",
+          "impact": "critical",
+          "n": 5,
+          "sample": [
+            {
+              "t": [
+                ".subMenu--c5eCQ:nth-child(2) > .nav--CYYVi > .backButton--CYYVi"
+              ],
+              "h": "<button class=\"backButton--CYYVi\"></button>"
+            }
+          ]
+        },
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "n": 3,
+          "sample": [
+            {
+              "t": [
+                ".tag--rdTW6 > a[href$=\"cyber-liability-insurance\"][target=\"\"][rel=\"\"]"
+              ],
+              "h": "<a href=\"/tag/cyber-liability-insurance\" target=\"\" rel=\"\">Cyber liability insurance</a>"
+            }
+          ]
+        },
+        {
+          "id": "label",
+          "impact": "critical",
+          "n": 1,
+          "sample": [
+            {
+              "t": [
+                "#react-select-13299-input"
+              ],
+              "h": "<input class=\"\" style=\"label:input;color:inherit;background:0;opacity:1;width:100%;grid-area:1 / 2;font:inheri"
+            }
+          ]
+        },
+        {
+          "id": "landmark-one-main",
+          "impact": "moderate",
+          "n": 1,
+          "sample": [
+            {
+              "t": [
+                "html"
+              ],
+              "h": "<html lang=\"en\">"
+            }
+          ]
+        },
+        {
+          "id": "link-in-text-block",
+          "impact": "serious",
+          "n": 21,
+          "sample": [
+            {
+              "t": [
+                "p:nth-child(1) > a[href=\"/technology-business-insurance\"]"
+              ],
+              "h": "<a href=\"/technology-business-insurance\" title=\"Business insurance for tech and software companies\">IT and tec"
+            }
+          ]
+        },
+        {
+          "id": "link-name",
+          "impact": "serious",
+          "n": 1,
+          "sample": [
+            {
+              "t": [
+                ".escape--s\\+X-e"
+              ],
+              "h": "<a href=\"\" class=\"escape--s+X-e\"></a>"
+            }
+          ]
+        },
+        {
+          "id": "region",
+          "impact": "moderate",
+          "n": 38,
+          "sample": [
+            {
+              "t": [
+                ".imageWrapper--PoSVP"
+              ],
+              "h": "<div class=\"imageWrapper--PoSVP\">"
+            }
+          ]
+        }
+      ],
+      "namelessButtons": [
+        "<button class=\"backButton--CYYVi\"></button>",
+        "<button class=\"backButton--CYYVi\"></button>"
+      ],
+      "namelessLinks": [
+        "<a href=\"\" class=\"escape--s+X-e\"></a>"
+      ],
+      "emptyHref": [
+        "<a href=\"\" class=\"escape--s+X-e\"></a>"
+      ],
+      "hasMain": false,
+      "phantomMenu": {
+        "transform": "matrix(1, 0, 0, 1, -320, 0)",
+        "display": "block",
+        "visibility": "visible",
+        "ariaHidden": null,
+        "inert": false,
+        "pointerEvents": "none",
+        "exposedInTree": true,
+        "links": 64,
+        "buttons": 5,
+        "focusable": 69,
+        "tabbable": 69
+      }
+    },
+    "article": {
+      "url": "https://www.techinsurance.com/resources/how-to-file-a-business-insurance-claim",
+      "violations": [
+        {
+          "id": "button-name",
+          "impact": "critical",
+          "n": 5,
+          "sample": [
+            {
+              "t": [
+                ".subMenu--c5eCQ:nth-child(2) > .nav--CYYVi > .backButton--CYYVi"
+              ],
+              "h": "<button class=\"backButton--CYYVi\"></button>"
+            }
+          ]
+        },
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "n": 5,
+          "sample": [
+            {
+              "t": [
+                ".tag--rdTW6 > a[href$=\"small-business-insurance\"][target=\"\"][rel=\"\"]"
+              ],
+              "h": "<a href=\"/tag/small-business-insurance\" target=\"\" rel=\"\">Small business insurance</a>"
+            }
+          ]
+        },
+        {
+          "id": "label",
+          "impact": "critical",
+          "n": 1,
+          "sample": [
+            {
+              "t": [
+                "#react-select-3-input"
+              ],
+              "h": "<input class=\"\" autocapitalize=\"none\" autocomplete=\"off\" autocorrect=\"off\" id=\"react-select-3-input\" spellchec"
+            }
+          ]
+        },
+        {
+          "id": "landmark-one-main",
+          "impact": "moderate",
+          "n": 1,
+          "sample": [
+            {
+              "t": [
+                "html"
+              ],
+              "h": "<html lang=\"en\">"
+            }
+          ]
+        },
+        {
+          "id": "link-in-text-block",
+          "impact": "serious",
+          "n": 9,
+          "sample": [
+            {
+              "t": [
+                "p:nth-child(1) > a[href=\"/commercial-property-insurance\"]"
+              ],
+              "h": "<a href=\"/commercial-property-insurance\">commercial property insurance</a>"
+            }
+          ]
+        },
+        {
+          "id": "link-name",
+          "impact": "serious",
+          "n": 1,
+          "sample": [
+            {
+              "t": [
+                ".escape--s\\+X-e"
+              ],
+              "h": "<a href=\"\" class=\"escape--s+X-e\"></a>"
+            }
+          ]
+        },
+        {
+          "id": "region",
+          "impact": "moderate",
+          "n": 30,
+          "sample": [
+            {
+              "t": [
+                ".imageWrapper--PoSVP"
+              ],
+              "h": "<div class=\"imageWrapper--PoSVP\">"
+            }
+          ]
+        }
+      ],
+      "namelessButtons": [
+        "<button class=\"backButton--CYYVi\"></button>",
+        "<button class=\"backButton--CYYVi\"></button>"
+      ],
+      "namelessLinks": [
+        "<a href=\"\" class=\"escape--s+X-e\"></a>"
+      ],
+      "emptyHref": [
+        "<a href=\"\" class=\"escape--s+X-e\"></a>"
+      ],
+      "hasMain": false,
+      "phantomMenu": {
+        "transform": "matrix(1, 0, 0, 1, -320, 0)",
+        "display": "block",
+        "visibility": "visible",
+        "ariaHidden": null,
+        "inert": false,
+        "pointerEvents": "none",
+        "exposedInTree": true,
+        "links": 64,
+        "buttons": 5,
+        "focusable": 69,
+        "tabbable": 69
+      }
+    },
+    "resources": {
+      "url": "https://www.techinsurance.com/resources",
+      "violations": [
+        {
+          "id": "button-name",
+          "impact": "critical",
+          "n": 5,
+          "sample": [
+            {
+              "t": [
+                ".subMenu--c5eCQ:nth-child(2) > .nav--CYYVi > .backButton--CYYVi"
+              ],
+              "h": "<button class=\"backButton--CYYVi\"></button>"
+            }
+          ]
+        },
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "n": 18,
+          "sample": [
+            {
+              "t": [
+                ".contain--MtsUf.block--MtsUf.AuthorSetContent:nth-child(2) > .list--AqMy9[data-test-id=\"AuthorSetContent-Cards\"] > .card--bWlpu.noImage--bWlpu[data-test-id=\"BlogCard\"]:nth-child(1) > .content--bWlpu > .tag--bWlpu"
+              ],
+              "h": "<div class=\"tag--bWlpu\">Small business tips</div>"
+            }
+          ]
+        },
+        {
+          "id": "label",
+          "impact": "critical",
+          "n": 1,
+          "sample": [
+            {
+              "t": [
+                "#react-select-14605-input"
+              ],
+              "h": "<input class=\"\" style=\"label:input;color:inherit;background:0;opacity:1;width:100%;grid-area:1 / 2;font:inheri"
+            }
+          ]
+        },
+        {
+          "id": "landmark-one-main",
+          "impact": "moderate",
+          "n": 1,
+          "sample": [
+            {
+              "t": [
+                "html"
+              ],
+              "h": "<html lang=\"en\">"
+            }
+          ]
+        },
+        {
+          "id": "link-in-text-block",
+          "impact": "serious",
+          "n": 1,
+          "sample": [
+            {
+              "t": [
+                "a[href$=\"www.techinsurance.com\"][title=\"\"][target=\"\"]"
+              ],
+              "h": "<a href=\"https://www.techinsurance.com\" title=\"\" target=\"\" rel=\"\">TechInsurance</a>"
+            }
+          ]
+        },
+        {
+          "id": "link-name",
+          "impact": "serious",
+          "n": 1,
+          "sample": [
+            {
+              "t": [
+                ".escape--s\\+X-e"
+              ],
+              "h": "<a href=\"\" class=\"escape--s+X-e\"></a>"
+            }
+          ]
+        },
+        {
+          "id": "region",
+          "impact": "moderate",
+          "n": 18,
+          "sample": [
+            {
+              "t": [
+                ".imageWrapper--PoSVP"
+              ],
+              "h": "<div class=\"imageWrapper--PoSVP\">"
+            }
+          ]
+        }
+      ],
+      "namelessButtons": [
+        "<button class=\"backButton--CYYVi\"></button>",
+        "<button class=\"backButton--CYYVi\"></button>"
+      ],
+      "namelessLinks": [
+        "<a href=\"\" class=\"escape--s+X-e\"></a>"
+      ],
+      "emptyHref": [
+        "<a href=\"\" class=\"escape--s+X-e\"></a>"
+      ],
+      "hasMain": false,
+      "phantomMenu": {
+        "transform": "matrix(1, 0, 0, 1, -320, 0)",
+        "display": "block",
+        "visibility": "visible",
+        "ariaHidden": null,
+        "inert": false,
+        "pointerEvents": "none",
+        "exposedInTree": true,
+        "links": 64,
+        "buttons": 5,
+        "focusable": 69,
+        "tabbable": 69
+      }
+    },
+    "about": {
+      "url": "https://www.techinsurance.com/about-us",
+      "violations": [
+        {
+          "id": "button-name",
+          "impact": "critical",
+          "n": 5,
+          "sample": [
+            {
+              "t": [
+                ".subMenu--c5eCQ:nth-child(2) > .nav--CYYVi > .backButton--CYYVi"
+              ],
+              "h": "<button class=\"backButton--CYYVi\"></button>"
+            }
+          ]
+        },
+        {
+          "id": "heading-order",
+          "impact": "moderate",
+          "n": 1,
+          "sample": [
+            {
+              "t": [
+                "#learn-which-policies-are-required-and-recommended"
+              ],
+              "h": "<h4 class=\"block Heading contain\" id=\"learn-which-policies-are-required-and-recommended\" data-test-id=\"Heading"
+            }
+          ]
+        },
+        {
+          "id": "landmark-one-main",
+          "impact": "moderate",
+          "n": 1,
+          "sample": [
+            {
+              "t": [
+                "html"
+              ],
+              "h": "<html lang=\"en\">"
+            }
+          ]
+        },
+        {
+          "id": "link-in-text-block",
+          "impact": "serious",
+          "n": 2,
+          "sample": [
+            {
+              "t": [
+                "a[title=\"Technology business insurance\"]"
+              ],
+              "h": "<a title=\"Technology business insurance\" href=\"/technology-business-insurance\">tech professionals</a>"
+            }
+          ]
+        },
+        {
+          "id": "link-name",
+          "impact": "serious",
+          "n": 1,
+          "sample": [
+            {
+              "t": [
+                ".escape--s\\+X-e"
+              ],
+              "h": "<a href=\"\" class=\"escape--s+X-e\"></a>"
+            }
+          ]
+        },
+        {
+          "id": "region",
+          "impact": "moderate",
+          "n": 19,
+          "sample": [
+            {
+              "t": [
+                ".imageWrapper--ZuU3l"
+              ],
+              "h": "<div class=\"imageWrapper--ZuU3l\">"
+            }
+          ]
+        }
+      ],
+      "namelessButtons": [
+        "<button class=\"backButton--CYYVi\"></button>",
+        "<button class=\"backButton--CYYVi\"></button>"
+      ],
+      "namelessLinks": [
+        "<a href=\"\" class=\"escape--s+X-e\"></a>"
+      ],
+      "emptyHref": [
+        "<a href=\"\" class=\"escape--s+X-e\"></a>"
+      ],
+      "hasMain": false,
+      "phantomMenu": {
+        "transform": "matrix(1, 0, 0, 1, -320, 0)",
+        "display": "block",
+        "visibility": "visible",
+        "ariaHidden": null,
+        "inert": false,
+        "pointerEvents": "none",
+        "exposedInTree": true,
+        "links": 64,
+        "buttons": 5,
+        "focusable": 69,
+        "tabbable": 69
+      }
+    },
+    "contact": {
+      "url": "https://www.techinsurance.com/contact-us",
+      "violations": [
+        {
+          "id": "button-name",
+          "impact": "critical",
+          "n": 5,
+          "sample": [
+            {
+              "t": [
+                ".subMenu--c5eCQ:nth-child(2) > .nav--CYYVi > .backButton--CYYVi"
+              ],
+              "h": "<button class=\"backButton--CYYVi\"></button>"
+            }
+          ]
+        },
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "n": 4,
+          "sample": [
+            {
+              "t": [
+                ".descriptor--bJvaf > div > div:nth-child(1)"
+              ],
+              "h": "<div style=\"color: #84829c; text-align: center; margin-bottom: 7px;\">Toll-free: <a href=\"tel:8006687020\"><stro"
+            }
+          ]
+        },
+        {
+          "id": "heading-order",
+          "impact": "moderate",
+          "n": 1,
+          "sample": [
+            {
+              "t": [
+                ".wrap--lMirb.MultiColumn[data-test-id=\"MultiColumnWrap\"]:nth-child(1) > .col--lMirb:nth-child(1) > .contactCard--bJvaf[data-test-id=\"ContactCard\"] > .heading--bJvaf"
+              ],
+              "h": "<h3 class=\"heading--bJvaf\">Call us</h3>"
+            }
+          ]
+        },
+        {
+          "id": "landmark-one-main",
+          "impact": "moderate",
+          "n": 1,
+          "sample": [
+            {
+              "t": [
+                "html"
+              ],
+              "h": "<html lang=\"en\">"
+            }
+          ]
+        },
+        {
+          "id": "link-in-text-block",
+          "impact": "serious",
+          "n": 7,
+          "sample": [
+            {
+              "t": [
+                "div:nth-child(5) > .body--twrlA.BodyText.list-style > p:nth-child(1) > a:nth-child(1)"
+              ],
+              "h": "<a href=\"/about-us/business-insurance-partners\" title=\"Our trusted business insurance companies\">top-rated nat"
+            }
+          ]
+        },
+        {
+          "id": "region",
+          "impact": "moderate",
+          "n": 22,
+          "sample": [
+            {
+              "t": [
+                ".h1Descriptor--ESNzo"
+              ],
+              "h": "<div class=\"h1Descriptor--ESNzo contain block\"><h1 class=\"pageHeading--ESNzo\">Contact Us</h1><div class=\"descr"
+            }
+          ]
+        }
+      ],
+      "namelessButtons": [
+        "<button class=\"backButton--CYYVi\"></button>",
+        "<button class=\"backButton--CYYVi\"></button>"
+      ],
+      "namelessLinks": [],
+      "emptyHref": [],
+      "hasMain": false,
+      "phantomMenu": {
+        "transform": "matrix(1, 0, 0, 1, -320, 0)",
+        "display": "block",
+        "visibility": "visible",
+        "ariaHidden": null,
+        "inert": false,
+        "pointerEvents": "none",
+        "exposedInTree": true,
+        "links": 64,
+        "buttons": 5,
+        "focusable": 69,
+        "tabbable": 69
+      }
+    },
+    "legal": {
+      "url": "https://www.techinsurance.com/legal/privacy-policy",
+      "violations": [
+        {
+          "id": "button-name",
+          "impact": "critical",
+          "n": 5,
+          "sample": [
+            {
+              "t": [
+                ".subMenu--c5eCQ:nth-child(2) > .nav--CYYVi > .backButton--CYYVi"
+              ],
+              "h": "<button class=\"backButton--CYYVi\"></button>"
+            }
+          ]
+        },
+        {
+          "id": "landmark-one-main",
+          "impact": "moderate",
+          "n": 1,
+          "sample": [
+            {
+              "t": [
+                "html"
+              ],
+              "h": "<html lang=\"en\">"
+            }
+          ]
+        },
+        {
+          "id": "link-in-text-block",
+          "impact": "serious",
+          "n": 3,
+          "sample": [
+            {
+              "t": [
+                "a[href$=\"insureon.com/\"]"
+              ],
+              "h": "<a href=\"https://www.insureon.com/\">www.insureon.com</a>"
+            }
+          ]
+        },
+        {
+          "id": "region",
+          "impact": "moderate",
+          "n": 1,
+          "sample": [
+            {
+              "t": [
+                ".copy"
+              ],
+              "h": "<div class=\"copy legal\">"
+            }
+          ]
+        }
+      ],
+      "namelessButtons": [
+        "<button class=\"backButton--CYYVi\"></button>",
+        "<button class=\"backButton--CYYVi\"></button>"
+      ],
+      "namelessLinks": [],
+      "emptyHref": [],
+      "hasMain": false,
+      "phantomMenu": {
+        "transform": "matrix(1, 0, 0, 1, -320, 0)",
+        "display": "block",
+        "visibility": "visible",
+        "ariaHidden": null,
+        "inert": false,
+        "pointerEvents": "none",
+        "exposedInTree": true,
+        "links": 64,
+        "buttons": 5,
+        "focusable": 69,
+        "tabbable": 69
+      }
+    },
+    "a11y-stmt": {
+      "url": "https://www.techinsurance.com/legal/accessibility-statement",
+      "violations": [
+        {
+          "id": "button-name",
+          "impact": "critical",
+          "n": 5,
+          "sample": [
+            {
+              "t": [
+                ".subMenu--c5eCQ:nth-child(2) > .nav--CYYVi > .backButton--CYYVi"
+              ],
+              "h": "<button class=\"backButton--CYYVi\"></button>"
+            }
+          ]
+        },
+        {
+          "id": "landmark-one-main",
+          "impact": "moderate",
+          "n": 1,
+          "sample": [
+            {
+              "t": [
+                "html"
+              ],
+              "h": "<html lang=\"en\">"
+            }
+          ]
+        },
+        {
+          "id": "link-in-text-block",
+          "impact": "serious",
+          "n": 2,
+          "sample": [
+            {
+              "t": [
+                "p:nth-child(1) > a"
+              ],
+              "h": "<a href=\"mailto:reception@techinsurance.com\">reception@techinsurance.com</a>"
+            }
+          ]
+        },
+        {
+          "id": "region",
+          "impact": "moderate",
+          "n": 1,
+          "sample": [
+            {
+              "t": [
+                ".copy"
+              ],
+              "h": "<div class=\"copy legal\">"
+            }
+          ]
+        }
+      ],
+      "namelessButtons": [
+        "<button class=\"backButton--CYYVi\"></button>",
+        "<button class=\"backButton--CYYVi\"></button>"
+      ],
+      "namelessLinks": [],
+      "emptyHref": [],
+      "hasMain": false,
+      "phantomMenu": {
+        "transform": "matrix(1, 0, 0, 1, -320, 0)",
+        "display": "block",
+        "visibility": "visible",
+        "ariaHidden": null,
+        "inert": false,
+        "pointerEvents": "none",
+        "exposedInTree": true,
+        "links": 64,
+        "buttons": 5,
+        "focusable": 69,
+        "tabbable": 69
+      }
+    }
+  }
+}

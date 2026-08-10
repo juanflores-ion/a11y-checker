@@ -1,0 +1,16 @@
+{
+  "name": "agent-a11y-scanner",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Standalone Playwright + axe-core scan engine (core.mjs), with two callers: the scheduled CLI (scan.mjs) and the on-demand live scan server (server.mjs). Deliberately separate from the viewer: a full scheduled run takes 3-5 minutes and must never live in an HTTP request \u2014 but a single live scan is fast enough to serve one on demand.",
+  "scripts": {
+    "postinstall": "playwright install chromium",
+    "scan": "node scan.mjs --out ../data/runs",
+    "server": "node server.mjs"
+  },
+  "dependencies": {
+    "axe-core": "4.13.0",
+    "playwright": "^1.47.0"
+  }
+}
