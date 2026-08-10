@@ -160,12 +160,20 @@ Two limits, both deliberate:
 Point the Scanner control on Measure or Compare at a local address to bypass
 both limits.
 
-### What still doesn't run there
+### Recording a full run without installing anything
 
-Scheduled scans. A 20-page run takes ~100 seconds and has to write a file, and
-the filesystem is read-only. Run `npm run scan` locally or in CI, commit the
-run file, and the push redeploys the dashboard with the new numbers — which
-also gives every measurement a commit and a diff for free.
+A 20-page scan takes ~100 seconds and has to write a file, so it cannot run as
+one request against a host that allows far less and has a read-only filesystem.
+Both objections dissolve if the browser drives it: **Measure → Run full scan**
+walks the tracked pages three at a time, each request comfortably inside the
+limit, assembles the run file client-side and hands it back as a download.
+
+Drop it in `data/runs/`, commit, push. The push redeploys with the new numbers,
+and every measurement gets a commit and a diff for free.
+
+`npm run scan` still does the same thing from the CLI in one process, which is
+what you would wire into CI. Neither path is privileged — same engine, same
+device profile, same file.
 
 ## Scanner
 

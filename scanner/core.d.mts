@@ -12,6 +12,8 @@ export interface LaunchOptions {
 
 export function launchOptions(): LaunchOptions;
 
+export const VIEWPORT: { width: number; height: number; isMobile: boolean };
+
 /** Opens a context with the Lighthouse mobile profile the scores are computed on. */
 export function launchContext(browser: any): Promise<any>;
 

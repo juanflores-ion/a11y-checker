@@ -82,9 +82,16 @@ export function launchOptions() {
  * purpose: point this at one of the ten tracked URLs and the numbers should
  * land in the same place the next scheduled run would put them.
  */
+/**
+ * The device profile every scan uses, exported so a caller assembling a run
+ * file records what was actually measured rather than repeating the numbers
+ * and hoping they stay in step.
+ */
+export const VIEWPORT = { width: 390, height: 844, isMobile: true };
+
 export async function launchContext(browser) {
   return browser.newContext({
-    viewport: { width: 390, height: 844 },
+    viewport: { width: VIEWPORT.width, height: VIEWPORT.height },
     isMobile: true,
     hasTouch: true,
     deviceScaleFactor: 3,

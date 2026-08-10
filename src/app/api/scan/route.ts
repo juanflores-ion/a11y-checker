@@ -118,7 +118,7 @@ export async function POST(request: Request) {
    * import right here resolves from the function's own tree, which does have
    * it. One engine, two ways of reaching it, same measurement either way.
    */
-  const [{ chromium }, chromiumPack, { launchContext, scanPage }, axe] = await Promise.all([
+  const [{ chromium }, chromiumPack, { launchContext, scanPage, VIEWPORT }, axe] = await Promise.all([
     import('playwright-core'),
     import('@sparticuz/chromium').then((m) => m.default ?? m),
     import('../../../../scanner/core.mjs'),
@@ -169,6 +169,7 @@ export async function POST(request: Request) {
       startedAt,
       finishedAt: new Date().toISOString(),
       results,
+      viewport: VIEWPORT,
       scannedBy: 'hosted',
     });
   } catch (err) {
