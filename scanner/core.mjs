@@ -29,24 +29,36 @@ import { createRequire } from 'node:module';
 import { collectMeasurements } from './probes.mjs';
 
 /**
- * axe's engine source, resolved without depending on module interop.
+ * axe's engine, as a source string.
  *
- * axe-core is CommonJS and exposes its whole engine as a `source` string.
- * Whether that arrives on the default export or the namespace depends on who
- * is loading the file — plain Node ESM for the CLI, a bundler for the API
- * route — and getting it wrong is not a crash. It is a scan that launches a
- * browser, loads the page, injects nothing and reports zero violations on a
- * site with hundreds of problems. `createRequire` sidesteps the question by
- * loading it the way the package was written to be loaded.
+ * axe-core is CommonJS and exposes its whole engine on `.source`. Which shape
+ * that arrives in depends on who loaded the file — plain Node ESM for the CLI,
+ * a bundler for the API route — and where `node_modules` sits relative to this
+ * file, which differs again inside a serverless bundle.
  *
- * The throw is the important part: a scanner that cannot measure has to say
- * so, because "no violations found" and "no violations looked for" read
- * identically in the output and mean opposite things.
+ * So this resolves lazily and never throws at import time. An earlier version
+ * threw from module scope, which turned a recoverable "couldn't find axe" into
+ * an unhandled 500 before the route's own error handling could run. Callers
+ * that can resolve axe themselves (the API route can, through the bundler)
+ * pass it to `scanPage` instead and skip this entirely.
  */
-const axeSource = createRequire(import.meta.url)('axe-core').source;
+let cachedAxeSource = null;
 
-if (typeof axeSource !== 'string' || axeSource.length === 0) {
-  throw new Error('axe-core source could not be resolved — the scanner cannot measure anything.');
+export function resolveAxeSource() {
+  if (cachedAxeSource) return cachedAxeSource;
+  const require = createRequire(import.meta.url);
+  for (const specifier of ['axe-core', 'axe-core/axe.js']) {
+    try {
+      const source = require(specifier)?.source;
+      if (typeof source === 'string' && source.length > 0) {
+        cachedAxeSource = source;
+        return cachedAxeSource;
+      }
+    } catch {
+      // Try the next specifier before giving up.
+    }
+  }
+  return null;
 }
 
 /**
@@ -158,7 +170,17 @@ async function confirmClickListeners(page, controls) {
  * httpStatus, axeVersion }` on success, or `{ url, error }` on failure — the shape a scanned run file expects, plus `axeVersion`, which
  * per-page callers are free to drop (the CLI keeps it once, in `meta`).
  */
-export async function scanPage(context, url) {
+export async function scanPage(context, url, { axeSource: providedAxeSource } = {}) {
+  const axeSource = providedAxeSource ?? resolveAxeSource();
+  if (!axeSource) {
+    return {
+      url,
+      error:
+        'axe-core could not be loaded, so nothing was measured. This is a packaging fault, ' +
+        'not a fault on the page.',
+    };
+  }
+
   const page = await context.newPage();
   try {
     const response = await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 45_000 });

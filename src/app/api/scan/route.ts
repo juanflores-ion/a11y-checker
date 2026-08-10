@@ -107,11 +107,37 @@ export async function POST(request: Request) {
 
   // Imported lazily so a failure to load the browser can be reported as a
   // clean error, and so the heavy modules stay out of any other route's trace.
-  const [{ chromium }, chromiumPack, { launchContext, scanPage }] = await Promise.all([
+  /**
+   * axe is resolved here, not inside core.mjs, and passed down.
+   *
+   * core.mjs can find it perfectly well from the CLI. Inside a serverless
+   * bundle it cannot: `createRequire` there resolves from
+   * /vercel/path0/scanner/, which has no node_modules, and the first deploy
+   * failed with exactly that — `Cannot find module 'axe-core'`, requireStack
+   * /vercel/path0/scanner/core.mjs. This module is bundler-external, so the
+   * import right here resolves from the function's own tree, which does have
+   * it. One engine, two ways of reaching it, same measurement either way.
+   */
+  const [{ chromium }, chromiumPack, { launchContext, scanPage }, axe] = await Promise.all([
     import('playwright-core'),
     import('@sparticuz/chromium').then((m) => m.default ?? m),
     import('../../../../scanner/core.mjs'),
+    import('axe-core'),
   ]);
+
+  const axeModule = axe as unknown as { source?: string; default?: { source?: string } };
+  const axeSource = axeModule.source ?? axeModule.default?.source;
+  if (typeof axeSource !== 'string' || axeSource.length === 0) {
+    return NextResponse.json(
+      {
+        error:
+          'The scan engine could not be loaded on the server, so nothing was measured. ' +
+          'This is a packaging fault rather than a problem with the page. Run the scanner ' +
+          'locally as a fallback.',
+      },
+      { status: 503 }
+    );
+  }
 
   let browser;
   try {
@@ -137,7 +163,7 @@ export async function POST(request: Request) {
     // Sequential on purpose: concurrent Chromium pages in a function's memory
     // budget is how you turn a slow scan into a failed one.
     for (const url of urls) {
-      results.push(await scanPage(context, url));
+      results.push(await scanPage(context, url, { axeSource }));
     }
     return NextResponse.json({
       startedAt,

@@ -20,7 +20,11 @@ export function launchContext(browser: any): Promise<any>;
  * `{ url, error }` when the page could not be measured — never throws for a
  * page-level failure.
  */
+/** Resolves axe's engine source, or null when it can't be found here. */
+export function resolveAxeSource(): string | null;
+
 export function scanPage(
   context: any,
-  url: string
+  url: string,
+  options?: { axeSource?: string }
 ): Promise<PageResult & { axeVersion?: string | null; httpStatus?: number }>;
