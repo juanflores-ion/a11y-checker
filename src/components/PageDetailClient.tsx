@@ -23,8 +23,8 @@ export function PageDetailClient({
   byRun: PageDetailByRun;
   allPageKeys: string[];
 }) {
-  const { currentId, current } = useRuns();
-  const entry = byRun[currentId];
+  const { currentKey, current } = useRuns();
+  const entry = byRun[currentKey];
 
   return (
     <div className="space-y-6">

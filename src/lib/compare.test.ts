@@ -133,3 +133,41 @@ test('pairUrls pairs by line position and tolerates uneven lists', () => {
   ]);
   assert.deepEqual(pairUrls([], []), []);
 });
+
+test('a diff taken across two device profiles is flagged, not quietly reported', () => {
+  // These sites serve different markup per device, so a before/after taken at
+  // two profiles compares two different pages — the desktop nav alone accounts
+  // for roughly 56 links. The UI applies one profile to both sides, so this
+  // should never fire in practice; it exists because "compared the wrong two
+  // things and reported a confident number" is the failure this tool keeps
+  // having to design out.
+  const before = page({ navLinks: { total: 70, inTree: 70 } });
+  const after = page({ navLinks: { total: 63, inTree: 7 } });
+
+  const mismatched = diffPages('prod', 'staging', before, after, {
+    before: 'mobile',
+    after: 'desktop',
+  });
+  assert.deepEqual(mismatched.viewportMismatch, { before: 'mobile', after: 'desktop' });
+
+  const matched = diffPages('prod', 'staging', before, after, {
+    before: 'desktop',
+    after: 'desktop',
+  });
+  assert.equal(matched.viewportMismatch, undefined);
+
+  // Unstated viewports stay unflagged — the older callers pass neither.
+  assert.equal(diffPages('prod', 'staging', before, after).viewportMismatch, undefined);
+});
+
+test('navigation an agent cannot find is diffed alongside the rule counts', () => {
+  // The desktop failure mode is invisible to axe: the links are in the DOM and
+  // out of the accessibility tree, so no rule fires on them. Without this the
+  // fix that matters most would show up as "no change".
+  const before = page({ navLinks: { total: 63, inTree: 7 } });
+  const after = page({ navLinks: { total: 63, inTree: 63 } });
+  const diff = diffPages('prod', 'staging', before, after);
+
+  assert.equal(diff.navHiddenBefore, 56);
+  assert.equal(diff.navHiddenAfter, 0);
+});

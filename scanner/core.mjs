@@ -77,27 +77,91 @@ export function launchOptions() {
 }
 
 /**
- * Mirrors the Lighthouse mobile profile the PageSpeed score is computed on.
- * Live scans use the identical device profile as the scheduled scan, on
- * purpose: point this at one of the ten tracked URLs and the numbers should
- * land in the same place the next scheduled run would put them.
+ * The device profiles a scan can run at, exported so a caller assembling a run
+ * file records what was actually measured rather than repeating the numbers and
+ * hoping they stay in step.
+ *
+ * ── Why there are two, and why desktop is first ──────────────────────────
+ * These sites resolve their layout on the server from the user-agent — Sitecore
+ * puts the result in `deviceLayout`, and the React tree branches on it — and
+ * then re-resolve it in the browser from `matchMedia`. So the profile isn't a
+ * detail of how we look at the page; it decides which page we are looking at.
+ *
+ * Measured against production: a desktop UA, an unrecognised UA, and no UA at
+ * all all resolve to `deviceLayout: desktop`. Only a recognised mobile UA gets
+ * the mobile layout. Agents therefore receive the *desktop* markup, which is
+ * why it leads here — a scan that only ran the mobile profile was describing
+ * the one variant no agent ever sees.
+ *
+ * They fail in opposite ways, so neither substitutes for the other. On mobile
+ * the nav links are all in the accessibility tree but trapped in an off-screen
+ * drawer; on desktop they are `display: none` until hover, so Insureon exposes
+ * 7 of its 63 nav destinations. Both are real, and one number cannot say both.
+ *
+ * The user-agent and the viewport must always agree. Ship a desktop viewport
+ * with a mobile UA and the server renders mobile, the client then swaps to
+ * desktop on hydration, and the scan measures a state no visitor is ever in.
  */
-/**
- * The device profile every scan uses, exported so a caller assembling a run
- * file records what was actually measured rather than repeating the numbers
- * and hoping they stay in step.
- */
-export const VIEWPORT = { width: 390, height: 844, isMobile: true };
-
-export async function launchContext(browser) {
-  return browser.newContext({
-    viewport: { width: VIEWPORT.width, height: VIEWPORT.height },
+export const PROFILES = {
+  desktop: {
+    name: 'desktop',
+    label: 'Desktop',
+    width: 1440,
+    height: 900,
+    isMobile: false,
+    hasTouch: false,
+    deviceScaleFactor: 1,
+    userAgent:
+      'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 ' +
+      '(KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36',
+  },
+  /** Mirrors the Lighthouse mobile profile the PageSpeed score is computed on. */
+  mobile: {
+    name: 'mobile',
+    label: 'Mobile',
+    width: 390,
+    height: 844,
     isMobile: true,
     hasTouch: true,
     deviceScaleFactor: 3,
     userAgent:
       'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 ' +
       '(KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1',
+  },
+};
+
+/** Desktop leads because it is what agents are served. */
+export const PROFILE_NAMES = ['desktop', 'mobile'];
+export const DEFAULT_PROFILE = 'desktop';
+
+export function resolveProfile(name = DEFAULT_PROFILE) {
+  const profile = PROFILES[name];
+  if (!profile) {
+    throw new Error(
+      `Unknown device profile “${name}”. Known profiles: ${PROFILE_NAMES.join(', ')}.`
+    );
+  }
+  return profile;
+}
+
+/**
+ * Retained so a run file recorded before profiles existed still describes
+ * itself correctly: those runs were all mobile.
+ */
+export const VIEWPORT = {
+  width: PROFILES.mobile.width,
+  height: PROFILES.mobile.height,
+  isMobile: true,
+};
+
+export async function launchContext(browser, profileName = DEFAULT_PROFILE) {
+  const p = resolveProfile(profileName);
+  return browser.newContext({
+    viewport: { width: p.width, height: p.height },
+    isMobile: p.isMobile,
+    hasTouch: p.hasTouch,
+    deviceScaleFactor: p.deviceScaleFactor,
+    userAgent: p.userAgent,
     bypassCSP: true,
   });
 }

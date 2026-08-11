@@ -15,6 +15,11 @@
  *   4. NO GHOSTS  — anything that looks closed or hidden is genuinely out of
  *                   the tree, not merely out of sight.
  *
+ * There is a fifth, and it is the mirror image of the fourth:
+ *
+ *   5. REACHABILITY — content that *is* out of the tree can still be found,
+ *                   because something in the tree announces it.
+ *
  * axe, and the scanner's original probes, only ever tested (2), and only for
  * elements that already satisfied (1). That is a real blind spot rather than a
  * technicality: a hamburger menu built from `<div onClick>` fails (1) and (3)
@@ -26,6 +31,21 @@
  * single hardcoded `[class*="megaMenu"]` selector into the property that
  * actually mattered — *any* region still in the tree, still full of focusable
  * controls, that isn't on screen.
+ *
+ * `unreachablePanels` tests (5), and exists because the other probes have a
+ * blind spot they cannot see past. Every one of them starts by discarding
+ * anything `removedFromTree()` matches, on the reasoning that content properly
+ * out of the tree is correctly hidden and not worth reporting. For a closed
+ * dialog that is exactly right. For the site's primary navigation it is exactly
+ * wrong, and the difference is measurable: at a desktop viewport Insureon puts
+ * 63 navigation links in the DOM and 7 in the accessibility tree, because the
+ * mega-menu is `display: none` until a mouse hovers it. Nothing announces the
+ * other 56. An agent doesn't fail to *operate* that menu — it never learns the
+ * destinations exist.
+ *
+ * What separates the dialog from the mega-menu is not the hiding, it is whether
+ * something still in the tree advertises what is hidden. So that, and not the
+ * hiding, is what this probe measures.
  *
  * ── The rule that doesn't bend ───────────────────────────────────────────
  * Nothing here clicks, hovers, focuses or scrolls. Every probe is a read of
@@ -294,6 +314,121 @@ export function collectMeasurements() {
     };
   });
 
+  /* ---------------------------------------------------------------- */
+  /* 5. REACHABILITY — out of the tree, and nothing announces it       */
+  /* ---------------------------------------------------------------- */
+
+  /**
+   * The mirror of `hiddenPanels`. That probe reports regions still in the tree
+   * but off screen; this one reports regions genuinely out of the tree, which
+   * every other probe here deliberately skips.
+   *
+   * Being out of the tree is not itself a fault — it is how a closed menu is
+   * supposed to behave. The fault is being out of the tree with nothing in the
+   * tree that says so. A disclosure button with `aria-expanded` is a promise an
+   * agent can act on; a `:hover` rule is not reachable and not discoverable.
+   */
+  const hidesItself = (el) => {
+    const s = getComputedStyle(el);
+    const why = [];
+    // `display` computes per element, so this matches only the element that
+    // sets it — which is what makes it the boundary of the hidden subtree.
+    if (s.display === 'none') why.push('display: none');
+    if (s.visibility === 'hidden') why.push('visibility: hidden');
+    if (el.getAttribute('aria-hidden') === 'true') why.push('aria-hidden="true"');
+    if (el.hasAttribute('inert')) why.push('inert');
+    return why;
+  };
+
+  /** The control that opens it, if one is discoverable from the markup. */
+  const disclosureFor = (el) => {
+    // The explicit contract first: something points at this by id.
+    if (el.id) {
+      let byControls = null;
+      try {
+        byControls = document.querySelector(`[aria-controls="${CSS.escape(el.id)}"]`);
+      } catch {
+        byControls = null; // exotic id that won't escape; fall through
+      }
+      if (byControls) return byControls;
+    }
+    // Otherwise the conventional shape: a trigger sitting beside the panel.
+    const parent = el.parentElement;
+    if (!parent) return null;
+    for (const c of [...parent.children].filter((c) => c !== el)) {
+      if (c.matches(NATIVE_INTERACTIVE) || c.getAttribute('role') === 'button') return c;
+      const inner = c.querySelector('button,a[href],[role="button"]');
+      if (inner) return inner;
+    }
+    return null;
+  };
+
+  const unreachableAll = [];
+  for (const el of document.querySelectorAll('div,nav,ul,section,aside,form')) {
+    const why = hidesItself(el);
+    if (why.length === 0) continue;
+    // Only the outermost hidden container: if an ancestor is already out of the
+    // tree, this one is a detail of it, not a separate finding.
+    if (el.parentElement && removedFromTree(el.parentElement)) continue;
+
+    const focusables = [...el.querySelectorAll(FOCUSABLE)].filter(isFocusable);
+    if (focusables.length < 3) continue; // a panel, not a stray control
+
+    const trigger = disclosureFor(el);
+    // A trigger only counts if an agent could find and use it: in the tree,
+    // and advertising that it controls something.
+    const triggerInTree = !!trigger && !removedFromTree(trigger);
+    const announces =
+      !!trigger &&
+      (trigger.hasAttribute('aria-expanded') ||
+        trigger.hasAttribute('aria-haspopup') ||
+        trigger.hasAttribute('aria-controls'));
+
+    unreachableAll.push({
+      selector: describe(el),
+      why,
+      inNav: !!el.closest('nav,[role="navigation"]'),
+      links: el.querySelectorAll('a[href]').length,
+      buttons: el.querySelectorAll('button,[role="button"]').length,
+      focusable: focusables.length,
+      hasTrigger: !!trigger,
+      triggerInTree,
+      /** The whole point: is this findable from the tree, or only by hovering? */
+      announced: triggerInTree && announces,
+      triggerSelector: trigger ? describe(trigger) : null,
+      sample: trunc(el.outerHTML.slice(0, TRUNCATE)),
+    });
+  }
+
+  // Report every one in the totals, but list only the largest few — a page can
+  // legitimately hold dozens of hidden blocks, and a run file is read by humans.
+  const unreachableRanked = [...unreachableAll].sort((a, b) => b.focusable - a.focusable);
+  const unreachablePanels = unreachableRanked.slice(0, 20);
+  const unannounced = unreachableAll.filter((p) => !p.announced);
+  const unreachableTotals = {
+    panels: unreachableAll.length,
+    unannouncedPanels: unannounced.length,
+    /** Controls an agent cannot find at all — the number that matters. */
+    unannouncedFocusable: unannounced.reduce((s, p) => s + p.focusable, 0),
+    unannouncedLinks: unannounced.reduce((s, p) => s + p.links, 0),
+  };
+
+  /**
+   * The headline, measured directly rather than inferred from the panels: of
+   * everywhere this page says you can go, how much of it can an agent see?
+   *
+   * Counted per element rather than per landmark so overlapping navs — a header
+   * nav inside a wrapper nav — can't double-count a link.
+   */
+  const navSeen = new Set();
+  for (const nav of document.querySelectorAll('nav,[role="navigation"]')) {
+    for (const a of nav.querySelectorAll('a[href]')) navSeen.add(a);
+  }
+  const navLinks = {
+    total: navSeen.size,
+    inTree: [...navSeen].filter((a) => !removedFromTree(a)).length,
+  };
+
   /**
    * Kept for continuity: every historical run and every chart keys off
    * `phantomMenu`. It is now simply the largest hidden panel, which on both
@@ -326,5 +461,8 @@ export function collectMeasurements() {
     clickableNoRole,
     hiddenPanels,
     phantomMenu,
+    unreachablePanels,
+    unreachableTotals,
+    navLinks,
   };
 }

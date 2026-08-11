@@ -5,12 +5,14 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { latestRun, loadRuns, Run } from './loadRuns';
+import { latestRun, loadRuns, runAtViewport, Run, VIEWPORT_NAMES } from './loadRuns';
 import {
   clickableNoRoleCount,
   ghostControlCount,
   hiddenPanelStats,
   mainCoverage,
+  navReach,
+  unreachableStats,
   namelessCounts,
   passRatio,
   perPageRuleTotals,
@@ -55,11 +57,17 @@ function withRules(counts: Record<string, number>): Run {
     hasMain: true,
     phantomMenu: null,
   });
-  return {
-    id: 'synthetic',
-    meta: { startedAt: '2026-08-08T10:30:00.000Z' },
+  const brands = {
     insureon: { home: page('https://www.insureon.com/') },
     techinsurance: { home: page('https://www.techinsurance.com/') },
+  };
+  return {
+    id: 'synthetic',
+    meta: { startedAt: '2026-08-08T10:30:00.000Z', primaryViewport: 'desktop' },
+    ...brands,
+    byViewport: { desktop: brands },
+    viewports: ['desktop'],
+    primaryViewport: 'desktop',
   };
 }
 
@@ -68,41 +76,108 @@ const after = withRules({ region: 324, 'link-in-text-block': 179, 'color-contras
 
 const extended = latestRun(runs) as Run;
 
-test('the extended probes measure what axe structurally cannot', () => {
+/**
+ * The latest run projected to each profile. Every probe assertion below names
+ * the profile it is about, because the two are different pages: these sites
+ * pick their markup from the user-agent on the server, so the mobile back
+ * controls simply do not exist in the desktop document and vice versa.
+ */
+const onMobile = extended ? runAtViewport(extended, 'mobile') : null;
+const onDesktop = extended ? runAtViewport(extended, 'desktop') : null;
+
+test('the extended probes measure what axe structurally cannot — mobile', () => {
   // The whole point of the probe rewrite. Insureon's back control is a <div>,
   // so axe's button-name rule reads 0 on a site that has fifty of them. If
   // this ever goes back to zero, the probe has regressed — check that before
   // believing the sites were fixed.
-  assert.ok(extended, 'no run on file');
-  assert.equal(ruleTotals(extended, 'insureon')['button-name'] ?? 0, 0, 'axe still cannot see them');
-  assert.equal(ghostControlCount(extended, 'insureon', 'backButton'), 50);
+  assert.ok(onMobile, 'the latest run did not measure the mobile profile');
+  assert.equal(ruleTotals(onMobile, 'insureon')['button-name'] ?? 0, 0, 'axe still cannot see them');
+  assert.equal(ghostControlCount(onMobile, 'insureon', 'backButton'), 50);
 
   // The hamburger: one per page, both brands, invisible to every audit.
-  assert.equal(ghostControlCount(extended, 'insureon', 'menu'), 10);
-  assert.equal(ghostControlCount(extended, 'techinsurance', 'menu'), 10);
+  assert.equal(ghostControlCount(onMobile, 'insureon', 'menu'), 10);
+  assert.equal(ghostControlCount(onMobile, 'techinsurance', 'menu'), 10);
 
   // Generalised panel probe reproduces the hardcoded mega-menu reading.
-  assert.equal(phantomFocusable(extended, 'insureon'), 68);
-  assert.equal(phantomFocusable(extended, 'techinsurance'), 69);
+  assert.equal(phantomFocusable(onMobile, 'insureon'), 68);
+  assert.equal(phantomFocusable(onMobile, 'techinsurance'), 69);
 
   // And finds more than the mega-menu, which the old selector never could.
-  assert.ok(hiddenPanelStats(extended, 'insureon').panels > 10);
-  assert.ok(clickableNoRoleCount(extended, 'insureon') > 100);
+  assert.ok(hiddenPanelStats(onMobile, 'insureon').panels > 10);
+  assert.ok(clickableNoRoleCount(onMobile, 'insureon') > 100);
+
+  // On mobile the nav is entirely in the tree — trapped off-screen, but
+  // present. That is what makes the desktop reading below a separate defect
+  // rather than the same one counted twice.
+  assert.equal(navReach(onMobile, 'insureon').hidden, 0);
+  assert.equal(navReach(onMobile, 'techinsurance').hidden, 0);
+});
+
+test('the desktop profile is measured, and it is the one agents are served', () => {
+  // Desktop went unmeasured until 11 Aug 2026, so every figure the dashboard
+  // showed described the mobile layout — the one variant no agent receives.
+  // A desktop UA, an unrecognised UA and no UA at all are all served desktop.
+  assert.ok(onDesktop, 'the latest run did not measure the desktop profile');
+  assert.equal(extended.primaryViewport, 'desktop', 'desktop should lead — agents get it');
+
+  // The hover-only mega-menu: in the page, out of the accessibility tree, and
+  // nothing in the tree announces it. Both brands, every page.
+  for (const brand of ['insureon', 'techinsurance'] as const) {
+    const nav = navReach(onDesktop, brand);
+    assert.ok(nav.total > 0, `${brand}: no navigation links measured at all`);
+    assert.ok(
+      nav.hidden > nav.inTree * 3,
+      `${brand}: expected most of the nav to be unreachable on desktop, ` +
+        `got ${nav.hidden} hidden vs ${nav.inTree} reachable`
+    );
+    // Cross-check: the panel probe and the nav probe are computed
+    // independently, so agreement between them is evidence, not tautology.
+    assert.ok(unreachableStats(onDesktop, brand).unannouncedPanels > 0);
+  }
+
+  // The mobile-only components are absent here, which is the point: these are
+  // two different documents, not one document at two widths.
+  assert.equal(ghostControlCount(onDesktop, 'insureon', 'backButton'), 0);
 });
 
 test('no page in any run was measured from an error page', () => {
   // Ten stale target URLs once 404'd and were measured as real pages, which
   // read as a 47% improvement. scanPage now rejects non-OK responses, so a
   // moved URL surfaces as a failed page instead of a fake win.
+  //
+  // Every viewport, not just the primary: a URL that 404s only under one
+  // profile would otherwise sail through, and half a run measured on error
+  // pages is exactly as misleading as a whole one.
   for (const run of runs) {
-    for (const brand of ['insureon', 'techinsurance'] as const) {
-      for (const [key, page] of Object.entries(run[brand])) {
-        const status = (page as { httpStatus?: number }).httpStatus;
-        if (status !== undefined) {
-          assert.ok(status < 400, `${run.id} ${brand}/${key} was measured on HTTP ${status}`);
+    for (const viewport of run.viewports) {
+      for (const brand of ['insureon', 'techinsurance'] as const) {
+        for (const [key, page] of Object.entries(run.byViewport[viewport]![brand])) {
+          const status = (page as { httpStatus?: number }).httpStatus;
+          if (status !== undefined) {
+            assert.ok(
+              status < 400,
+              `${run.id} ${viewport} ${brand}/${key} was measured on HTTP ${status}`
+            );
+          }
         }
       }
     }
+  }
+});
+
+test('the two profiles in a run are genuinely different measurements', () => {
+  // If desktop and mobile ever come back identical, the profile plumbing has
+  // broken — most likely a user-agent that no longer matches its viewport, so
+  // the server hands back the same layout twice. The dashboard would then show
+  // two headings over one set of numbers, which is worse than showing one.
+  for (const run of runs) {
+    if (run.viewports.length < 2) continue;
+    const [a, b] = run.viewports;
+    assert.notDeepEqual(
+      run.byViewport[a],
+      run.byViewport[b],
+      `${run.id}: ${a} and ${b} measured identically — check the profile user-agents`
+    );
   }
 });
 
@@ -128,7 +203,10 @@ test('every run is a distinct measurement', () => {
   // genuine flat result. This caught a duplicated fixture once already.
   const seen = new Map<string, string>();
   for (const run of runs) {
-    const fingerprint = JSON.stringify([run.insureon, run.techinsurance]);
+    // Fingerprint every viewport, not the primary projection alone — two runs
+    // could differ only in the profile they lead with and still be the same
+    // measurement twice over.
+    const fingerprint = JSON.stringify(run.byViewport);
     const twin = seen.get(fingerprint);
     assert.equal(twin, undefined, `${run.id} has identical measurements to ${twin}`);
     seen.set(fingerprint, run.id);
@@ -148,6 +226,71 @@ test('every run on file is a real measurement', () => {
       `${run.id} is dated in the future — data/runs holds real scans only, ` +
         'never hand-built or projected ones'
     );
+  }
+});
+
+test('every run declares the viewports it actually measured', () => {
+  // A run's numbers mean nothing without knowing which device profile produced
+  // them: these sites serve different markup per device, so desktop and mobile
+  // are different pages rather than different framings of one. Runs recorded
+  // before profiles existed were all mobile, and the loader has to say so
+  // rather than leave it implied.
+  for (const run of runs) {
+    assert.ok(run.viewports.length > 0, `${run.id} declares no viewport`);
+    for (const v of run.viewports) {
+      assert.ok(run.byViewport[v], `${run.id} lists ${v} but carries no ${v} results`);
+    }
+    assert.ok(
+      run.viewports.includes(run.primaryViewport),
+      `${run.id} is primarily ${run.primaryViewport}, which it never measured`
+    );
+  }
+});
+
+test('the primary projection is the primary viewport, not whatever was first', () => {
+  // run.insureon is what every aggregate helper reads. If it ever drifts from
+  // byViewport[primaryViewport], the whole dashboard silently reports one
+  // profile under another profile's heading.
+  for (const run of runs) {
+    assert.deepEqual(run.insureon, run.byViewport[run.primaryViewport]?.insureon);
+    assert.deepEqual(run.techinsurance, run.byViewport[run.primaryViewport]?.techinsurance);
+  }
+});
+
+test('runAtViewport refuses to substitute a profile that was not measured', () => {
+  // The whole guard. Returning the other viewport's numbers here would be the
+  // same class of bug as charting a mobile run next to a desktop one — a
+  // confident figure describing a page nobody looked at.
+  for (const run of runs) {
+    for (const v of VIEWPORT_NAMES) {
+      const view = runAtViewport(run, v);
+      if (run.viewports.includes(v)) {
+        assert.ok(view, `${run.id} measured ${v} but would not project to it`);
+        assert.equal(view.primaryViewport, v);
+        assert.deepEqual(view.insureon, run.byViewport[v]?.insureon);
+      } else {
+        assert.equal(view, null, `${run.id} never measured ${v} but projected to it anyway`);
+      }
+    }
+  }
+});
+
+test('a check that never ran is not a pass', () => {
+  // The scorecard once counted "this probe did not exist yet" as met. Absence
+  // has to read as absence: met === null and notMeasured set, so the pass ratio
+  // excludes it instead of banking it.
+  for (const run of runs) {
+    for (const brand of ['insureon', 'techinsurance'] as const) {
+      for (const row of scorecard(run, brand)) {
+        if (row.notMeasured) {
+          assert.equal(
+            row.met,
+            null,
+            `${run.id} ${brand}: "${row.label}" was never measured but scored ${row.met}`
+          );
+        }
+      }
+    }
   }
 });
 

@@ -31,8 +31,20 @@ export interface PageDiff {
   totalChange: number;
   phantomBefore: number;
   phantomAfter: number;
+  navHiddenBefore: number;
+  navHiddenAfter: number;
   resolvedCount: number;
   newCount: number;
+  /**
+   * Set when the two sides were measured at different device profiles.
+   *
+   * These sites serve different markup per device, so such a diff compares two
+   * different pages and every row of it is noise — the desktop nav alone moves
+   * ~56 links. The UI applies one viewport to both sides, so this should never
+   * fire; it exists because "compared the wrong two things and reported a
+   * confident number" is the failure this tool keeps having to design out.
+   */
+  viewportMismatch?: { before: string; after: string };
 }
 
 function scannedOrNull(page: PageResult | null): ScannedPage | null {
@@ -77,10 +89,19 @@ export function diffPages(
   beforeUrl: string,
   afterUrl: string,
   before: PageResult | null,
-  after: PageResult | null
+  after: PageResult | null,
+  viewports?: { before?: string; after?: string }
 ): PageDiff {
   const beforePage = scannedOrNull(before);
   const afterPage = scannedOrNull(after);
+
+  const mismatch =
+    viewports?.before && viewports?.after && viewports.before !== viewports.after
+      ? { before: viewports.before, after: viewports.after }
+      : undefined;
+
+  const navHidden = (page: ScannedPage | null) =>
+    page?.navLinks ? page.navLinks.total - page.navLinks.inTree : 0;
 
   const beforeCounts = ruleCounts(beforePage);
   const afterCounts = ruleCounts(afterPage);
@@ -107,8 +128,11 @@ export function diffPages(
     totalChange: totalNodes(afterPage) - totalNodes(beforePage),
     phantomBefore: beforePage?.phantomMenu?.focusable ?? 0,
     phantomAfter: afterPage?.phantomMenu?.focusable ?? 0,
+    navHiddenBefore: navHidden(beforePage),
+    navHiddenAfter: navHidden(afterPage),
     resolvedCount: rules.filter((r) => r.status === 'resolved').length,
     newCount: rules.filter((r) => r.status === 'new').length,
+    ...(mismatch ? { viewportMismatch: mismatch } : {}),
   };
 }
 

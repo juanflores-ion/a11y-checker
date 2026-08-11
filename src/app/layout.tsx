@@ -23,6 +23,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     axeVersion: r.meta.axeVersion,
     display: formatRunTime(r),
     short: formatRunShort(r),
+    viewports: r.viewports,
   }));
 
   return (

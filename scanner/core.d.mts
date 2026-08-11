@@ -12,10 +12,31 @@ export interface LaunchOptions {
 
 export function launchOptions(): LaunchOptions;
 
+/** Retained so pre-profile run files still describe themselves; those were mobile. */
 export const VIEWPORT: { width: number; height: number; isMobile: boolean };
 
-/** Opens a context with the Lighthouse mobile profile the scores are computed on. */
-export function launchContext(browser: any): Promise<any>;
+export interface DeviceProfile {
+  name: string;
+  label: string;
+  width: number;
+  height: number;
+  isMobile: boolean;
+  hasTouch: boolean;
+  deviceScaleFactor: number;
+  userAgent: string;
+}
+
+/**
+ * These sites branch their markup on the device, server-side, so the profile
+ * decides which page is measured. Desktop leads: it is what agents are served.
+ */
+export const PROFILES: Record<string, DeviceProfile>;
+export const PROFILE_NAMES: string[];
+export const DEFAULT_PROFILE: string;
+export function resolveProfile(name?: string): DeviceProfile;
+
+/** Opens a context at the named profile, user-agent and viewport in step. */
+export function launchContext(browser: any, profileName?: string): Promise<any>;
 
 /**
  * Scan one URL in an existing context. Resolves to a measured page, or to

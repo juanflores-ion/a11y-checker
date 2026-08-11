@@ -2,7 +2,14 @@
 
 import { useState } from 'react';
 
-import type { PageResult } from '@/lib/model';
+import {
+  DEFAULT_VIEWPORT,
+  VIEWPORT_LABEL,
+  VIEWPORT_NAMES,
+  type PageResult,
+  type ViewportName,
+  type ViewportSpec,
+} from '@/lib/model';
 import { Eyebrow } from './Primitives';
 
 export interface ScanTarget {
@@ -20,6 +27,7 @@ interface Progress {
   done: number;
   total: number;
   current: string | null;
+  currentViewport: ViewportName | null;
   failures: number;
 }
 
@@ -39,10 +47,12 @@ interface Progress {
  */
 export function FullScanRunner({ targets }: { targets: ScanTarget[] }) {
   const [status, setStatus] = useState<Status>('idle');
+  const [viewports, setViewports] = useState<ViewportName[]>([...VIEWPORT_NAMES]);
   const [progress, setProgress] = useState<Progress>({
     done: 0,
-    total: targets.length,
+    total: targets.length * VIEWPORT_NAMES.length,
     current: null,
+    currentViewport: null,
     failures: 0,
   });
   const [error, setError] = useState<string | null>(null);
@@ -50,58 +60,73 @@ export function FullScanRunner({ targets }: { targets: ScanTarget[] }) {
   const [label, setLabel] = useState('');
 
   async function run() {
+    const total = targets.length * viewports.length;
     setStatus('running');
     setError(null);
     setRunFile(null);
-    setProgress({ done: 0, total: targets.length, current: null, failures: 0 });
+    setProgress({ done: 0, total, current: null, currentViewport: null, failures: 0 });
 
     const startedAt = new Date().toISOString();
-    const byBrand: Record<string, Record<string, PageResult>> = {};
+    const byViewport: Record<string, Record<string, Record<string, PageResult>>> = {};
+    const viewportSpecs: Record<string, ViewportSpec> = {};
     let axeVersion: string | null = null;
-    let viewport: unknown = null;
     let failures = 0;
+    let done = 0;
 
     try {
-      for (let i = 0; i < targets.length; i += BATCH_SIZE) {
-        const batch = targets.slice(i, i + BATCH_SIZE);
-        setProgress((p) => ({ ...p, current: batch[0].url }));
+      /**
+       * Profile is the outer loop, matching the CLI. Each request names the
+       * profile it wants, and the server pairs the user-agent with the viewport
+       * — these sites pick their markup from the user-agent server-side, so a
+       * mismatched pair measures a page no visitor is ever served.
+       */
+      for (const viewport of viewports) {
+        const byBrand: Record<string, Record<string, PageResult>> = {};
 
-        const res = await fetch('/api/scan', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ urls: batch.map((t) => t.url) }),
-        });
-        const body = await res.json().catch(() => null);
-        if (!res.ok) throw new Error(body?.error ?? `Scan failed with ${res.status}`);
+        for (let i = 0; i < targets.length; i += BATCH_SIZE) {
+          const batch = targets.slice(i, i + BATCH_SIZE);
+          setProgress((p) => ({ ...p, current: batch[0].url, currentViewport: viewport }));
 
-        viewport ??= body.viewport ?? null;
-        // Results come back in request order, so they pair positionally.
-        batch.forEach((target, n) => {
-          const result = body.results?.[n];
-          if (!result) return;
-          axeVersion ??= result.axeVersion ?? null;
-          if (result.error) failures += 1;
-          (byBrand[target.brand] ??= {})[target.key] = result;
-        });
+          const res = await fetch('/api/scan', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ urls: batch.map((t) => t.url), viewport }),
+          });
+          const body = await res.json().catch(() => null);
+          if (!res.ok) throw new Error(body?.error ?? `Scan failed with ${res.status}`);
 
-        setProgress((p) => ({
-          ...p,
-          done: Math.min(i + batch.length, targets.length),
-          failures,
-        }));
+          if (body.viewportSpec) viewportSpecs[viewport] = body.viewportSpec;
+          // Results come back in request order, so they pair positionally.
+          batch.forEach((target, n) => {
+            const result = body.results?.[n];
+            if (!result) return;
+            axeVersion ??= result.axeVersion ?? null;
+            if (result.error) failures += 1;
+            (byBrand[target.brand] ??= {})[target.key] = result;
+          });
+
+          done += batch.length;
+          setProgress((p) => ({ ...p, done: Math.min(done, total), failures }));
+        }
+
+        byViewport[viewport] = byBrand;
       }
 
       // Exactly the shape data/runs/*.json uses — see the data contract in the
       // README. Anything else here would not load.
+      const primaryViewport = viewports.includes(DEFAULT_VIEWPORT)
+        ? DEFAULT_VIEWPORT
+        : viewports[0];
       const run = {
         meta: {
           startedAt,
           finishedAt: new Date().toISOString(),
           axeVersion,
-          viewport,
+          primaryViewport,
+          viewports: viewportSpecs,
           ...(label.trim() ? { label: label.trim() } : {}),
         },
-        ...byBrand,
+        byViewport,
       };
       setRunFile(JSON.stringify(run, null, 2));
       setStatus('done');
@@ -109,8 +134,16 @@ export function FullScanRunner({ targets }: { targets: ScanTarget[] }) {
       setError(err instanceof Error ? err.message : String(err));
       setStatus('failed');
     } finally {
-      setProgress((p) => ({ ...p, current: null }));
+      setProgress((p) => ({ ...p, current: null, currentViewport: null }));
     }
+  }
+
+  function toggleViewport(v: ViewportName) {
+    setViewports((current) =>
+      current.includes(v)
+        ? current.filter((x) => x !== v)
+        : VIEWPORT_NAMES.filter((n) => n === v || current.includes(n))
+    );
   }
 
   function download() {
@@ -143,6 +176,32 @@ export function FullScanRunner({ targets }: { targets: ScanTarget[] }) {
           </p>
         </div>
       </div>
+
+      <fieldset className="mt-4">
+        <legend className="text-eyebrow font-medium text-muted">Device profiles</legend>
+        <p className="mt-1 max-w-measure text-xs leading-relaxed text-faint">
+          These sites serve different markup per device, so each profile is a separate
+          measurement rather than the same page at another width. Desktop is what agents are
+          served; mobile is what most people get. Scanning both doubles the time.
+        </p>
+        <div className="mt-2 flex flex-wrap gap-4">
+          {VIEWPORT_NAMES.map((v) => (
+            <label key={v} className="flex items-center gap-2 text-sm text-ink">
+              <input
+                type="checkbox"
+                checked={viewports.includes(v)}
+                disabled={status === 'running' || (viewports.length === 1 && viewports.includes(v))}
+                onChange={() => toggleViewport(v)}
+                className="accent-accent"
+              />
+              {VIEWPORT_LABEL[v]}
+              {v === 'desktop' ? (
+                <span className="text-faint">— what agents get</span>
+              ) : null}
+            </label>
+          ))}
+        </div>
+      </fieldset>
 
       <div className="mt-4 flex flex-wrap items-end gap-3">
         <label className="min-w-[14rem] flex-1">
@@ -178,8 +237,11 @@ export function FullScanRunner({ targets }: { targets: ScanTarget[] }) {
           </div>
           <p className="mt-2 flex flex-wrap items-center gap-x-3 text-xs text-muted">
             <span className="tnum">
-              {progress.done} of {progress.total} pages
+              {progress.done} of {progress.total} page scans
             </span>
+            {progress.currentViewport ? (
+              <span className="text-faint">{VIEWPORT_LABEL[progress.currentViewport]}</span>
+            ) : null}
             {progress.failures > 0 ? (
               <span className="text-critical tnum">
                 {progress.failures} couldn&apos;t be measured
@@ -205,7 +267,8 @@ export function FullScanRunner({ targets }: { targets: ScanTarget[] }) {
         <div className="mt-4 rounded-card border border-good/25 bg-good/[0.04] p-4">
           <Eyebrow className="text-good">Run complete</Eyebrow>
           <p className="mt-1.5 text-sm leading-relaxed text-ink">
-            {progress.total - progress.failures} of {progress.total} pages measured.
+            {progress.total - progress.failures} of {progress.total} page scans measured, across{' '}
+            {viewports.map((v) => VIEWPORT_LABEL[v]).join(' and ')}.
             {progress.failures > 0
               ? ' The pages that failed contribute zero and are flagged in the file — treat the totals as incomplete, and check targets.mjs, since a failure usually means a URL moved.'
               : ''}

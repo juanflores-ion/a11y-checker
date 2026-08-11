@@ -93,7 +93,7 @@ function parseUrls(input: unknown): { urls: string[]; error?: string } {
 }
 
 export async function POST(request: Request) {
-  let body: { urls?: unknown };
+  let body: { urls?: unknown; viewport?: unknown };
   try {
     body = await request.json();
   } catch {
@@ -102,6 +102,8 @@ export async function POST(request: Request) {
 
   const { urls, error } = parseUrls(body.urls);
   if (error) return NextResponse.json({ error }, { status: 400 });
+
+  const requestedViewport = body.viewport === undefined ? undefined : String(body.viewport);
 
   const startedAt = new Date().toISOString();
 
@@ -118,12 +120,32 @@ export async function POST(request: Request) {
    * import right here resolves from the function's own tree, which does have
    * it. One engine, two ways of reaching it, same measurement either way.
    */
-  const [{ chromium }, chromiumPack, { launchContext, scanPage, VIEWPORT }, axe] = await Promise.all([
+  const [
+    { chromium },
+    chromiumPack,
+    { launchContext, scanPage, PROFILES, PROFILE_NAMES, DEFAULT_PROFILE },
+    axe,
+  ] = await Promise.all([
     import('playwright-core'),
     import('@sparticuz/chromium').then((m) => m.default ?? m),
     import('../../../../scanner/core.mjs'),
     import('axe-core'),
   ]);
+
+  /**
+   * The profile isn't cosmetic here: these sites resolve their layout from the
+   * user-agent on the server, so scanning at the wrong one measures a different
+   * page. An unknown name is rejected rather than defaulted, because silently
+   * measuring something other than what was asked for is how a scan comes back
+   * clean about a page nobody looked at.
+   */
+  const viewport = requestedViewport ?? DEFAULT_PROFILE;
+  if (!PROFILES[viewport]) {
+    return NextResponse.json(
+      { error: `Unknown viewport “${viewport}”. Known viewports: ${PROFILE_NAMES.join(', ')}.` },
+      { status: 400 }
+    );
+  }
 
   const axeModule = axe as unknown as { source?: string; default?: { source?: string } };
   const axeSource = axeModule.source ?? axeModule.default?.source;
@@ -158,18 +180,24 @@ export async function POST(request: Request) {
   }
 
   try {
-    const context = await launchContext(browser);
+    const context = await launchContext(browser, viewport);
     const results = [];
     // Sequential on purpose: concurrent Chromium pages in a function's memory
     // budget is how you turn a slow scan into a failed one.
     for (const url of urls) {
       results.push(await scanPage(context, url, { axeSource }));
     }
+    const profile = PROFILES[viewport];
     return NextResponse.json({
       startedAt,
       finishedAt: new Date().toISOString(),
       results,
-      viewport: VIEWPORT,
+      viewport,
+      viewportSpec: {
+        width: profile.width,
+        height: profile.height,
+        isMobile: profile.isMobile,
+      },
       scannedBy: 'hosted',
     });
   } catch (err) {
@@ -181,11 +209,14 @@ export async function POST(request: Request) {
 
 /** Mirrors the standalone server's /health so the client can probe either. */
 export async function GET() {
+  const { PROFILE_NAMES, DEFAULT_PROFILE } = await import('../../../../scanner/core.mjs');
   return NextResponse.json({
     ok: true,
     busy: false,
     hosted: true,
     maxUrls: MAX_URLS,
     allowedHosts: allowedHosts(),
+    viewports: PROFILE_NAMES,
+    defaultViewport: DEFAULT_PROFILE,
   });
 }

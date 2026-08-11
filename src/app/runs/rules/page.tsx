@@ -7,21 +7,27 @@ import {
   probeTotals,
   ruleTotals,
 } from '@/lib/aggregate';
-import { BRANDS, loadRuns, pageKeysUnion } from '@/lib/loadRuns';
+import { BRANDS, loadRuns, pageKeysUnion, runAtViewport, viewKey } from '@/lib/loadRuns';
 
 export default function RulesPage() {
   const runs = loadRuns();
 
+  // Keyed by run and viewport — the same run holds two different sets of
+  // numbers, because the sites serve different markup per device.
   const byRun: Record<string, RulesRunData> = {};
   for (const run of runs) {
-    byRun[run.id] = {
-      totals: Object.fromEntries(BRANDS.map((b) => [b, ruleTotals(run, b)])),
-      perPage: Object.fromEntries(BRANDS.map((b) => [b, perPageRuleTotals(run, b)])),
-      pageKeys: Object.fromEntries(BRANDS.map((b) => [b, Object.keys(run[b] ?? {})])),
-      probeTotals: Object.fromEntries(BRANDS.map((b) => [b, probeTotals(run, b)])),
-      probePerPage: Object.fromEntries(BRANDS.map((b) => [b, perPageProbeTotals(run, b)])),
-      hasProbes: BRANDS.some((b) => hasProbeData(run, b)),
-    };
+    for (const viewport of run.viewports) {
+      const view = runAtViewport(run, viewport);
+      if (!view) continue;
+      byRun[viewKey(run.id, viewport)] = {
+        totals: Object.fromEntries(BRANDS.map((b) => [b, ruleTotals(view, b)])),
+        perPage: Object.fromEntries(BRANDS.map((b) => [b, perPageRuleTotals(view, b)])),
+        pageKeys: Object.fromEntries(BRANDS.map((b) => [b, Object.keys(view[b] ?? {})])),
+        probeTotals: Object.fromEntries(BRANDS.map((b) => [b, probeTotals(view, b)])),
+        probePerPage: Object.fromEntries(BRANDS.map((b) => [b, perPageProbeTotals(view, b)])),
+        hasProbes: BRANDS.some((b) => hasProbeData(view, b)),
+      };
+    }
   }
 
   return (

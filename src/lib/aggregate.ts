@@ -308,6 +308,17 @@ export function scorecard(run: Run, brand: Brand): ScorecardRow[] {
       note: 'Measured by our own probe — no rule engine can see these.',
     },
     {
+      key: 'unreachable-nav',
+      label: 'Navigation links an agent cannot find',
+      value: navReach(run, brand).hidden,
+      target: 0,
+      /** Same reasoning as ghost-controls: absence of the check isn't a pass. */
+      met: hasReachData(run, brand) ? navReach(run, brand).hidden === 0 : null,
+      inScope: true,
+      notMeasured: !hasReachData(run, brand),
+      note: 'Out of the accessibility tree with nothing announcing them. Hover-only menus do this.',
+    },
+    {
       key: 'region',
       label: 'Content outside any labelled region',
       value: get('region'),
@@ -437,6 +448,59 @@ export function hiddenPanelStats(
   return { panels, controls, mouseOnly };
 }
 
+/**
+ * Content out of the accessibility tree that nothing in the tree announces.
+ *
+ * The counterpart to `hiddenPanelStats`, and the two never overlap: that one
+ * covers regions still in the tree but off screen, this one regions genuinely
+ * out of it. A page tends to fail one way or the other depending on the
+ * viewport — the same menu is an off-screen drawer on mobile and a
+ * `display: none` block on desktop.
+ */
+export function unreachableStats(
+  run: Run,
+  brand: Brand
+): { panels: number; unannouncedPanels: number; controls: number; links: number } {
+  let panels = 0;
+  let unannouncedPanels = 0;
+  let controls = 0;
+  let links = 0;
+  for (const [, page] of scannedPages(run, brand)) {
+    const t = page.unreachableTotals;
+    if (!t) continue;
+    panels += t.panels;
+    unannouncedPanels += t.unannouncedPanels;
+    controls += t.unannouncedFocusable;
+    links += t.unannouncedLinks;
+  }
+  return { panels, unannouncedPanels, controls, links };
+}
+
+/**
+ * Of everywhere the pages say you can go, how much can an agent see?
+ *
+ * Summed across pages, so a nav repeated on ten pages counts ten times — which
+ * is right: it's ten pages from which an agent can't find its way onward.
+ */
+export function navReach(
+  run: Run,
+  brand: Brand
+): { total: number; inTree: number; hidden: number } {
+  let total = 0;
+  let inTree = 0;
+  for (const [, page] of scannedPages(run, brand)) {
+    if (!page.navLinks) continue;
+    total += page.navLinks.total;
+    inTree += page.navLinks.inTree;
+  }
+  return { total, inTree, hidden: total - inTree };
+}
+
+/** True when this run measured reachability — its absence isn't a zero. */
+export function hasReachData(run: Run, brand: Brand): boolean {
+  return scannedPages(run, brand).some(([, p]) => p.navLinks !== undefined);
+}
+
 /** rule-style per-page breakdown for the probe-based checks. */
 export function perPageProbeTotals(
   run: Run,
@@ -446,6 +510,7 @@ export function perPageProbeTotals(
     'ghost-controls': {},
     'hidden-panel-controls': {},
     'clickable-no-role': {},
+    'unreachable-nav': {},
   };
   for (const [key, page] of scannedPages(run, brand)) {
     const ghosts = (page.ghostControls ?? []).length;
@@ -453,6 +518,8 @@ export function perPageProbeTotals(
     const trapped = (page.hiddenPanels ?? []).reduce((sum, h) => sum + h.focusable, 0);
     if (trapped) out['hidden-panel-controls'][key] = trapped;
     if (page.clickableNoRole) out['clickable-no-role'][key] = page.clickableNoRole;
+    const hidden = page.navLinks ? page.navLinks.total - page.navLinks.inTree : 0;
+    if (hidden) out['unreachable-nav'][key] = hidden;
   }
   return out;
 }
@@ -479,6 +546,12 @@ export const PROBE_CHECKS = [
     note: 'Still in the accessibility tree and still tabbable, but not on screen.',
   },
   {
+    id: 'unreachable-nav',
+    label: 'Navigation links an agent cannot find',
+    impact: 'critical' as const,
+    note: 'In the page, out of the accessibility tree, and nothing in the tree says they exist.',
+  },
+  {
     id: 'clickable-no-role',
     label: 'Clickable elements with no role',
     impact: 'moderate' as const,
@@ -491,6 +564,7 @@ export function probeTotals(run: Run, brand: Brand): Record<string, number> {
   return {
     'ghost-controls': ghostControlCount(run, brand),
     'hidden-panel-controls': panels.controls,
+    'unreachable-nav': navReach(run, brand).hidden,
     'clickable-no-role': clickableNoRoleCount(run, brand),
   };
 }
@@ -557,6 +631,18 @@ export function resolveMetric(run: Run, brand: Brand, ref: MetricRef): ResolvedM
       return {
         label: ref.label,
         value: hiddenPanelStats(run, brand, { excludeLargest: true }).controls,
+        misleadingZero: false,
+      };
+    case 'nav-links-hidden':
+      return { label: ref.label, value: navReach(run, brand).hidden, misleadingZero: false };
+    case 'nav-links-in-tree':
+      return { label: ref.label, value: navReach(run, brand).inTree, misleadingZero: false };
+    case 'nav-links-total':
+      return { label: ref.label, value: navReach(run, brand).total, misleadingZero: false };
+    case 'unannounced-panels':
+      return {
+        label: ref.label,
+        value: unreachableStats(run, brand).unannouncedPanels,
         misleadingZero: false,
       };
   }

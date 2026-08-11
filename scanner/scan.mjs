@@ -21,7 +21,14 @@ import path from 'node:path';
 
 import { chromium } from 'playwright';
 
-import { launchContext, launchOptions, scanPage } from './core.mjs';
+import {
+  DEFAULT_PROFILE,
+  PROFILES,
+  PROFILE_NAMES,
+  launchContext,
+  launchOptions,
+  scanPage,
+} from './core.mjs';
 import { targetList } from './targets.mjs';
 
 /* ------------------------------------------------------------------ */
@@ -29,12 +36,13 @@ import { targetList } from './targets.mjs';
 /* ------------------------------------------------------------------ */
 
 function parseArgs(argv) {
-  const args = { out: 'data/runs', label: undefined, only: undefined };
+  const args = { out: 'data/runs', label: undefined, only: undefined, viewports: undefined };
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i];
     if (arg === '--out') args.out = argv[++i];
     else if (arg === '--label') args.label = argv[++i];
     else if (arg === '--only') args.only = argv[++i]; // brand or brand:pageKey, for debugging
+    else if (arg === '--viewport') args.viewports = argv[++i].split(',').map((s) => s.trim());
     else if (arg === '--help' || arg === '-h') args.help = true;
   }
   return args;
@@ -44,13 +52,18 @@ const USAGE = `
 Agent-accessibility scanner
 
   node scanner/scan.mjs [--out DIR] [--label TEXT] [--only BRAND[:PAGE]]
+                        [--viewport desktop,mobile]
 
-  --out    Directory to write the run file into. Default: data/runs
-  --label  Free text stored in meta.label and annotated on the trend chart,
-           e.g. "baseline", "after phase 1".
-  --only   Scan a subset. "techinsurance" or "techinsurance:home".
-           Produces a partial run — fine for debugging, don't commit it,
-           because missing pages make every total look better than it is.
+  --out       Directory to write the run file into. Default: data/runs
+  --label     Free text stored in meta.label and annotated on the trend chart,
+              e.g. "baseline", "after phase 1".
+  --only      Scan a subset. "techinsurance" or "techinsurance:home".
+              Produces a partial run — fine for debugging, don't commit it,
+              because missing pages make every total look better than it is.
+  --viewport  Which device profiles to measure. Default: ${PROFILE_NAMES.join(',')}.
+              These sites serve different markup per device, so each profile is
+              a different page, not a different framing of one. Desktop is what
+              agents are served and is the primary.
 
 For an arbitrary URL not in the fixed target list, use the live scan server
 instead: node scanner/server.mjs
@@ -87,50 +100,79 @@ async function main() {
     console.error(`Partial run: ${targets.length} target(s). Do not treat totals as complete.\n`);
   }
 
-  const startedAt = new Date();
-  const browser = await chromium.launch(launchOptions());
-  const context = await launchContext(browser);
-
-  const result = { insureon: {}, techinsurance: {} };
-  let axeVersion = null;
-  let failures = 0;
-
-  for (const [i, target] of targets.entries()) {
-    const progress = `[${String(i + 1).padStart(2)}/${targets.length}]`;
-    const r = await scanPage(context, target.url);
-
-    if (r.error) {
-      failures += 1;
-      result[target.brand][target.key] = { url: r.url, error: r.error };
-      console.error(`${progress} ${target.brand}/${target.key} — FAILED: ${r.error}`);
-    } else {
-      // axeVersion travels with every scanPage() result so a live scan can
-      // report it too, but the run file keeps it once, at the meta level.
-      const { axeVersion: v, ...page } = r;
-      axeVersion ??= v;
-      result[target.brand][target.key] = page;
-
-      const nodes = page.violations.reduce((sum, viol) => sum + viol.n, 0);
-      console.error(
-        `${progress} ${target.brand}/${target.key} — ${page.violations.length} rules, ${nodes} nodes, ` +
-          `phantom ${page.phantomMenu ? page.phantomMenu.focusable : 'n/a'}`
-      );
+  const viewports = args.viewports ?? PROFILE_NAMES;
+  for (const name of viewports) {
+    if (!PROFILES[name]) {
+      console.error(`Unknown viewport “${name}”. Known: ${PROFILE_NAMES.join(', ')}`);
+      process.exitCode = 1;
+      return;
     }
   }
 
-  await context.close();
+  const startedAt = new Date();
+  const browser = await chromium.launch(launchOptions());
+
+  const byViewport = {};
+  let axeVersion = null;
+  let failures = 0;
+
+  /**
+   * One context per profile, and every page measured in both before the file
+   * is written. Profile is the outer loop because a context carries the
+   * user-agent: it has to match its viewport, or the server renders one layout
+   * and the client hydrates into the other.
+   */
+  for (const viewport of viewports) {
+    const context = await launchContext(browser, viewport);
+    const result = { insureon: {}, techinsurance: {} };
+
+    for (const [i, target] of targets.entries()) {
+      const progress = `${viewport.padEnd(7)} [${String(i + 1).padStart(2)}/${targets.length}]`;
+      const r = await scanPage(context, target.url);
+
+      if (r.error) {
+        failures += 1;
+        result[target.brand][target.key] = { url: r.url, error: r.error };
+        console.error(`${progress} ${target.brand}/${target.key} — FAILED: ${r.error}`);
+      } else {
+        // axeVersion travels with every scanPage() result so a live scan can
+        // report it too, but the run file keeps it once, at the meta level.
+        const { axeVersion: v, ...page } = r;
+        axeVersion ??= v;
+        result[target.brand][target.key] = page;
+
+        const nodes = page.violations.reduce((sum, viol) => sum + viol.n, 0);
+        const nav = page.navLinks ? `nav ${page.navLinks.inTree}/${page.navLinks.total}` : 'nav n/a';
+        console.error(
+          `${progress} ${target.brand}/${target.key} — ${page.violations.length} rules, ${nodes} nodes, ` +
+            `phantom ${page.phantomMenu ? page.phantomMenu.focusable : 'n/a'}, ${nav}`
+        );
+      }
+    }
+
+    byViewport[viewport] = result;
+    await context.close();
+  }
+
   await browser.close();
 
+  const primaryViewport = viewports.includes(DEFAULT_PROFILE) ? DEFAULT_PROFILE : viewports[0];
   const finishedAt = new Date();
   const run = {
     meta: {
       startedAt: startedAt.toISOString(),
       finishedAt: finishedAt.toISOString(),
       axeVersion,
-      viewport: { width: 390, height: 844, isMobile: true },
+      primaryViewport,
+      viewports: Object.fromEntries(
+        viewports.map((v) => [
+          v,
+          { width: PROFILES[v].width, height: PROFILES[v].height, isMobile: PROFILES[v].isMobile },
+        ])
+      ),
       ...(args.label ? { label: args.label } : {}),
     },
-    ...result,
+    byViewport,
   };
 
   const outDir = path.resolve(process.cwd(), args.out);
@@ -140,7 +182,8 @@ async function main() {
 
   const seconds = Math.round((finishedAt - startedAt) / 1000);
   console.error(
-    `\nWrote ${path.relative(process.cwd(), outPath)} — ${targets.length} pages in ${seconds}s` +
+    `\nWrote ${path.relative(process.cwd(), outPath)} — ${targets.length} pages ` +
+      `× ${viewports.join(', ')} in ${seconds}s` +
       (failures ? `, ${failures} failed` : '')
   );
   console.error('Rebuild the viewer to pick it up: npm run build');

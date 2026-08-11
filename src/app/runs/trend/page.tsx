@@ -1,30 +1,55 @@
 import { TrendClient, type TrendPoint } from '@/components/TrendClient';
-import { allRuleIds, inScopeNodes, phantomFocusable, ruleTotals, totalNodes } from '@/lib/aggregate';
-import { BRANDS, formatRunShort, loadRuns } from '@/lib/loadRuns';
+import {
+  allRuleIds,
+  inScopeNodes,
+  navReach,
+  phantomFocusable,
+  ruleTotals,
+  totalNodes,
+} from '@/lib/aggregate';
+import { BRANDS, formatRunShort, loadRuns, runAtViewport, viewKey } from '@/lib/loadRuns';
 
 export default function TrendPage() {
   const runs = loadRuns();
   const ruleIds = allRuleIds(runs, [...BRANDS]);
 
-  const points: TrendPoint[] = runs.map((run) => {
-    const point: TrendPoint = {
-      runId: run.id,
-      short: formatRunShort(run),
-      startedAt: run.meta.startedAt,
-      label: run.meta.label ?? null,
-      values: {},
-    };
-    for (const brand of BRANDS) {
-      const totals = ruleTotals(run, brand);
-      point.values[brand] = {
-        total: totalNodes(run, brand),
-        'in-scope': inScopeNodes(run, brand),
-        phantom: phantomFocusable(run, brand),
-        ...Object.fromEntries(ruleIds.map((id) => [`rule:${id}`, totals[id] ?? 0])),
+  /**
+   * One point per run *per viewport*, and the chart plots a single viewport at
+   * a time.
+   *
+   * A line joining a mobile reading to a desktop one would be the most
+   * convincing wrong number this tool could produce: the desktop nav alone
+   * differs by ~56 links, so a viewport change would read as a dramatic
+   * regression or fix that nobody made. Runs that never measured the selected
+   * profile are absent from the series rather than interpolated.
+   */
+  const points: TrendPoint[] = [];
+  for (const run of runs) {
+    for (const viewport of run.viewports) {
+      const view = runAtViewport(run, viewport);
+      if (!view) continue;
+      const point: TrendPoint = {
+        runId: run.id,
+        key: viewKey(run.id, viewport),
+        viewport,
+        short: formatRunShort(run),
+        startedAt: run.meta.startedAt,
+        label: run.meta.label ?? null,
+        values: {},
       };
+      for (const brand of BRANDS) {
+        const totals = ruleTotals(view, brand);
+        point.values[brand] = {
+          total: totalNodes(view, brand),
+          'in-scope': inScopeNodes(view, brand),
+          phantom: phantomFocusable(view, brand),
+          'unreachable-nav': navReach(view, brand).hidden,
+          ...Object.fromEntries(ruleIds.map((id) => [`rule:${id}`, totals[id] ?? 0])),
+        };
+      }
+      points.push(point);
     }
-    return point;
-  });
+  }
 
   return <TrendClient points={points} ruleIds={ruleIds} />;
 }
