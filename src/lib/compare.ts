@@ -31,8 +31,16 @@ export interface PageDiff {
   totalChange: number;
   phantomBefore: number;
   phantomAfter: number;
-  navHiddenBefore: number;
-  navHiddenAfter: number;
+  /**
+   * Links out of the accessibility tree that nothing announces.
+   *
+   * Deliberately not "links out of the tree": a menu closed behind a proper
+   * disclosure button puts its links out of the tree, and that is the fix, not
+   * the fault. Diffing the broader figure made a corrected build look like a
+   * 680-link regression.
+   */
+  unfindableBefore: number;
+  unfindableAfter: number;
   resolvedCount: number;
   newCount: number;
   /**
@@ -100,8 +108,8 @@ export function diffPages(
       ? { before: viewports.before, after: viewports.after }
       : undefined;
 
-  const navHidden = (page: ScannedPage | null) =>
-    page?.navLinks ? page.navLinks.total - page.navLinks.inTree : 0;
+  const unfindable = (page: ScannedPage | null) =>
+    page?.unreachableTotals?.unannouncedLinks ?? 0;
 
   const beforeCounts = ruleCounts(beforePage);
   const afterCounts = ruleCounts(afterPage);
@@ -128,8 +136,8 @@ export function diffPages(
     totalChange: totalNodes(afterPage) - totalNodes(beforePage),
     phantomBefore: beforePage?.phantomMenu?.focusable ?? 0,
     phantomAfter: afterPage?.phantomMenu?.focusable ?? 0,
-    navHiddenBefore: navHidden(beforePage),
-    navHiddenAfter: navHidden(afterPage),
+    unfindableBefore: unfindable(beforePage),
+    unfindableAfter: unfindable(afterPage),
     resolvedCount: rules.filter((r) => r.status === 'resolved').length,
     newCount: rules.filter((r) => r.status === 'new').length,
     ...(mismatch ? { viewportMismatch: mismatch } : {}),

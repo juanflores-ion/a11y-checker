@@ -308,15 +308,29 @@ export function scorecard(run: Run, brand: Brand): ScorecardRow[] {
       note: 'Measured by our own probe — no rule engine can see these.',
     },
     {
-      key: 'unreachable-nav',
-      label: 'Navigation links an agent cannot find',
-      value: navReach(run, brand).hidden,
+      key: 'unfindable-links',
+      label: 'Links an agent cannot find',
+      /**
+       * Unannounced only — and that distinction is the whole check.
+       *
+       * This row first shipped reading `navReach().hidden`, every link out of
+       * the accessibility tree. That is wrong in the one case that matters
+       * most: a menu hidden *correctly*, behind a button that says what it
+       * opens, is content an agent can find and use. Measured against a fixed
+       * build of Insureon, the old formula read 680 where the true figure was
+       * 51 — it would have reported a completed fix as a catastrophic
+       * regression, which is precisely the mistake this tool exists to avoid.
+       *
+       * Being out of the tree is not the defect. Being out of the tree with
+       * nothing in the tree announcing it is.
+       */
+      value: unreachableStats(run, brand).links,
       target: 0,
       /** Same reasoning as ghost-controls: absence of the check isn't a pass. */
-      met: hasReachData(run, brand) ? navReach(run, brand).hidden === 0 : null,
+      met: hasReachData(run, brand) ? unreachableStats(run, brand).links === 0 : null,
       inScope: true,
       notMeasured: !hasReachData(run, brand),
-      note: 'Out of the accessibility tree with nothing announcing them. Hover-only menus do this.',
+      note: 'Hidden with nothing announcing them. A hover-only menu does this; a disclosure button does not.',
     },
     {
       key: 'region',
@@ -510,7 +524,7 @@ export function perPageProbeTotals(
     'ghost-controls': {},
     'hidden-panel-controls': {},
     'clickable-no-role': {},
-    'unreachable-nav': {},
+    'unfindable-links': {},
   };
   for (const [key, page] of scannedPages(run, brand)) {
     const ghosts = (page.ghostControls ?? []).length;
@@ -518,8 +532,8 @@ export function perPageProbeTotals(
     const trapped = (page.hiddenPanels ?? []).reduce((sum, h) => sum + h.focusable, 0);
     if (trapped) out['hidden-panel-controls'][key] = trapped;
     if (page.clickableNoRole) out['clickable-no-role'][key] = page.clickableNoRole;
-    const hidden = page.navLinks ? page.navLinks.total - page.navLinks.inTree : 0;
-    if (hidden) out['unreachable-nav'][key] = hidden;
+    const unfindable = page.unreachableTotals?.unannouncedLinks ?? 0;
+    if (unfindable) out['unfindable-links'][key] = unfindable;
   }
   return out;
 }
@@ -546,10 +560,10 @@ export const PROBE_CHECKS = [
     note: 'Still in the accessibility tree and still tabbable, but not on screen.',
   },
   {
-    id: 'unreachable-nav',
-    label: 'Navigation links an agent cannot find',
+    id: 'unfindable-links',
+    label: 'Links an agent cannot find',
     impact: 'critical' as const,
-    note: 'In the page, out of the accessibility tree, and nothing in the tree says they exist.',
+    note: 'In the page, out of the accessibility tree, and nothing in the tree says they exist. A menu behind a proper disclosure button is not counted — that one can be found.',
   },
   {
     id: 'clickable-no-role',
@@ -564,7 +578,7 @@ export function probeTotals(run: Run, brand: Brand): Record<string, number> {
   return {
     'ghost-controls': ghostControlCount(run, brand),
     'hidden-panel-controls': panels.controls,
-    'unreachable-nav': navReach(run, brand).hidden,
+    'unfindable-links': unreachableStats(run, brand).links,
     'clickable-no-role': clickableNoRoleCount(run, brand),
   };
 }
@@ -633,7 +647,15 @@ export function resolveMetric(run: Run, brand: Brand, ref: MetricRef): ResolvedM
         value: hiddenPanelStats(run, brand, { excludeLargest: true }).controls,
         misleadingZero: false,
       };
+    case 'unfindable-links':
+      return { label: ref.label, value: unreachableStats(run, brand).links, misleadingZero: false };
     case 'nav-links-hidden':
+      /**
+       * Descriptive, not a verdict: how much of the nav is out of the tree,
+       * whether or not something announces it. Read it next to
+       * `unfindable-links` — a big number here with a zero there is a menu that
+       * is correctly closed, which is the shape a fixed site has.
+       */
       return { label: ref.label, value: navReach(run, brand).hidden, misleadingZero: false };
     case 'nav-links-in-tree':
       return { label: ref.label, value: navReach(run, brand).inTree, misleadingZero: false };
