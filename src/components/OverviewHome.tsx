@@ -24,6 +24,7 @@ export function OverviewHome({
   runLabel,
   runNote,
   viewport,
+  viewportLabel,
   runCount,
 }: {
   sites: SiteCard[];
@@ -31,6 +32,7 @@ export function OverviewHome({
   runLabel: string | null;
   runNote: string | null;
   viewport: { width: number; height: number; isMobile: boolean } | null;
+  viewportLabel: string | null;
   runCount: number;
 }) {
   return (
@@ -49,7 +51,8 @@ export function OverviewHome({
           <p className="mt-4 text-xs text-faint">
             Latest measurement of production: {runLabel}
             {runNote ? ` · ${runNote}` : ''}
-            {viewport ? ` · ${viewport.width}×${viewport.height}` : ''} ·{' '}
+            {viewportLabel ? ` · ${viewportLabel}` : ''}
+            {viewport ? ` ${viewport.width}×${viewport.height}` : ''} ·{' '}
             {sites[0]?.pagesScanned ?? 0} page types per site
           </p>
         ) : (
@@ -251,9 +254,15 @@ function Footer({ runCount, pagesScanned }: { runCount: number; pagesScanned: nu
       </h2>
       <div className="mt-3 grid gap-x-8 gap-y-4 text-sm leading-relaxed text-muted sm:grid-cols-2">
         <p>
-          Each page loads in a real browser at a mobile viewport and is audited with axe-core —
-          the same engine behind PageSpeed Insights, so the numbers line up with what Google
-          reports. {pagesScanned > 0 ? `${pagesScanned} page types per site.` : ''}
+          Each page loads in a real browser and is audited with axe-core — the same engine
+          behind PageSpeed Insights, so the numbers line up with what Google reports.{' '}
+          {pagesScanned > 0 ? `${pagesScanned} page types per site.` : ''}
+        </p>
+        <p>
+          Every page is measured twice, on desktop and on mobile. These sites choose their
+          markup from the device before the page is even sent, so the two aren&apos;t one page
+          at two widths — they&apos;re different pages that fail in different ways. Desktop is
+          what an agent is served.
         </p>
         <p>
           The scanner never clicks, hovers or scrolls. The moment it opens a menu the counts

@@ -3,7 +3,14 @@
 import { useEffect, useRef, useState } from 'react';
 
 import { diffPages, pairUrls, type PageDiff } from '@/lib/compare';
-import { isFailedPage, type PageResult } from '@/lib/model';
+import {
+  DEFAULT_VIEWPORT,
+  VIEWPORT_LABEL,
+  VIEWPORT_NAMES,
+  isFailedPage,
+  type PageResult,
+  type ViewportName,
+} from '@/lib/model';
 import { SITES, productionUrls } from '@/lib/sites';
 import { CompareCard } from './CompareCard';
 import { Eyebrow } from './Primitives';
@@ -113,6 +120,15 @@ export function LiveScanClient({ mode }: { mode: Mode }) {
   const [diffs, setDiffs] = useState<PageDiff[] | null>(null);
 
   const [scannedAt, setScannedAt] = useState<string | null>(null);
+  /**
+   * One profile for the whole scan, and in Compare both sides use it.
+   *
+   * These sites branch their markup on the device server-side, so a before/after
+   * taken at two profiles would diff two different pages — the desktop nav alone
+   * accounts for ~56 links — and every row of that diff would be noise dressed
+   * up as a result.
+   */
+  const [viewport, setViewport] = useState<ViewportName>(DEFAULT_VIEWPORT);
   const abortRef = useRef<AbortController | null>(null);
 
   // `localStorage` and `fetch` don't exist while this page is prerendered for
@@ -160,7 +176,7 @@ export function LiveScanClient({ mode }: { mode: Mode }) {
       const res = await fetch(endpoints(serverUrl).scan, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ urls }),
+        body: JSON.stringify({ urls, viewport }),
         signal: controller.signal,
       });
       const body = await res.json().catch(() => null);
@@ -303,12 +319,30 @@ export function LiveScanClient({ mode }: { mode: Mode }) {
           <p className="text-eyebrow font-medium text-muted">
             {mode === 'scan' ? 'URLs to measure' : 'Two versions of the same pages'}
           </p>
-          <ServerStatus
-            serverUrl={serverUrl}
-            health={health}
-            onServerUrlChange={saveServerUrl}
-            onRecheck={() => checkHealth(serverUrl)}
-          />
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+            <label className="flex items-center gap-2">
+              <span className="text-eyebrow font-medium text-muted">Device</span>
+              <select
+                value={viewport}
+                onChange={(e) => setViewport(e.target.value as ViewportName)}
+                disabled={busy}
+                className="rounded-card border border-rule bg-card px-2 py-1.5 font-mono text-sm text-ink hover:border-accent disabled:opacity-60"
+              >
+                {VIEWPORT_NAMES.map((v) => (
+                  <option key={v} value={v}>
+                    {VIEWPORT_LABEL[v]}
+                    {v === 'desktop' ? ' — what agents get' : ''}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <ServerStatus
+              serverUrl={serverUrl}
+              health={health}
+              onServerUrlChange={saveServerUrl}
+              onRecheck={() => checkHealth(serverUrl)}
+            />
+          </div>
         </div>
 
         <div className="p-5">

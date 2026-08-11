@@ -20,6 +20,7 @@ export interface BrandSnapshot {
   passRatio: { passed: number; total: number };
   mainCoverage: { withMain: number; scanned: number };
   nameless: { buttons: number; links: number; emptyHref: number };
+  navReach: { total: number; inTree: number; hidden: number };
   failed: Array<{ key: string; url: string; error: string }>;
 }
 
@@ -32,14 +33,14 @@ export function OverviewClient({
   snapshots: Snapshots;
   runOrder: string[];
 }) {
-  const { currentId, compareId, current, compare, runs } = useRuns();
+  const { currentId, currentKey, compareKey, current, compare, runs } = useRuns();
 
   if (runs.length === 0) {
     return <EmptyState />;
   }
 
-  const now = snapshots[currentId];
-  const before = compareId ? snapshots[compareId] : null;
+  const now = snapshots[currentKey];
+  const before = compareKey ? snapshots[compareKey] : null;
   if (!now) return <EmptyState />;
 
   // Sparkline covers every run up to and including the one being viewed.

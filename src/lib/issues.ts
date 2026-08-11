@@ -76,7 +76,12 @@ export type MetricRef =
   | { kind: 'hidden-panels'; label: string }
   | { kind: 'hidden-panel-controls'; label: string }
   /** Hidden panels excluding the largest one — the mega-menu is counted separately. */
-  | { kind: 'secondary-hidden-panel-controls'; label: string };
+  | { kind: 'secondary-hidden-panel-controls'; label: string }
+  // Added with the desktop profile: content out of the tree that nothing announces.
+  | { kind: 'nav-links-hidden'; label: string }
+  | { kind: 'nav-links-in-tree'; label: string }
+  | { kind: 'nav-links-total'; label: string }
+  | { kind: 'unannounced-panels'; label: string };
 
 export interface CodeSampleRef {
   caption: string;
@@ -407,27 +412,38 @@ export const ISSUES: Issue[] = [
   },
 
   {
-    id: 'mega-menu-in-ssr',
-    title: 'The mobile mega-menu ships in the HTML at every screen size',
-    severity: 'serious',
-    brands: ['insureon'],
-    detection: 'manual',
+    id: 'hover-only-navigation',
+    title: 'On desktop, most of the navigation is invisible to an agent',
+    severity: 'blocking',
+    brands: ['insureon', 'techinsurance'],
+    detection: 'scanner',
     whatBreaks:
-      'Reported during the code audit: the server was thought to send the mobile mega-menu markup to every visitor, desktop included. Not yet reproduced by measurement — treat this one as unconfirmed.',
+      'The desktop mega-menu is hidden with display:none until a mouse hovers it, and nothing else on the page says those destinations exist. An agent reading the home page finds a handful of navigation links instead of the full set — the rest are in the HTML but absent from the accessibility tree.',
     whyItMatters:
-      'Agents frequently read the server HTML rather than rendering the page, so markup that looks mobile-only can still reach them. That is why it was worth raising — but the evidence for it is currently weaker than for anything else on this list.',
+      'This is the layout agents are actually served. Measured against production, a desktop browser, an unrecognised user-agent and a request with no user-agent at all are all sent the desktop markup; only a recognised mobile user-agent gets the mobile one. So the version an assistant sees is the version where most of the site map is missing, and it cannot browse to pages it never learns about. It also cannot hover — there is no pointer to hover with.',
     technical:
-      'The audit attributed this to the Media component falling back to the mobile branch when resolving the source breakpoint. A probe written to confirm it was withdrawn: fetching each home page with desktop and mobile user agents shows the servers DO vary by device (desktop receives 4-5 mega-menu blocks, mobile 1), so the desktop HTML appears to carry the desktop menu rather than a leaked mobile one. That does not disprove the original finding — both menus share a class name, so counting blocks cannot tell them apart — but nothing here has been demonstrated. Re-check the component directly before actioning it.',
-    metrics: [],
-    sources: ['Media component — source breakpoint fallback'],
+      'Sitecore resolves a deviceLayout server-side from the user-agent, and Navigation.tsx branches on it through the Media component, rendering exactly one of MobileMenu/TabletMenu/DesktopMenu. On desktop the mega-menu panels are display:none until :hover, which removes them from the accessibility tree entirely. That is why the other probes never reported it: they all skip content properly out of the tree, on the reasoning that a closed menu should be. The distinction that matters is not whether content is hidden but whether anything in the tree announces it — a disclosure button with aria-expanded is a promise an agent can act on, a :hover rule is not. None of these panels have one. Note this is the mirror image of the mobile failure, not a duplicate of it: on mobile the same links are in the tree but trapped off-screen in the drawer.',
+    metrics: [
+      { kind: 'nav-links-hidden', label: 'Navigation links an agent cannot find' },
+      { kind: 'nav-links-in-tree', label: 'Navigation links it can find' },
+      { kind: 'nav-links-total', label: 'Navigation links in the page' },
+      { kind: 'unannounced-panels', label: 'Hidden regions nothing announces' },
+    ],
+    sources: [
+      'page-components/Navigation/Navigation.tsx',
+      'components/Media/index.tsx — breakpoint resolution',
+      'page-components/Navigation/DesktopMenu/MegaMenu/styles.module.scss',
+    ],
     fix: {
-      summary: 'Only send the mobile menu markup when it is actually needed.',
-      technical: 'Correct the breakpoint resolution so the SSR branch matches the requested viewport.',
-      risk: 'Touches server rendering — needs a check across viewports that the right menu renders.',
+      summary:
+        'Make the menu open from the keyboard, and say what it controls, instead of relying on hover.',
+      technical:
+        'Give each top-level menu item a real button with aria-expanded and aria-controls pointing at its panel, toggle the panel on click and focus as well as hover, and keep the panel display:none while closed. The hiding is correct — what is missing is the control that announces it.',
+      risk: 'Touches the primary navigation on every page, and the hover interaction has to keep working for mouse users.',
       riskLevel: 'medium',
     },
     verify:
-      'Not verifiable by grepping for the class name — both menus use it. Read the Media component breakpoint resolution, or diff desktop against mobile server HTML on the submenu contents rather than the wrapper.',
+      'Re-scan at the desktop profile and check that navigation links in the tree matches the total. By hand: load the desktop site, and Tab — every top-level menu should open and expose its links without touching the mouse.',
     inScope: true,
   },
 

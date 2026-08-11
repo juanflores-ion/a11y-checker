@@ -33,7 +33,7 @@ import http from 'node:http';
 
 import { chromium } from 'playwright';
 
-import { launchContext, launchOptions, scanPage } from './core.mjs';
+import { DEFAULT_PROFILE, PROFILES, PROFILE_NAMES, launchContext, launchOptions, scanPage } from './core.mjs';
 
 const PORT = Number(process.env.PORT ?? 4790);
 const HOST = process.env.HOST ?? '127.0.0.1';
@@ -125,9 +125,14 @@ async function handleScan(req, res) {
   }
 
   let urls;
+  let viewport;
   try {
     const body = await readJsonBody(req);
     urls = normaliseUrls(body.urls);
+    viewport = body.viewport ?? DEFAULT_PROFILE;
+    if (!PROFILES[viewport]) {
+      throw new Error(`Unknown viewport "${viewport}". Known: ${PROFILE_NAMES.join(', ')}`);
+    }
   } catch (err) {
     sendJson(res, 400, { error: err.message });
     return;
@@ -138,7 +143,7 @@ async function handleScan(req, res) {
   let browser;
   try {
     browser = await chromium.launch(launchOptions());
-    const context = await launchContext(browser);
+    const context = await launchContext(browser, viewport);
 
     // Sequential, not Promise.all: one Chromium page at a time keeps this
     // predictable on an ordinary laptop and keeps timing comparable to the
@@ -155,6 +160,12 @@ async function handleScan(req, res) {
       startedAt: startedAt.toISOString(),
       finishedAt: new Date().toISOString(),
       results,
+      viewport,
+      viewportSpec: {
+        width: PROFILES[viewport].width,
+        height: PROFILES[viewport].height,
+        isMobile: PROFILES[viewport].isMobile,
+      },
     });
   } catch (err) {
     sendJson(res, 500, { error: String(err.message ?? err) });

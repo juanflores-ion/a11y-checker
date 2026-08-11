@@ -27,11 +27,11 @@ export function RulesClient({
   ruleIds: string[];
   pageOrder: string[];
 }) {
-  const { currentId, compareId, current, compare } = useRuns();
+  const { currentKey, compareKey, current, compare } = useRuns();
   const [open, setOpen] = useState<string | null>(null);
 
-  const now = byRun[currentId];
-  const before = compareId ? byRun[compareId] : null;
+  const now = byRun[currentKey];
+  const before = compareKey ? byRun[compareKey] : null;
   if (!now) return <p className="text-sm text-muted">No scan data for this run.</p>;
 
   const renderGroup = (ids: string[]) =>

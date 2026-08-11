@@ -4,7 +4,7 @@ import { inScopeNodes, mainCoverage, phantomFocusable, resolveMetric, ruleTotals
 import { ISSUES } from '@/lib/issues';
 import { ruleMeta } from '@/lib/rules';
 import { SITES } from '@/lib/sites';
-import { BRANDS, formatRunTime, latestRun, loadRuns } from '@/lib/loadRuns';
+import { BRANDS, VIEWPORT_LABEL, formatRunTime, latestRun, loadRuns } from '@/lib/loadRuns';
 
 /**
  * The landing page for an internal user, whichever team they're on.
@@ -15,6 +15,17 @@ import { BRANDS, formatRunTime, latestRun, loadRuns } from '@/lib/loadRuns';
 export default function HomePage() {
   const runs = loadRuns();
   const latest = latestRun(runs);
+
+  /**
+   * The headline figures are the primary profile's — desktop, where a run has
+   * it, because that is the markup an agent is served. Runs recorded before
+   * profiles existed are mobile, and say so rather than being relabelled.
+   */
+  const primary = latest?.primaryViewport ?? null;
+  const primarySpec =
+    latest && primary
+      ? latest.meta.viewports?.[primary] ?? latest.meta.viewport ?? null
+      : null;
 
   const sites: SiteCard[] = BRANDS.map((brand) => {
     const totals = latest ? ruleTotals(latest, brand) : {};
@@ -52,7 +63,8 @@ export default function HomePage() {
       metrics={metrics}
       runLabel={latest ? formatRunTime(latest) : null}
       runNote={latest?.meta.label ?? null}
-      viewport={latest?.meta.viewport ?? null}
+      viewport={primarySpec}
+      viewportLabel={primary ? VIEWPORT_LABEL[primary] : null}
       runCount={runs.length}
     />
   );

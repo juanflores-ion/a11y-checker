@@ -2,7 +2,7 @@ import { notFound } from 'next/navigation';
 
 import { PageDetailClient, type PageDetailByRun } from '@/components/PageDetailClient';
 import { worstPhantom } from '@/lib/aggregate';
-import { BRANDS, loadRuns, pageKeysUnion, type Brand } from '@/lib/loadRuns';
+import { BRANDS, loadRuns, pageKeysUnion, runAtViewport, viewKey, type Brand } from '@/lib/loadRuns';
 
 /**
  * Static export needs every brand/page combination enumerated up front. Build
@@ -25,12 +25,16 @@ export default function PageDetail({ params }: { params: { brand: string; page: 
 
   const byRun: PageDetailByRun = {};
   for (const run of runs) {
-    const result = run[brand]?.[params.page];
-    byRun[run.id] = {
-      present: result !== undefined,
-      result: result ?? null,
-      brandPhantomPages: worstPhantom(run, brand).pagesWithMenu,
-    };
+    for (const viewport of run.viewports) {
+      const view = runAtViewport(run, viewport);
+      if (!view) continue;
+      const result = view[brand]?.[params.page];
+      byRun[viewKey(run.id, viewport)] = {
+        present: result !== undefined,
+        result: result ?? null,
+        brandPhantomPages: worstPhantom(view, brand).pagesWithMenu,
+      };
+    }
   }
 
   return (

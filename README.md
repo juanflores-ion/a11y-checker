@@ -202,6 +202,8 @@ person could interact with, three things must hold — it **appears** in the tre
 with an interactive role, it **says** what it does, and it can be **operated**
 (reached by keyboard, actually activatable). And one thing must not: anything
 that looks closed must be genuinely out of the tree, not merely out of sight.
+There is a fifth, the mirror of the fourth: content that *is* out of the tree
+must still be **findable**, because something in the tree announces it.
 
 axe, and this scanner's original probes, only tested the second — and only for
 elements that already satisfied the first. That is a real blind spot: a
@@ -216,6 +218,8 @@ only way into mobile navigation.
 | `ghostControls` | Confirmed click listener, no role, no name, not in the tab order. An agent can neither identify nor operate these, and no rule will ever mention them. |
 | `clickableNoRole` | Magnitude: everything responding to a click without a role. Mostly harmless cards — context for the above. |
 | `hiddenPanels` | Any region still in the tree, still full of tabbable controls, that isn't on screen. Found by property, not by selector. |
+| `unreachablePanels` | The mirror: regions genuinely out of the tree that nothing in the tree announces. A closed dialog with an `aria-expanded` trigger is fine; a `:hover` mega-menu is not. |
+| `navLinks` | Of everywhere the page says you can go, how much of it is in the tree at all. |
 | `phantomMenu` | Kept for continuity — now derived as the largest `hiddenPanel` rather than a hardcoded `[class*="megaMenu"]`. |
 
 Listeners are confirmed over CDP against the browser's own registry, because
@@ -229,11 +233,56 @@ tabbable links — a count that previously took a person to establish. It also
 put a number on Insureon's misleading zero: axe reports `button-name: 0`, while
 the site has **50** `<div>` back controls an agent cannot identify.
 
-**One probe was written and withdrawn.** A check for the mobile mega-menu in
-server-rendered HTML flagged both brands — but verification showed the servers
-do vary by device (desktop receives 4–5 mega-menu panels, mobile 1), so it was
-matching legitimate desktop markup. It measured something real and concluded
-something false, so it was removed rather than shipped.
+`unreachablePanels` and `navLinks` are cross-checked against each other: on
+Insureon's desktop home page the panel probe finds five `display: none`
+mega-menu blocks holding 56 links between them, and the nav probe independently
+reports 63 navigation links with 7 in the tree. Two separate measurements, same
+56.
+
+**One probe was written and withdrawn**, and it is worth keeping the record. A
+check for the mobile mega-menu in server-rendered HTML flagged both brands, but
+verification showed the servers genuinely do vary by device, so it was matching
+legitimate desktop markup — it measured something real and concluded something
+false. Re-checking it properly is what turned up the viewport problem below.
+
+### Device profiles: the scan measures two different pages
+
+These sites resolve their layout **on the server** from the user-agent, and the
+React tree branches on the result. The profile is therefore not how the page is
+framed — it decides which page exists.
+
+Measured against production, both brands:
+
+| Client | Layout served |
+|---|---|
+| Desktop Chrome | `desktop` |
+| iPhone Safari | `mobile` |
+| ClaudeBot | `desktop` |
+| No user-agent at all | `desktop` |
+
+**Agents get desktop.** Anything the server doesn't recognise as mobile does.
+The scan used to run only a 390×844 iPhone profile, which means every number it
+produced described the one variant no agent ever receives.
+
+The two fail in opposite ways, so neither substitutes for the other:
+
+| | Insureon | TechInsurance |
+|---|--:|--:|
+| Nav links in the DOM, desktop | 63 | 60 |
+| **Reachable in the tree, desktop** | **7** | **6** |
+| Nav links reachable, mobile | 70 / 70 | 66 / 66 |
+
+On mobile the links are all in the tree, merely trapped off-screen in the closed
+drawer — that is the `phantomMenu` figure of 68/69. On desktop they are
+`display: none` until hover, so they are gone from the tree entirely and nothing
+announces them. One number cannot say both, so a run records both, and every
+figure in the dashboard is reported against a named profile.
+
+Two runs are only comparable at the same profile. The trend chart plots one
+profile at a time and drops runs that never measured it, rather than joining a
+mobile reading to a desktop one and drawing a cliff nobody caused. Runs recorded
+before profiles existed are normalised as mobile-only, because that is what they
+were.
 
 ### A page the server refused is not a page with no problems
 

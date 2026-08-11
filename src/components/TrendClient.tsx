@@ -13,12 +13,15 @@ import {
   YAxis,
 } from 'recharts';
 
-import { BRAND_COLOR, BRAND_LABEL, BRANDS, CHART } from '@/lib/model';
+import { BRAND_COLOR, BRAND_LABEL, BRANDS, CHART, VIEWPORT_LABEL, type ViewportName } from '@/lib/model';
 import { ruleMeta } from '@/lib/rules';
 import { Eyebrow } from './Primitives';
+import { useRuns } from './RunContext';
 
 export interface TrendPoint {
   runId: string;
+  key: string;
+  viewport: ViewportName;
   short: string;
   startedAt: string;
   label: string | null;
@@ -27,33 +30,47 @@ export interface TrendPoint {
 
 export function TrendClient({ points, ruleIds }: { points: TrendPoint[]; ruleIds: string[] }) {
   const [metric, setMetric] = useState('in-scope');
+  const { viewport } = useRuns();
+
+  /**
+   * One viewport at a time, always. Joining a mobile reading to a desktop one
+   * would draw a cliff that no code change caused — the two profiles differ by
+   * roughly 56 nav links on their own.
+   */
+  const series = useMemo(
+    () => points.filter((p) => p.viewport === viewport),
+    [points, viewport]
+  );
 
   const data = useMemo(
     () =>
-      points.map((p) => ({
+      series.map((p) => ({
         name: p.short,
         runId: p.runId,
         label: p.label,
         insureon: p.values['insureon']?.[metric] ?? 0,
         techinsurance: p.values['techinsurance']?.[metric] ?? 0,
       })),
-    [points, metric]
+    [series, metric]
   );
 
   const metricLabel = describeMetric(metric);
   const labelled = data.filter((d) => d.label);
+  const otherProfileRuns = points.filter((p) => p.viewport !== viewport).length;
 
   // Reachable by direct URL even though the tab is hidden below two runs.
-  if (points.length < 2) {
+  if (series.length < 2) {
     return (
       <div className="rounded-card border border-dashed border-rule bg-card p-8 text-center">
         <h2 className="font-display text-lg font-semibold">Nothing to plot yet</h2>
         <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-muted">
-          A trend needs at least two scans to draw a line between.{' '}
-          {points.length === 1
-            ? 'There is one scan on file so far.'
-            : 'There are no scans on file.'}{' '}
-          Take another and rebuild, and this fills in.
+          A trend needs at least two scans of the same device profile to draw a line between.{' '}
+          {series.length === 1
+            ? `One run measured ${VIEWPORT_LABEL[viewport]} so far.`
+            : `No run measured ${VIEWPORT_LABEL[viewport]}.`}{' '}
+          {otherProfileRuns > 0
+            ? 'Other runs measured a different profile, and joining the two would draw a change nobody made.'
+            : 'Take another and rebuild, and this fills in.'}
         </p>
         <code className="mt-3 inline-block rounded-card border border-rule bg-paper px-3 py-2 font-mono text-xs">
           node scanner/scan.mjs --out data/runs
@@ -85,6 +102,7 @@ export function TrendClient({ points, ruleIds }: { points: TrendPoint[]; ruleIds
               <option value="in-scope">Failing elements — in scope</option>
               <option value="total">Failing elements — all rules</option>
               <option value="phantom">Dead controls in the closed menu</option>
+              <option value="unreachable-nav">Navigation links an agent cannot find</option>
             </optgroup>
             <optgroup label="Individual rules">
               {ruleIds.map((id) => (
@@ -209,5 +227,8 @@ function describeMetric(metric: string): string {
   if (metric === 'in-scope') return 'Failing elements across in-scope rules';
   if (metric === 'total') return 'Failing elements across all rules';
   if (metric === 'phantom') return 'Focusable controls inside the closed mobile menu';
+  if (metric === 'unreachable-nav') {
+    return 'Navigation links in the page but out of the accessibility tree';
+  }
   return ruleMeta(metric.slice('rule:'.length)).label;
 }
