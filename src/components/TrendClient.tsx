@@ -102,7 +102,7 @@ export function TrendClient({ points, ruleIds }: { points: TrendPoint[]; ruleIds
               <option value="in-scope">Failing elements — in scope</option>
               <option value="total">Failing elements — all rules</option>
               <option value="phantom">Dead controls in the closed menu</option>
-              <option value="unreachable-nav">Navigation links an agent cannot find</option>
+              <option value="unfindable-links">Links an agent cannot find</option>
             </optgroup>
             <optgroup label="Individual rules">
               {ruleIds.map((id) => (
@@ -227,8 +227,8 @@ function describeMetric(metric: string): string {
   if (metric === 'in-scope') return 'Failing elements across in-scope rules';
   if (metric === 'total') return 'Failing elements across all rules';
   if (metric === 'phantom') return 'Focusable controls inside the closed mobile menu';
-  if (metric === 'unreachable-nav') {
-    return 'Navigation links in the page but out of the accessibility tree';
+  if (metric === 'unfindable-links') {
+    return 'Links out of the accessibility tree with nothing announcing them';
   }
   return ruleMeta(metric.slice('rule:'.length)).label;
 }

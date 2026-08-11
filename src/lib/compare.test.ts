@@ -160,14 +160,71 @@ test('a diff taken across two device profiles is flagged, not quietly reported',
   assert.equal(diffPages('prod', 'staging', before, after).viewportMismatch, undefined);
 });
 
-test('navigation an agent cannot find is diffed alongside the rule counts', () => {
+test('links an agent cannot find are diffed alongside the rule counts', () => {
   // The desktop failure mode is invisible to axe: the links are in the DOM and
   // out of the accessibility tree, so no rule fires on them. Without this the
   // fix that matters most would show up as "no change".
-  const before = page({ navLinks: { total: 63, inTree: 7 } });
-  const after = page({ navLinks: { total: 63, inTree: 63 } });
+  const before = page({
+    navLinks: { total: 63, inTree: 7 },
+    unreachableTotals: {
+      panels: 5,
+      unannouncedPanels: 5,
+      unannouncedFocusable: 56,
+      unannouncedLinks: 56,
+    },
+  });
+  const after = page({
+    navLinks: { total: 63, inTree: 63 },
+    unreachableTotals: {
+      panels: 0,
+      unannouncedPanels: 0,
+      unannouncedFocusable: 0,
+      unannouncedLinks: 0,
+    },
+  });
   const diff = diffPages('prod', 'staging', before, after);
 
-  assert.equal(diff.navHiddenBefore, 56);
-  assert.equal(diff.navHiddenAfter, 0);
+  assert.equal(diff.unfindableBefore, 56);
+  assert.equal(diff.unfindableAfter, 0);
+});
+
+test('a menu hidden behind a real disclosure button is not a regression', () => {
+  /**
+   * The exact shape of Insureon's fixed mobile build, measured 11 Aug 2026.
+   *
+   * Before: the closed drawer's 68 links sat *in* the accessibility tree,
+   * off-screen and tabbable — 68 dead controls. After: the drawer is properly
+   * hidden, so those links leave the tree, and a real <button> announces it.
+   * That is the fix working exactly as intended.
+   *
+   * Counting "links out of the tree" would score that as 0 -> 68 and report a
+   * completed fix as a catastrophic regression. It genuinely did, which is why
+   * this test exists. Only unannounced content counts.
+   */
+  const before = page({
+    navLinks: { total: 70, inTree: 70 },
+    phantomMenu: {
+      transform: null, display: 'block', visibility: 'visible', ariaHidden: null,
+      inert: false, pointerEvents: 'none', exposedInTree: true,
+      links: 68, buttons: 0, focusable: 68, tabbable: 68,
+    },
+    unreachableTotals: {
+      panels: 0, unannouncedPanels: 0, unannouncedFocusable: 0, unannouncedLinks: 0,
+    },
+  });
+  const after = page({
+    navLinks: { total: 70, inTree: 2 },
+    phantomMenu: null,
+    unreachableTotals: {
+      // One panel, out of the tree — but announced, so nothing is unfindable.
+      panels: 1, unannouncedPanels: 0, unannouncedFocusable: 0, unannouncedLinks: 0,
+    },
+  });
+  const diff = diffPages('prod', 'staging', before, after);
+
+  assert.equal(diff.unfindableBefore, 0);
+  assert.equal(diff.unfindableAfter, 0, 'an announced panel must never count as unfindable');
+  // And the defect that actually got fixed shows up as fixed.
+  assert.equal(diff.phantomBefore, 68);
+  assert.equal(diff.phantomAfter, 0);
 });

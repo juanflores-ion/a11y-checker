@@ -2,10 +2,10 @@ import { TrendClient, type TrendPoint } from '@/components/TrendClient';
 import {
   allRuleIds,
   inScopeNodes,
-  navReach,
   phantomFocusable,
   ruleTotals,
   totalNodes,
+  unreachableStats,
 } from '@/lib/aggregate';
 import { BRANDS, formatRunShort, loadRuns, runAtViewport, viewKey } from '@/lib/loadRuns';
 
@@ -43,7 +43,7 @@ export default function TrendPage() {
           total: totalNodes(view, brand),
           'in-scope': inScopeNodes(view, brand),
           phantom: phantomFocusable(view, brand),
-          'unreachable-nav': navReach(view, brand).hidden,
+          'unfindable-links': unreachableStats(view, brand).links,
           ...Object.fromEntries(ruleIds.map((id) => [`rule:${id}`, totals[id] ?? 0])),
         };
       }

@@ -78,6 +78,9 @@ export type MetricRef =
   /** Hidden panels excluding the largest one — the mega-menu is counted separately. */
   | { kind: 'secondary-hidden-panel-controls'; label: string }
   // Added with the desktop profile: content out of the tree that nothing announces.
+  /** The verdict: out of the tree *and* unannounced. */
+  | { kind: 'unfindable-links'; label: string }
+  /** Descriptive: out of the tree, announced or not. Not a defect on its own. */
   | { kind: 'nav-links-hidden'; label: string }
   | { kind: 'nav-links-in-tree'; label: string }
   | { kind: 'nav-links-total'; label: string }
@@ -424,10 +427,10 @@ export const ISSUES: Issue[] = [
     technical:
       'Sitecore resolves a deviceLayout server-side from the user-agent, and Navigation.tsx branches on it through the Media component, rendering exactly one of MobileMenu/TabletMenu/DesktopMenu. On desktop the mega-menu panels are display:none until :hover, which removes them from the accessibility tree entirely. That is why the other probes never reported it: they all skip content properly out of the tree, on the reasoning that a closed menu should be. The distinction that matters is not whether content is hidden but whether anything in the tree announces it — a disclosure button with aria-expanded is a promise an agent can act on, a :hover rule is not. None of these panels have one. Note this is the mirror image of the mobile failure, not a duplicate of it: on mobile the same links are in the tree but trapped off-screen in the drawer.',
     metrics: [
-      { kind: 'nav-links-hidden', label: 'Navigation links an agent cannot find' },
+      { kind: 'unfindable-links', label: 'Links an agent cannot find' },
+      { kind: 'unannounced-panels', label: 'Hidden regions nothing announces' },
       { kind: 'nav-links-in-tree', label: 'Navigation links it can find' },
       { kind: 'nav-links-total', label: 'Navigation links in the page' },
-      { kind: 'unannounced-panels', label: 'Hidden regions nothing announces' },
     ],
     sources: [
       'page-components/Navigation/Navigation.tsx',
@@ -443,7 +446,7 @@ export const ISSUES: Issue[] = [
       riskLevel: 'medium',
     },
     verify:
-      'Re-scan at the desktop profile and check that navigation links in the tree matches the total. By hand: load the desktop site, and Tab — every top-level menu should open and expose its links without touching the mouse.',
+      'Re-scan at the desktop profile and check that "links an agent cannot find" reaches zero. Do not expect the nav links to appear in the accessibility tree while the menu is closed — they should not, and a fix that merely exposes them trades this defect for the trapped-controls one. What has to change is that the trigger announces the panel. By hand: load the desktop site and Tab — every top-level menu should open and expose its links without touching the mouse.',
     inScope: true,
   },
 

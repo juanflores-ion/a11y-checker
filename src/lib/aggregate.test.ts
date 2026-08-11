@@ -140,6 +140,57 @@ test('the desktop profile is measured, and it is the one agents are served', () 
   assert.equal(ghostControlCount(onDesktop, 'insureon', 'backButton'), 0);
 });
 
+test('the unfindable count is unannounced content, not merely hidden content', () => {
+  /**
+   * The distinction this whole check turns on.
+   *
+   * On mobile, production's closed drawer keeps its links *in* the tree, so
+   * nothing is out of the tree and nothing is unfindable. A build that hides
+   * the drawer properly behind a disclosure button moves those links out of the
+   * tree — and must still report zero unfindable, because a button announces
+   * them.
+   *
+   * This row first shipped counting every out-of-tree link. Measured against a
+   * fixed build of Insureon it read 680 where the truth was 51, turning a
+   * completed fix into a catastrophic-looking regression.
+   */
+  assert.ok(onMobile && onDesktop, 'need both profiles');
+
+  for (const brand of ['insureon', 'techinsurance'] as const) {
+    // Mobile is the case that proves the two are independent measurements.
+    // Every nav link is in the tree (nothing hidden), yet there are still
+    // unfindable links — they come from an unannounced panel that isn't in the
+    // nav at all. One number cannot be derived from the other.
+    const nav = navReach(onMobile, brand);
+    const stats = unreachableStats(onMobile, brand);
+    assert.equal(nav.hidden, 0, `${brand}: mobile keeps its nav links in the tree`);
+    if (stats.links > 0) {
+      assert.ok(
+        stats.unannouncedPanels > 0,
+        `${brand}: unfindable links must come from unannounced panels`
+      );
+    }
+
+    // Desktop: out of the tree *and* unannounced.
+    const d = unreachableStats(onDesktop, brand);
+    assert.ok(d.links > 0, `${brand}: desktop should report unfindable links`);
+    assert.ok(
+      d.unannouncedPanels > 0,
+      `${brand}: unfindable links must come from unannounced panels`
+    );
+  }
+
+  // The scorecard row reads the same number, not the broader hidden count.
+  const row = scorecard(onDesktop, 'insureon').find((r) => r.key === 'unfindable-links');
+  assert.ok(row, 'the unfindable-links row is missing');
+  assert.equal(row.value, unreachableStats(onDesktop, 'insureon').links);
+  assert.notEqual(
+    row.value,
+    navReach(onDesktop, 'insureon').hidden,
+    'the row is reading the old hidden-links formula again'
+  );
+});
+
 test('no page in any run was measured from an error page', () => {
   // Ten stale target URLs once 404'd and were measured as real pages, which
   // read as a 47% improvement. scanPage now rejects non-OK responses, so a
