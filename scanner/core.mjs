@@ -196,11 +196,33 @@ const ACTIVATION_EVENTS = new Set([
   'click', 'mousedown', 'mouseup', 'pointerdown', 'pointerup', 'touchstart', 'touchend', 'keydown',
 ]);
 
+/**
+ * A handler attached to nearly every candidate on the page is telemetry, not
+ * behaviour.
+ *
+ * Analytics scripts bind click listeners indiscriminately. On Insureon every
+ * single confirmed listener — all 37 — resolved to one line of `sgtracker.js`,
+ * and the probe read each of them as proof that a decorative icon was secretly
+ * a control. It reported fourteen defects that did not exist, against source
+ * files containing no handler at all.
+ *
+ * A real control's handler is attached for that control. So a handler location
+ * shared across most of the page's candidates is disqualified as evidence: it
+ * says something about the tracker, not about the element.
+ */
+const SHARED_HANDLER_SHARE = 0.5;
+
 async function confirmClickListeners(page, controls) {
   if (controls.length === 0) return controls;
   let cdp;
   try {
     cdp = await page.context().newCDPSession(page);
+
+    // Map scriptId -> url so a finding can name what attached its listener.
+    const scripts = new Map();
+    await cdp.send('Debugger.enable').catch(() => {});
+    cdp.on('Debugger.scriptParsed', (e) => scripts.set(e.scriptId, e.url));
+
     const { result } = await cdp.send('Runtime.evaluate', {
       expression: 'window.__ghostCandidateEls',
       returnByValue: false,
@@ -212,6 +234,9 @@ async function confirmClickListeners(page, controls) {
       ownProperties: true,
     });
 
+    // Pass one: collect, without judging.
+    const found = new Map(); // index -> [{ key, script }]
+    const frequency = new Map(); // handler location -> how many candidates
     for (const prop of props.result) {
       if (!/^\d+$/.test(prop.name) || !prop.value?.objectId) continue;
       const index = Number(prop.name);
@@ -220,9 +245,32 @@ async function confirmClickListeners(page, controls) {
         objectId: prop.value.objectId,
         depth: 0,
       });
-      controls[index].confirmedListener = (listeners ?? []).some((l) =>
-        ACTIVATION_EVENTS.has(l.type)
-      );
+      const activation = (listeners ?? []).filter((l) => ACTIVATION_EVENTS.has(l.type));
+      const entries = activation.map((l) => ({
+        key: `${l.scriptId}:${l.lineNumber}:${l.columnNumber}`,
+        script: scripts.get(l.scriptId) ?? null,
+      }));
+      found.set(index, entries);
+      for (const key of new Set(entries.map((e) => e.key))) {
+        frequency.set(key, (frequency.get(key) ?? 0) + 1);
+      }
+    }
+
+    // Pass two: a handler bound to most candidates is not what makes any one
+    // of them a control.
+    const total = found.size;
+    const shared = new Set(
+      [...frequency.entries()]
+        .filter(([, n]) => total >= 4 && n / total >= SHARED_HANDLER_SHARE)
+        .map(([key]) => key)
+    );
+
+    for (const [index, entries] of found) {
+      const own = entries.filter((e) => !shared.has(e.key));
+      controls[index].confirmedListener = own.length > 0;
+      controls[index].listenerScript = (own[0] ?? entries[0])?.script ?? null;
+      /** True when the only listeners here are page-wide analytics handlers. */
+      controls[index].listenerIsShared = own.length === 0 && entries.length > 0;
     }
   } catch {
     // Leave confirmedListener as null. An unconfirmed finding still reports.

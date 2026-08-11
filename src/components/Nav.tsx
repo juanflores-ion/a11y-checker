@@ -15,12 +15,17 @@ import { useRuns } from './RunContext';
  * Issues was a fifth until the scanner learned to measure what only prose
  * could describe. Once every figure it quoted was also in Runs, it stopped
  * being a destination and became a section of Overview.
+ *
+ * "How it works" is last and deliberately so: it is not a task, it is the
+ * answer to "why should I believe these numbers" — which people ask after
+ * seeing them, not before.
  */
 export const PRIMARY = [
   { href: '/', label: 'Overview', hint: 'Where the sites stand, and what’s wrong' },
   { href: '/runs', label: 'Runs', hint: 'Measurements already taken' },
   { href: '/measure', label: 'Measure', hint: 'Scan a live site now' },
   { href: '/compare', label: 'Compare', hint: 'Before vs after — check a fix landed' },
+  { href: '/how-it-works', label: 'How it works', hint: 'What the scanner does, in plain English' },
 ];
 
 /**

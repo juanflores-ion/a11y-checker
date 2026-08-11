@@ -417,7 +417,19 @@ export interface ResolvedMetric {
 export function ghostControlCount(run: Run, brand: Brand, match?: string): number {
   let total = 0;
   for (const [, page] of scannedPages(run, brand)) {
-    const controls = page.ghostControls ?? [];
+    /**
+     * Drop the ones the browser disproved.
+     *
+     * `cursor: pointer` is a style, and the listener registry is the authority
+     * — so an element the registry says has no handler of its own is not a
+     * control, whatever it looks like. `null` still counts: that means CDP
+     * could not answer, which is uncertainty, not absence.
+     *
+     * This matters because analytics scripts bind click handlers to everything.
+     * Counting those reported fourteen defects on Insureon against source files
+     * with no handler in them at all.
+     */
+    const controls = (page.ghostControls ?? []).filter((c) => c.confirmedListener !== false);
     total += match
       ? controls.filter((c) => c.selector.toLowerCase().includes(match.toLowerCase())).length
       : controls.length;
