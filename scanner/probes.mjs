@@ -80,13 +80,30 @@ export function collectMeasurements() {
     return `${el.tagName.toLowerCase()}${id}${cls ? `.${cls}` : ''}`;
   };
 
-  /** True when some ancestor genuinely removes this from the accessibility tree. */
+  /**
+   * True when some ancestor genuinely removes this from the accessibility tree.
+   *
+   * All six mechanisms, not the obvious four. `hidden` (including
+   * `hidden="until-found"`) and `content-visibility: hidden` remove a subtree
+   * from the tree and from the tab order just as surely as `display: none` —
+   * they are simply newer, and they are what a well-built collapsible uses,
+   * because they keep the content findable by browser find-in-page.
+   *
+   * Missing them meant the probe reported a *correctly implemented* accordion
+   * as five tabbable controls hidden off-screen. The better the implementation,
+   * the more confidently it was flagged, which is the worst possible direction
+   * for a check like this to fail in.
+   */
   const removedFromTree = (el) => {
     for (let n = el; n && n !== document.documentElement; n = n.parentElement) {
       const s = getComputedStyle(n);
       if (
         s.display === 'none' ||
         s.visibility === 'hidden' ||
+        // `auto` only skips rendering when off-screen and stays in the tree;
+        // only `hidden` actually removes the subtree.
+        s.contentVisibility === 'hidden' ||
+        n.hasAttribute('hidden') ||
         n.getAttribute('aria-hidden') === 'true' ||
         n.hasAttribute('inert')
       ) {
@@ -128,6 +145,48 @@ export function collectMeasurements() {
 
   const isFocusable = (el) =>
     !el.hasAttribute('disabled') && el.getAttribute('tabindex') !== '-1';
+
+  const controllerOf = (el) => {
+    if (!el.id) return null;
+    try {
+      return document.querySelector(`[aria-controls="${CSS.escape(el.id)}"]`);
+    } catch {
+      return null; // exotic id that won't escape
+    }
+  };
+
+  /**
+   * The control that opens a hidden region, if one is discoverable from the
+   * markup. Shared by both hiding probes so they cannot disagree about what
+   * counts as announced.
+   *
+   * Ancestors count. A disclosure typically puts `aria-controls` on the panel
+   * it owns, and the component hides something *inside* that panel — so the
+   * hidden element itself is named by nothing, while the thing an agent
+   * actually operates sits one level up. Checking only the hidden element
+   * reported a correctly built mega-menu as 560 unfindable links, because the
+   * button pointed at the wrapper rather than the inner block it hides.
+   *
+   * If any ancestor is announced, everything inside it is reachable: open that
+   * ancestor and the content arrives.
+   */
+  const disclosureFor = (el) => {
+    // The explicit contract first: something points at this, or at anything
+    // containing it, by id.
+    for (let n = el; n && n !== document.documentElement; n = n.parentElement) {
+      const byControls = controllerOf(n);
+      if (byControls) return byControls;
+    }
+    // Otherwise the conventional shape: a trigger sitting beside the panel.
+    const parent = el.parentElement;
+    if (!parent) return null;
+    for (const c of [...parent.children].filter((c) => c !== el)) {
+      if (c.matches(NATIVE_INTERACTIVE) || c.getAttribute('role') === 'button') return c;
+      const inner = c.querySelector('button,a[href],[role="button"]');
+      if (inner) return inner;
+    }
+    return null;
+  };
 
   /* ---------------------------------------------------------------- */
   /* 1 + 2. Named controls (the original checks, unchanged)            */
@@ -204,6 +263,20 @@ export function collectMeasurements() {
     const reachable = el.tabIndex >= 0;
     if (name || reachable) continue;
 
+    /**
+     * A wrapper around a working control is not a dead end.
+     *
+     * The defect being measured is "there is no way to operate this". If the
+     * element contains a real, focusable, in-tree control, there is a way — an
+     * agent uses that. react-select is the standard case: an unlabelled outer
+     * `div` around an `<input>` carrying `aria-expanded` and `aria-autocomplete`.
+     * Reporting the wrapper describes the library's DOM, not a barrier.
+     */
+    const worksThroughDescendant = [...el.querySelectorAll(NATIVE_INTERACTIVE)].some(
+      (d) => isFocusable(d) && !removedFromTree(d)
+    );
+    if (worksThroughDescendant) continue;
+
     ghostControls.push({
       selector: describe(el),
       html: trunc(el.outerHTML),
@@ -254,7 +327,18 @@ export function collectMeasurements() {
   for (const el of document.querySelectorAll('div,nav,ul,section,aside,form')) {
     if (removedFromTree(el)) continue; // correctly hidden — nothing to report
 
-    const focusables = [...el.querySelectorAll(FOCUSABLE)].filter(isFocusable);
+    /**
+     * Tree membership is per element, not per container.
+     *
+     * A wrapper can be collapsed to zero height while its contents are
+     * `display: none` — which is what a correctly built disclosure looks like
+     * while closed. Counting the wrapper's descendants without this filter
+     * reported 160 tabbable controls on a menu where nothing was reachable at
+     * all, turning a correct implementation into a defect.
+     */
+    const focusables = [...el.querySelectorAll(FOCUSABLE)]
+      .filter(isFocusable)
+      .filter((f) => !removedFromTree(f));
     if (focusables.length < 3) continue; // a panel, not a stray control
 
     const cs = getComputedStyle(el);
@@ -283,14 +367,12 @@ export function collectMeasurements() {
      * 3. OPERABILITY, at the panel level. A closed panel is fine if something
      * keyboard-reachable opens it. If the only trigger is hover, there is no
      * such element, and the whole panel is unreachable without a mouse.
+     *
+     * Same resolver as the reachability probe, so the two can't disagree about
+     * whether a panel is announced — they were built weeks apart and one used
+     * a sibling-only heuristic that missed `aria-controls` entirely.
      */
-    const parent = el.parentElement;
-    const siblings = parent ? [...parent.children].filter((c) => c !== el) : [];
-    const triggerCandidates = [
-      ...siblings.filter((c) => c.matches(NATIVE_INTERACTIVE) || c.getAttribute('role') === 'button'),
-      ...siblings.flatMap((c) => [...c.querySelectorAll('button,a[href],[role="button"]')]),
-    ];
-    const trigger = triggerCandidates[0] ?? null;
+    const trigger = disclosureFor(el);
 
     return {
       selector: describe(el),
@@ -338,29 +420,6 @@ export function collectMeasurements() {
     if (el.getAttribute('aria-hidden') === 'true') why.push('aria-hidden="true"');
     if (el.hasAttribute('inert')) why.push('inert');
     return why;
-  };
-
-  /** The control that opens it, if one is discoverable from the markup. */
-  const disclosureFor = (el) => {
-    // The explicit contract first: something points at this by id.
-    if (el.id) {
-      let byControls = null;
-      try {
-        byControls = document.querySelector(`[aria-controls="${CSS.escape(el.id)}"]`);
-      } catch {
-        byControls = null; // exotic id that won't escape; fall through
-      }
-      if (byControls) return byControls;
-    }
-    // Otherwise the conventional shape: a trigger sitting beside the panel.
-    const parent = el.parentElement;
-    if (!parent) return null;
-    for (const c of [...parent.children].filter((c) => c !== el)) {
-      if (c.matches(NATIVE_INTERACTIVE) || c.getAttribute('role') === 'button') return c;
-      const inner = c.querySelector('button,a[href],[role="button"]');
-      if (inner) return inner;
-    }
-    return null;
   };
 
   const unreachableAll = [];

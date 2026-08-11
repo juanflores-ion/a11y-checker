@@ -105,6 +105,13 @@ export interface GhostControl {
   keyboardReachable: boolean;
   /** true = confirmed against the browser's listener registry; null = not checked. */
   confirmedListener: boolean | null;
+  /** Which script attached the listener, so a finding can be traced or dismissed. */
+  listenerScript?: string | null;
+  /**
+   * True when the only handlers here are ones bound across most of the page —
+   * an analytics script, not this element's behaviour.
+   */
+  listenerIsShared?: boolean;
 }
 
 /**
