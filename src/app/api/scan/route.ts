@@ -25,6 +25,9 @@
  * "insureon.com.evil.test", which is why the check is on dot-boundaries and
  * not `includes()`.
  */
+import { execFileSync } from 'node:child_process';
+import path from 'node:path';
+
 import { NextResponse } from 'next/server';
 
 import { SITES } from '@/lib/sites';
@@ -41,6 +44,61 @@ export const maxDuration = 60;
  * let the client send several requests.
  */
 const MAX_URLS = 3;
+
+/**
+ * Which probe code this deployment is running.
+ *
+ * Same definition as `probeVersion()` in scanner/scan.mjs, which owns it: the
+ * short SHA of the last commit that touched `scanner/`, suffixed `+dirty` when
+ * the working tree has moved on. Deliberately re-derived here rather than
+ * shared, because the two callers cannot locate `scanner/` the same way. The
+ * CLI is always running out of a checkout and finds the directory from its own
+ * module URL. This route is usually running out of a bundle where the source
+ * layout no longer exists and there is no `.git` at all, so it resolves from
+ * `process.cwd()` and is *expected* to answer null in production.
+ *
+ * That null is the honest answer, not a stopgap, and it is why the answer is
+ * null rather than `VERCEL_GIT_COMMIT_SHA`: the deploy SHA moves on every
+ * commit to the repository, including the ones that change nothing under
+ * `scanner/`. Recording it would draw a probe-version discontinuity — the exact
+ * signal this field exists to raise — on runs measured by identical code.
+ *
+ * To record it properly from a deployment, compute it at build time with the
+ * same command and set SCANNER_PROBE_VERSION:
+ *
+ *   SCANNER_PROBE_VERSION=$(git log -1 --format=%h -- scanner/)
+ *
+ * Memoised because it shells out and the answer cannot change while the
+ * process lives.
+ */
+let probeVersionCache: string | null | undefined;
+
+function probeVersion(): string | null {
+  if (probeVersionCache !== undefined) return probeVersionCache;
+
+  const pinned = process.env.SCANNER_PROBE_VERSION?.trim();
+  if (pinned) {
+    probeVersionCache = pinned;
+    return probeVersionCache;
+  }
+
+  const scannerDir = path.join(process.cwd(), 'scanner');
+  try {
+    const git = (args: string[]) =>
+      execFileSync('git', ['-C', scannerDir, ...args], {
+        encoding: 'utf8',
+        stdio: ['ignore', 'pipe', 'ignore'],
+      }).trim();
+    const sha = git(['log', '-1', '--format=%h', '--', '.']);
+    // Untracked files count: a probe added but not committed is still code
+    // that ran and is not in the commit this claims to be.
+    const dirty = sha ? git(['status', '--porcelain', '--', '.']) : '';
+    probeVersionCache = sha ? (dirty ? `${sha}+dirty` : sha) : null;
+  } catch {
+    probeVersionCache = null;
+  }
+  return probeVersionCache;
+}
 
 function allowedHosts(): string[] {
   const configured = (process.env.SCAN_ALLOWED_HOSTS ?? '')
@@ -123,7 +181,7 @@ export async function POST(request: Request) {
   const [
     { chromium },
     chromiumPack,
-    { launchContext, scanPage, PROFILES, PROFILE_NAMES, DEFAULT_PROFILE },
+    { browserProvenance, launchContext, scanPage, PROFILES, PROFILE_NAMES, DEFAULT_PROFILE },
     axe,
   ] = await Promise.all([
     import('playwright-core'),
@@ -162,12 +220,26 @@ export async function POST(request: Request) {
   }
 
   let browser;
+  /**
+   * Kept as a variable, and resolved inside the try so a packaging failure
+   * still returns the friendly 503 rather than a stack trace.
+   *
+   * `browserProvenance` needs the options we actually launched with, because
+   * `browserType.executablePath()` reports the build Playwright *would* have
+   * chosen rather than the one it was pointed at — measured last session as
+   * chromium-1234 while chromium-1228 was the process running. Here the
+   * difference is the whole point: this route runs @sparticuz's Chromium and
+   * the CLI runs the full Playwright download, so a run file that does not
+   * name its executable cannot say which of the two measured it.
+   */
+  let launchOpts: { args?: string[]; executablePath?: string; headless?: boolean } = {};
   try {
-    browser = await chromium.launch({
+    launchOpts = {
       args: chromiumPack.args,
       executablePath: await chromiumPack.executablePath(),
       headless: true,
-    });
+    };
+    browser = await chromium.launch(launchOpts);
   } catch (err) {
     return NextResponse.json(
       {
@@ -188,6 +260,9 @@ export async function POST(request: Request) {
       results.push(await scanPage(context, url, { axeSource }));
     }
     const profile = PROFILES[viewport];
+    // Asked while the browser is still open — the `finally` below closes it,
+    // and a closed browser cannot be asked its version.
+    const engine = browserProvenance(browser, launchOpts);
     return NextResponse.json({
       startedAt,
       finishedAt: new Date().toISOString(),
@@ -199,6 +274,24 @@ export async function POST(request: Request) {
         isMobile: profile.isMobile,
       },
       scannedBy: 'hosted',
+      /**
+       * Which engine measured this, for whoever assembles a run file out of
+       * these responses — FullScanRunner does exactly that, and until now it
+       * dropped `scannedBy` on the floor and recorded nothing about the
+       * browser at all, so a run taken through the dashboard was
+       * indistinguishable from a run taken on someone's laptop.
+       *
+       * Every key is present on every response, `null` where it could not be
+       * established. Absent is reserved for the other meaning: a response from
+       * a deployment that predates this block. The client has to be able to
+       * tell "the server could not identify its browser" from "the server was
+       * never asked", because only one of those is worth chasing.
+       */
+      provenance: {
+        probeVersion: probeVersion(),
+        browserVersion: engine.browserVersion ?? null,
+        browserPath: engine.browserPath ?? null,
+      },
     });
   } catch (err) {
     return NextResponse.json({ error: String((err as Error).message ?? err) }, { status: 500 });

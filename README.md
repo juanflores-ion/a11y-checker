@@ -8,7 +8,7 @@ every control needs a role and an accessible name. A button with no name is a
 dead end, and the journey stops there. The same barriers hit anyone using a
 screen reader or navigating by keyboard.
 
-## Four sections
+## Five sections
 
 | Route | Who it's for | What it does |
 |---|---|---|
@@ -16,12 +16,13 @@ screen reader or navigating by keyboard.
 | `/runs/` — **Runs** | QA · Engineering | Scans already taken: Summary, By check, By page, and Over time once there are two runs. The run picker lives here and nowhere else. |
 | `/measure/` — **Measure** | QA · Engineering | Scan any URL on demand — production, staging, a preview build. |
 | `/compare/` — **Compare** | QA | Current vs fixed, scanned in one session and diffed check by check. The "did my fix land" workflow. |
+| `/how-it-works/` — **How it works** | Anyone | What the scanner does, in plain English: the five questions, the four words used precisely, what every figure is stamped with, and what the tool cannot determine at all. |
 
-Issues was a fifth section until the scanner learned to measure what only prose
-could describe. Once every figure it quoted also appeared under Runs → By
+Issues had a route of its own until the scanner learned to measure what only
+prose could describe. Once every figure it quoted also appeared under Runs → By
 check, it stopped being a destination and became a section of Overview.
 
-## Three moving parts## Three moving parts
+## Four moving parts
 
 | | What it is | Where |
 |---|---|---|
@@ -245,6 +246,84 @@ verification showed the servers genuinely do vary by device, so it was matching
 legitimate desktop markup — it measured something real and concluded something
 false. Re-checking it properly is what turned up the viewport problem below.
 
+### Where the answers come from
+
+Five things `probes.mjs` used to compute by hand — accessibility-tree
+membership, the accessible name algorithm, focusability, ARIA IDREF resolution
+and on-screen visibility — are now read from `axe.commons`, the primitives
+axe-core's own rules are built on, in the copy of axe already injected for
+`axe.run`.
+
+| Question | Answered by |
+|---|---|
+| Is it in the tree? | `axe.commons.dom.isVisibleToScreenReaders` |
+| Is it on screen? | `axe.commons.dom.isVisibleOnScreen` |
+| What is it called? | `axe.commons.text.accessibleText` |
+| Can it be tabbed to? | `axe.commons.dom.isInTabOrder` / `getTabbableElements` |
+| What does this attribute point at? | `axe.commons.aria.getAccessibleRefs` |
+
+Every hand-written version was a closed list over an open set of browser
+mechanisms, which is exactly why the false positives concentrated on modern,
+*correct* code: a well-built collapsible reaches for the newest hiding
+mechanism, and the newest one is the one missing from the list. Scored against
+Chromium's own tree over CDP on a 59-link fixture, the hand-written membership
+test disagreed with the browser on 9 of 59 links and `isVisibleToScreenReaders`
+on 0 of 59 — the nine were `visibility: collapse` and closed `<details>`.
+
+The point is not that axe is infallible. It is that this file stops owning the
+enumeration. Because `axe.commons` is an exposed internal rather than a
+documented API, axe-core is pinned to an exact version, `meta.axeVersion` is
+recorded on every run, and `core.mjs` fails a scan loudly when the helpers are
+missing rather than returning a clean page.
+
+**What is still hand-written is the relationship judgement** — does *this*
+control operate *that* region, does this signal originate here, does this
+trigger announce that panel. That is where the remaining risk lives, and it is
+measured rather than assumed: across two rounds of adversarial review, eight
+regressions against `main` were found, all eight in a hand-written relationship
+heuristic and none in the five delegated primitives. Where the scanner stopped
+owning the enumeration, the bugs stopped. So those heuristics are held at
+parity with what production already ships rather than refined further, and the
+rule any surviving suppression has to satisfy is written down:
+
+> A finding may be suppressed only when the thing it defers to is itself
+> published, or is a control an agent can demonstrably use. A suppression that
+> leaves nothing behind is not a refinement, it is a false clean.
+
+All eight had that one shape: a candidate or a defect found by a probe,
+suppressed by a heuristic, and nothing published in its place. The page reads
+clean. That is the incident this project has shipped twice, and it is what the
+rule above exists to prevent.
+
+### The test suite that states no expected values
+
+```bash
+npm run metamorphic                                   # every family
+node scanner/metamorphic/run.mjs --family icon-technique --verbose
+```
+
+A hand-written fixture benchmark was the plan until somebody ran the
+counterfactual: the fixtures a competent engineer would plausibly have written
+*before* each fault was known, scored against the real pre-fix probe code. The
+textbook-correct accordion and the textbook-correct mega-menu both came back
+silent — best case one of five faults caught. The reason is structural rather
+than a matter of writing better fixtures: the fixture's label and the probe's
+rule come from the same head, and every one of those faults *was* a gap in that
+head.
+
+So this suite asserts no values. It builds the same component several ways —
+behaviourally identical, structurally different — and requires the scanner to
+return the same numbers. Nobody has to know the right answer; the disagreement
+is the bug. That is not a slogan: it is the only technique in the whole
+investigation that found an unknown fault with no human label, when five
+hamburgers differing only in icon technique scored 0, 0, 1, 1, 1.
+
+Exit codes are 0 (every family agreed), 1 (a family disagreed, or a page went
+unmeasured) and 2 (the suite is misconfigured). Two and one are separate
+because "the suite could not run" must never be reachable from the same code
+path as "the suite passed". One family — `handler-identity` — is red on
+purpose; see **Known limitations** below.
+
 ### Device profiles: the scan measures two different pages
 
 These sites resolve their layout **on the server** from the user-agent, and the
@@ -376,6 +455,100 @@ change on every deploy. Everything aggregates on rule id + page type only.
 
 **A failed page scan is not a pass.** It renders as an explicit error state and
 contributes zero to every total, so treat that run's totals as incomplete.
+
+## Known limitations
+
+The worst thing this tool can do is report a clean page that is not clean, and
+it has done that twice. The surest way to do it a third time is a limit nobody
+wrote down — false-positive class 1 was exactly that shape, where "hidden" is
+observable and "unfindable" is a decision somebody has to write down, and until
+somebody did, each layer quietly invented its own answer.
+
+So the list is here, and the plain-English version of it is on the dashboard
+under **How it works → What it cannot tell you**, where each entry carries a
+badge saying which kind it is. The first two below will never close — they rest
+on a proxy for a fact that has no representation anywhere the scanner can read.
+They are limits, not a backlog. The rest are real gaps with real closing moves,
+not yet made.
+
+**Ghost controls rest on a proxy, permanently.** "Is this element intended to
+be a control" has no representation in the DOM, in the accessibility tree, or
+anywhere else — a real ghost control, a `div` a tracker bound a click to, and a
+plain tracked region are identical nodes to everything that can be read.
+`cursor: pointer` was a bad proxy because it inherits, so a decorative glyph
+inside a real button reads as a control on a signal it never carried. A
+non-shared click listener is a better proxy. Both are proxies, and no amount of
+work makes either stop being one. What the bad one cost: on Insureon every one
+of the 37 confirmed click listeners on the page resolved to a single line of
+one tracking file, producing 37 phantom controls and fourteen defects reported
+against source files containing no handler at all.
+
+**The shared-handler test cannot tell a tracker from a component library.**
+`SHARED_HANDLER_SHARE` in `core.mjs` disqualifies a handler key carried by most
+candidates, on the premise that a real control's handler is attached for that
+control. A component library attaches one handler to every instance of a
+component, which breaks the premise on every React or Sitecore site — which is
+every site this scanner points at. Six instances of one component sharing one
+callback are six real controls, and over CDP they produce the same single key a
+page-wide tracker does: `DOMDebugger.getEventListeners` locates the handler
+*function*, not the `addEventListener` call. The metamorphic `handler-identity`
+family is red for exactly this and stays red; the full reasoning, including a
+homogeneity guard that was built, run and rejected because it manufactured six
+controls on a page whose elements do nothing when clicked, is in
+`scanner/metamorphic/families.mjs`. Practical effect: on any page that also
+runs analytics, the tool reports *fewer* controls than exist.
+
+**A disclosure trigger sharing a parent with an unrelated hover menu is
+undecidable as the metric is currently defined.** A `<button aria-expanded>`
+accordion beside a `:hover` mega-menu currently publishes six unfindable links
+as **0** — the trigger is accepted as announcing the menu. The metamorphic
+`trigger-placement` family's `sibling-expanded` variant requires the opposite
+answer for markup that is, element for element, the same. Both demands are
+reasonable; the definition of "announces" does not separate them. It resolves
+permissively today, which under-reports, and it resolves the same way on `main`
+— so this is a limitation, not a regression. Closing it means sharpening the
+definition, not patching a heuristic, and until somebody sharpens it this stays
+written down rather than implied.
+
+**`overflow: clip` is a false negative, on this version and the one before
+it.** Measured across the five values of `overflow` on a two-slide carousel,
+`clip` is the only one where the browser does *not* scroll the content into
+view when focus reaches it — and it is the one value axe's `isVisibleOnScreen`
+calls visible, so nothing reports it. The evidence table is in `probes.mjs`
+beside `scrollRevealable`. Content really is stranded there. Closing it widens
+what the probe finds rather than correcting what it answers.
+
+**Child frames are not measured at all.** Both `getFullAXTree` and
+`page.evaluate` are main-frame only, and roughly 700–770 accessibility nodes
+per production page live in child frames. `shapeViolations()` in `core.mjs` also
+keeps only axe's `violations` and discards its `incomplete` bucket — which is
+where axe reports the frames it could not test. So this is worse than a blind
+spot: it is a blind spot the tool is told about and does not pass on. Zero
+findings inside a frame means nobody looked.
+
+**Volume metrics are not reproducible on one of the two sites.** insureon.com
+served three different documents to eight identical `curl` requests — 394,816 /
+434,507 / 703,895 bytes. Across sixteen identical scans of its desktop home
+page, `clickableNoRole` came back 1, 36 and 87, and axe failing-node totals
+ranged 28–68. In those same sixteen scans `unfindableLinks` (56), `navLinks`
+(7/63) and `unreachablePanels` (5) were identical every time, and
+techinsurance.com was byte-identical over six fetches — so this is the site,
+not the harness. **The tree-structural figures are exact; the volume figures
+are not measurements yet.** `metricStability()` in `aggregate.ts` carries that
+evidence per metric, and a metric nobody has repeat-scanned reports
+`repeatability: 'unknown'` against a placeholder tolerance of 2 rather than
+borrowing another metric's confidence.
+
+**Two runs are comparable only at the same device profile *and* the same probe
+version.** Every run now records `probeVersion`, `browserVersion` and
+`browserPath` in `meta` — `null` where provenance could not be established,
+never a plausible-looking guess. The runs already on file record none of them,
+and three different Chromium majors were used to drive scans in a single
+working session. Nothing about those numbers is known to be wrong, but nobody
+can now prove which instrument produced them, so a difference between an old
+run and a new one cannot be attributed to the site. A missing stamp renders as
+"not recorded" and must stay that way — filling it in from what was probably
+used turns a known gap into a confident-looking fact.
 
 ## Data contract
 

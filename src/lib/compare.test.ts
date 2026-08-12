@@ -1,3 +1,15 @@
+/**
+ * Tests for `compare.ts` — the before/after diffing behind the Compare page.
+ *
+ * Every input here is constructed inline. Nothing reads a run file, so no
+ * assertion in this file can move because a site changed or a probe was
+ * rewritten, and none of them needs to be re-pinned when ION's fix lands.
+ *
+ * Most of what is tested is one rule: **a figure that was never measured is
+ * `null`, never 0.** Compare is where that fails most expensively, because the
+ * whole screen is subtraction — an absent side scored as zero turns a scan that
+ * did not happen into a column of resolved rules or a hundred new violations.
+ */
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
@@ -93,21 +105,81 @@ test('resolved and new rules sort ahead of improved/worsened/unchanged', () => {
   );
 });
 
-test('a failed scan on either side degrades gracefully instead of throwing', () => {
+test('a failed scan on either side reports the absence rather than a zero', () => {
+  /**
+   * This test used to assert `totalBefore === 0`, and that assertion was the
+   * 10 Aug false-clean written down as a requirement.
+   *
+   * A scan that failed measured nothing. Scoring it zero produces "0 → 120",
+   * which reads as 120 new violations rather than as a measurement that never
+   * happened — and it renders directly underneath the notice saying the scan
+   * failed. Worse in the other direction: with the *after* side failed, every
+   * rule the before side found came back "Resolved", a screen full of green
+   * produced by a scan that never ran.
+   *
+   * "Degrades gracefully" means it reports the absence. It does not mean it
+   * substitutes a zero and carries on.
+   */
   const failed = { url: 'https://example.com/', error: 'timed out' };
   const diff = diffPages('a', 'b', failed, page({ violations: [{ id: 'label', impact: 'critical', n: 3 }] }));
 
-  // The failed side contributes zero, not a crash and not a false "resolved".
-  assert.equal(diff.totalBefore, 0);
-  assert.equal(diff.totalAfter, 3);
-  assert.equal(diff.rules[0].status, 'new');
+  assert.equal(diff.totalBefore, null, 'a failed scan is not a clean page');
+  assert.equal(diff.totalAfter, 3, 'the side that did scan still reports its number');
+  assert.equal(diff.totalChange, null, 'there is nothing to subtract from what');
+  assert.equal(diff.notComparable, 'not-measured');
+
+  // Every cross-side figure is withheld, not computed against the gap.
+  assert.deepEqual(diff.rules, [], 'no rule may be called new or resolved against a scan that failed');
+  assert.equal(diff.resolvedCount, null, '"0 resolved" would read as news');
+  assert.equal(diff.newCount, null);
 });
 
 test('missing entirely (null) is treated the same as a failed scan', () => {
+  // Compare hits this mid-deploy, when one side is still queued or the request
+  // cap was reached. Not-yet-measured and failed-to-measure are the same
+  // answer: nobody looked.
   const diff = diffPages('a', 'b', null, null);
-  assert.equal(diff.totalBefore, 0);
-  assert.equal(diff.totalAfter, 0);
+  assert.equal(diff.totalBefore, null);
+  assert.equal(diff.totalAfter, null);
+  assert.equal(diff.totalChange, null);
   assert.deepEqual(diff.rules, []);
+  assert.equal(diff.notComparable, 'not-measured');
+});
+
+test('a scanner that predates a check reports nothing, not zero', () => {
+  /**
+   * §8 bug 8, and the one that had shipped: `unannouncedLinks ?? 0` treated
+   * "this check did not exist" as "this check found none".
+   *
+   * It is reachable from the UI, not only from history — the Scanner control
+   * on Compare accepts any address, so a local server running older probe code
+   * returns a page with no `unreachableTotals` at all. Both sides scanned
+   * cleanly, both sides report zero unfindable links, and the headline figure
+   * of the whole tool reads clean because nothing looked.
+   */
+  const diff = diffPages('prod', 'staging', page(), page());
+
+  assert.equal(diff.unfindableBefore, null, 'nothing counted unfindable links here');
+  assert.equal(diff.unfindableAfter, null);
+
+  // The contrast: a page that *was* measured and found none reports the zero,
+  // because that is a measurement.
+  const measured = page({
+    unreachableTotals: { panels: 0, unannouncedPanels: 0, unannouncedFocusable: 0, unannouncedLinks: 0 },
+  });
+  const real = diffPages('prod', 'staging', measured, measured);
+  assert.equal(real.unfindableBefore, 0);
+  assert.equal(real.unfindableAfter, 0);
+});
+
+test('a scanned page with no closed menu reports zero phantom controls, not null', () => {
+  // The other half of the same rule, and the reason `phantom` and `unfindable`
+  // read their absences differently. `phantomMenu: null` on a scanned page is
+  // a real reading — the scanner looked and there is no such region — so zero
+  // is the honest answer. Only an unmeasured side is null.
+  const diff = diffPages('prod', 'staging', page({ phantomMenu: null }), null);
+  assert.equal(diff.phantomBefore, 0, 'looked, and there is no closed menu');
+  assert.equal(diff.phantomAfter, null, 'nobody looked');
 });
 
 test('phantom-menu focusable count is compared independently of axe violations', () => {
@@ -150,14 +222,30 @@ test('a diff taken across two device profiles is flagged, not quietly reported',
   });
   assert.deepEqual(mismatched.viewportMismatch, { before: 'mobile', after: 'desktop' });
 
+  // And it is not merely flagged: every cross-side figure is withheld. A
+  // mismatched diff has a row for each rule and every one of them is noise.
+  assert.equal(mismatched.notComparable, 'viewport-mismatch');
+  assert.deepEqual(mismatched.rules, []);
+  assert.equal(mismatched.totalChange, null);
+  assert.equal(mismatched.resolvedCount, null);
+  // The per-side figures survive, because each was measured — it is the
+  // subtraction between them that means nothing.
+  assert.equal(mismatched.unfindableBefore, null);
+  assert.equal(mismatched.viewports.before, 'mobile');
+
   const matched = diffPages('prod', 'staging', before, after, {
     before: 'desktop',
     after: 'desktop',
   });
   assert.equal(matched.viewportMismatch, undefined);
+  assert.equal(matched.notComparable, undefined);
 
-  // Unstated viewports stay unflagged — the older callers pass neither.
-  assert.equal(diffPages('prod', 'staging', before, after).viewportMismatch, undefined);
+  // Unstated viewports stay unflagged — the older callers pass neither. That
+  // is why `viewports` is on the diff: the screen says whether the guard was
+  // armed, rather than leaving it to a code reading.
+  const unstated = diffPages('prod', 'staging', before, after);
+  assert.equal(unstated.viewportMismatch, undefined);
+  assert.deepEqual(unstated.viewports, { before: null, after: null });
 });
 
 test('links an agent cannot find are diffed alongside the rule counts', () => {
