@@ -12,6 +12,31 @@ export interface LaunchOptions {
 
 export function launchOptions(): LaunchOptions;
 
+/**
+ * Which browser produced a run, for `RunMeta`.
+ *
+ * Both fields are optional, and that is deliberate rather than lax: three runs
+ * on disk predate any provenance at all, and "absent" has to keep rendering as
+ * *not recorded* rather than being filled in with a plausible value. Spread the
+ * result into `meta` so a key we could not establish simply isn't there.
+ */
+export interface BrowserProvenance {
+  /** e.g. "Chromium 149.0.7827.55". */
+  browserVersion?: string;
+  /** The executable actually launched, not the one Playwright would have picked. */
+  browserPath?: string;
+}
+
+/**
+ * Pass the options you launched with — `browserType.executablePath()` reports
+ * the default build even when `executablePath` overrode it. Call while the
+ * browser is open.
+ */
+export function browserProvenance(
+  browser: any,
+  launchOpts?: { executablePath?: string }
+): BrowserProvenance;
+
 /** Retained so pre-profile run files still describe themselves; those were mobile. */
 export const VIEWPORT: { width: number; height: number; isMobile: boolean };
 

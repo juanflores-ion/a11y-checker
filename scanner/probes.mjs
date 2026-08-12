@@ -34,9 +34,9 @@
  *
  * `unreachablePanels` tests (5), and exists because the other probes have a
  * blind spot they cannot see past. Every one of them starts by discarding
- * anything `removedFromTree()` matches, on the reasoning that content properly
- * out of the tree is correctly hidden and not worth reporting. For a closed
- * dialog that is exactly right. For the site's primary navigation it is exactly
+ * anything already out of the tree, on the reasoning that content properly out
+ * of the tree is correctly hidden and not worth reporting. For a closed dialog
+ * that is exactly right. For the site's primary navigation it is exactly
  * wrong, and the difference is measurable: at a desktop viewport Insureon puts
  * 63 navigation links in the DOM and 7 in the accessibility tree, because the
  * mega-menu is `display: none` until a mouse hovers it. Nothing announces the
@@ -46,6 +46,43 @@
  * What separates the dialog from the mega-menu is not the hiding, it is whether
  * something still in the tree advertises what is hidden. So that, and not the
  * hiding, is what this probe measures.
+ *
+ * ── Where the answers come from ──────────────────────────────────────────
+ *
+ * This file used to hand-implement five things Chromium already computes:
+ * accessibility-tree membership, the accessible name algorithm, focusability,
+ * ARIA IDREF resolution, and on-screen visibility. Each was a closed list over
+ * an open set of browser mechanisms, and that is precisely why the false
+ * positives concentrated on modern, *correct* code — a well-built collapsible
+ * reaches for the newest mechanism, which is the one missing from the list.
+ * The observed signature was "the better the implementation, the more
+ * confidently it was flagged", which is the worst possible direction for a
+ * check like this to fail in.
+ *
+ * So none of those five is computed here any more. axe-core is already injected
+ * into every page for `axe.run`, and it publishes the same primitives its own
+ * rules are built on. They are used instead:
+ *
+ *   tree membership     axe.commons.dom.isVisibleToScreenReaders
+ *   on-screen           axe.commons.dom.isVisibleOnScreen
+ *   accessible name     axe.commons.text.accessibleText
+ *   focusability        axe.commons.dom.isInTabOrder / getTabbableElements
+ *   IDREF resolution    axe.commons.aria.getAccessibleRefs
+ *   interactive roles   axe.commons.aria.getRolesByType('widget')
+ *
+ * Scored against Chromium's own accessibility tree over CDP on the primitives
+ * fixture, joined on `backendDOMNodeId` with node *absence* as the membership
+ * test: the hand-written `removedFromTree` disagreed with the browser on 9 of
+ * 59 links, `isVisibleToScreenReaders` on 0 of 59. The nine were
+ * `visibility: collapse` and closed `<details>`, neither of which the old list
+ * knew about.
+ *
+ * The point is not that axe is infallible. It is that this file stops owning
+ * the enumeration, and something with a test suite and an industry's worth of
+ * users owns it instead. `axe.commons` is an exposed internal rather than a
+ * documented API, which is why axe-core is pinned to an exact version, why
+ * `meta.axeVersion` is recorded on every run, and why core.mjs fails a scan
+ * loudly when the helpers are missing rather than returning a clean page.
  *
  * ── The rule that doesn't bend ───────────────────────────────────────────
  * Nothing here clicks, hovers, focuses or scrolls. Every probe is a read of
@@ -59,469 +96,1372 @@ export function collectMeasurements() {
   const trunc = (s) => (s && s.length > TRUNCATE ? `${s.slice(0, TRUNCATE)}…` : s || '');
 
   /* ---------------------------------------------------------------- */
-  /* Shared vocabulary                                                 */
+  /* The engine                                                        */
   /* ---------------------------------------------------------------- */
 
-  const NATIVE_INTERACTIVE = 'a[href],button,input,select,textarea,summary,label,[contenteditable="true"],audio[controls],video[controls]';
-
-  // Roles that make an element announce itself as something you can operate.
-  const INTERACTIVE_ROLES = new Set([
-    'button', 'link', 'checkbox', 'radio', 'tab', 'menuitem', 'menuitemcheckbox',
-    'menuitemradio', 'option', 'switch', 'combobox', 'textbox', 'searchbox',
-    'slider', 'spinbutton', 'treeitem', 'gridcell', 'listbox', 'menuitemradio',
-  ]);
-
-  const FOCUSABLE = 'a[href],button,input,select,textarea,[tabindex],[contenteditable="true"]';
-
-  /** Short, human-readable locator. Not for machine matching — class hashes churn. */
-  const describe = (el) => {
-    const id = el.id ? `#${el.id}` : '';
-    const cls = (el.getAttribute('class') || '').trim().split(/\s+/).filter(Boolean)[0];
-    return `${el.tagName.toLowerCase()}${id}${cls ? `.${cls}` : ''}`;
-  };
+  const axe = window.axe;
 
   /**
-   * True when some ancestor genuinely removes this from the accessibility tree.
+   * A measurement that did not happen must never render as a good result.
    *
-   * All six mechanisms, not the obvious four. `hidden` (including
-   * `hidden="until-found"`) and `content-visibility: hidden` remove a subtree
-   * from the tree and from the tab order just as surely as `display: none` —
-   * they are simply newer, and they are what a well-built collapsible uses,
-   * because they keep the content findable by browser find-in-page.
-   *
-   * Missing them meant the probe reported a *correctly implemented* accordion
-   * as five tabbable controls hidden off-screen. The better the implementation,
-   * the more confidently it was flagged, which is the worst possible direction
-   * for a check like this to fail in.
+   * core.mjs checks this before it calls us, the same way it has checked
+   * `axe.run` since a Content-Security-Policy silently dropped the injected
+   * script and produced a spotless report from a scanner that never ran. This
+   * second check is here because these primitives are an exposed internal: a
+   * future axe could keep `axe.run` and move `axe.commons`, and the failure
+   * mode would be a page that measures clean on every probe in this file.
+   * Throwing turns that into `{ url, error }`, which the viewer renders as an
+   * explicit failure and counts as zero.
    */
-  const removedFromTree = (el) => {
-    for (let n = el; n && n !== document.documentElement; n = n.parentElement) {
-      const s = getComputedStyle(n);
-      if (
-        s.display === 'none' ||
-        s.visibility === 'hidden' ||
-        // `auto` only skips rendering when off-screen and stays in the tree;
-        // only `hidden` actually removes the subtree.
-        s.contentVisibility === 'hidden' ||
-        n.hasAttribute('hidden') ||
-        n.getAttribute('aria-hidden') === 'true' ||
-        n.hasAttribute('inert')
-      ) {
+  if (
+    typeof axe?.commons?.dom?.isVisibleToScreenReaders !== 'function' ||
+    typeof axe?.commons?.text?.accessibleText !== 'function' ||
+    typeof axe?.commons?.aria?.getAccessibleRefs !== 'function' ||
+    typeof axe?.setup !== 'function'
+  ) {
+    throw new Error(
+      'axe.commons is not available in the page, so tree membership, accessible names, ' +
+        'focusability and IDREF resolution could not be measured. Refusing to report a ' +
+        'page as clean on primitives that never ran.'
+    );
+  }
+
+  /**
+   * `axe.commons` needs the virtual tree that `axe.setup()` builds; calling it
+   * twice throws ("Axe is already setup") rather than quietly handing back a
+   * stale one. `axe.run` builds and tears down its own tree, so by the time we
+   * get here there is normally nothing set up — but tearing down first is a
+   * measured no-op when that is the case, and it makes this function safe to
+   * call regardless of what ran before it. The `finally` matters as much: a
+   * throw halfway through must not leave `axe._tree` pinned to a document the
+   * next page in the loop has already replaced.
+   */
+  axe.teardown();
+  axe.setup(document.documentElement);
+
+  try {
+    return measurePage();
+  } finally {
+    axe.teardown();
+  }
+
+  function measurePage() {
+    const { dom, text, aria } = axe.commons;
+
+    /* ---------------------------------------------------------------- */
+    /* Shared vocabulary                                                 */
+    /* ---------------------------------------------------------------- */
+
+    const NATIVE_INTERACTIVE =
+      'a[href],button,input,select,textarea,summary,label,[contenteditable="true"],audio[controls],video[controls]';
+
+    /**
+     * The candidate net for "things a person could operate". Deliberately a
+     * cheap CSS query: it over-selects, and axe decides which of them count.
+     * `summary` is in the list because a closed `<details>` is a *correct*
+     * disclosure — its trigger has to be seen as a control, or the accordion
+     * it fronts gets reported as a region nothing announces.
+     */
+    const FOCUSABLE =
+      'a[href],button,input,select,textarea,summary,[tabindex],[contenteditable="true"]';
+
+    /**
+     * The tags the ghost-control probe will even look at. Named once because
+     * two separate tests below ask "would this element itself have been a
+     * candidate?", and they have to be asking about the same net.
+     */
+    const CANDIDATE_TAGS = 'div,span,li,i,svg,p,section,header,figure';
+
+    /** Roles that make an element announce itself as something you can operate. */
+    const WIDGET_ROLES = new Set(aria.getRolesByType('widget'));
+
+    /**
+     * The ONE role where ARIA puts the control that displays the popup beside
+     * the widget rather than on it.
+     *
+     * `combobox`, and nothing else. The combobox pattern is explicitly two
+     * elements — a text field and an optional button that displays the popup —
+     * acting as one widget, which is what react-select renders: a chevron in
+     * `IndicatorsContainer` beside the container holding the
+     * `<input role="combobox">` that actually operates it.
+     *
+     * `searchbox`, `textbox` and `spinbutton` used to be in this set and they
+     * have no business here: none of them has a popup in ARIA at all, so
+     * nothing beside one can be "the button that displays it". Measured, that
+     * over-wide set is what let an `<input type="search">` (role `searchbox`)
+     * and an `<input aria-label="Filter" aria-controls="…">` (role `textbox`,
+     * no popup of any kind) each certify a dead hamburger standing next to
+     * them — main reported `div.burger`, this file reported nothing. A false
+     * clean, which is the incident class this project has already shipped twice.
+     */
+    const POPUP_PAIRED_ROLE = 'combobox';
+
+    /** A region needs this many controls to be a panel rather than a stray control. */
+    const MIN_CONTROLS = 3;
+
+    /** Short, human-readable locator. Not for machine matching — class hashes churn. */
+    const describe = (el) => {
+      const id = el.id ? `#${el.id}` : '';
+      const cls = (el.getAttribute('class') || '').trim().split(/\s+/).filter(Boolean)[0];
+      return `${el.tagName.toLowerCase()}${id}${cls ? `.${cls}` : ''}`;
+    };
+
+    /**
+     * Every predicate below is asked once per element and then remembered.
+     * The panel probes ask about the same controls from several enclosing
+     * regions, and `getRole` and the visibility walks are not free on a page
+     * with a thousand candidate containers.
+     */
+    const memo = (fn) => {
+      const cache = new Map();
+      return (el) => {
+        if (cache.has(el)) return cache.get(el);
+        const value = fn(el);
+        cache.set(el, value);
+        return value;
+      };
+    };
+
+    /* ---------------------------------------------------------------- */
+    /* The five primitives, all borrowed                                 */
+    /* ---------------------------------------------------------------- */
+
+    /** In the accessibility tree. Knows every mechanism axe knows, and grows with it. */
+    const inTree = memo((el) => dom.isVisibleToScreenReaders(el));
+
+    /** Rendered where a person could see it. Opacity, clip, overflow, off-screen. */
+    const onScreen = memo((el) => dom.isVisibleOnScreen(el));
+
+    /**
+     * The real accname algorithm, which is the fix for a specific measured
+     * failure: the old version read `el.textContent`, so
+     * `<span aria-hidden="true">☰</span>` gave a hamburger a name and every
+     * check below skipped it. Measured on a fixture holding five hamburgers
+     * that differ only in icon technique — `aria-hidden` span, `aria-hidden`
+     * svg, `aria-hidden` `<i>`, visually-hidden text, and no icon at all —
+     * `textContent` named two of the five and `accessibleText` names none of
+     * them, which is the answer all five must share.
+     */
+    const UNCOMPUTED_NAME = '(name could not be computed)';
+    const accessibleName = memo((el) => {
+      try {
+        return (text.accessibleText(el) || '').trim();
+      } catch {
+        // "We could not tell" is not "there is no name", and every check below
+        // treats an empty name as a defect. Returning "" would manufacture a
+        // finding out of a failed measurement, so this returns something truthy
+        // and the element goes unreported instead. That is a real gap; it is
+        // just not one worth inventing a false positive to close.
+        return UNCOMPUTED_NAME;
+      }
+    });
+
+    /**
+     * The name the browser actually publishes for an element with NO role.
+     *
+     * `accessibleText` above answers "what would this element be called if it
+     * were named from its contents", which is the right question for a button
+     * or a link and the wrong one for a bare `<div>`. Chromium publishes a name
+     * on a role-less element only when an author wrote one — `aria-label`,
+     * `aria-labelledby`, or `title` — and publishes nothing at all for text,
+     * `<img alt>` or `<svg><title>` inside it. Measured over CDP against
+     * Chromium's own accessibility tree; the table is at the call site.
+     *
+     * So this asks only for the authored name. It still goes through axe rather
+     * than reading the three attributes here, because `aria-labelledby` is an
+     * IDREF list with its own resolution rules and that is exactly the kind of
+     * closed list this file stopped keeping.
+     */
+    const exposedName = memo((el) => {
+      try {
+        const vNode = axe.utils.getNodeFromTree(el) ?? el;
+        const labelledby = (aria.arialabelledbyText(vNode) || '').trim();
+        if (labelledby) return labelledby;
+        const label = (aria.arialabelText(vNode) || '').trim();
+        if (label) return label;
+        return (text.titleText(vNode) || '').trim();
+      } catch {
+        // Same reasoning as UNCOMPUTED_NAME above: "we could not tell" must not
+        // become "there is no name", because the caller reads an empty name as
+        // a defect. Report nothing rather than invent a finding.
+        return UNCOMPUTED_NAME;
+      }
+    });
+
+    /** In the tab order, as axe computes it. */
+    const inTabOrder = memo((el) => {
+      try {
+        return dom.isInTabOrder(el);
+      } catch {
+        return false;
+      }
+    });
+
+    /**
+     * The element's computed role, asked once. `null` means "the browser
+     * publishes no role for this" — measured, that is what axe answers for a
+     * bare `<div>`, `<span>` and `<section>` without a name.
+     */
+    const roleOf = memo((el) => {
+      try {
+        return aria.getRole(el, { noPresentational: true });
+      } catch {
+        return null;
+      }
+    });
+
+    /**
+     * Everything in the document that points at this element by an ARIA IDREF —
+     * `aria-controls`, `aria-owns`, `aria-labelledby` and the rest, in both
+     * directions. axe indexes every idref attribute in the spec once per root
+     * and caches it, so this is a map lookup rather than a `querySelector` per
+     * candidate.
+     *
+     * The old version read only the first `[aria-controls="…"]`, which missed
+     * `aria-owns` outright: on the fixture it found the controller for one of
+     * two correctly-announced panels and reported the other as unfindable.
+     */
+    const referrersTo = (el) => {
+      if (!el.id) return [];
+      try {
+        return aria.getAccessibleRefs(el);
+      } catch {
+        return [];
+      }
+    };
+
+    /**
+     * "Is this a control a person could reach, setting aside whether the region
+     * around it happens to be open?"
+     *
+     * axe's own `isFocusable` cannot answer this, and the reason matters:
+     * `focusDisabled()` — which it calls first — ends in `isHiddenForEveryone()`.
+     * So every control inside a closed panel answers *false*, which is correct
+     * for a visible page and useless here, where the whole subject is a panel
+     * that is closed. Counting controls with it would report zero lost controls
+     * exactly where the defect is — a false clean, which is the failure mode
+     * this project has already shipped twice.
+     *
+     * So the visibility half is set aside and each remaining question is still
+     * put to something that owns the answer:
+     *
+     *   :disabled       the browser's own pseudo-class, which already knows a
+     *                   control inside `<fieldset disabled>` is disabled. The
+     *                   hand-written `!el.hasAttribute('disabled')` did not,
+     *                   and that inflated the count feeding "controls an agent
+     *                   cannot find" — measured 8 against a true 3.
+     *   parseTabindex   axe's parser, so odd `tabindex` values behave.
+     *   getRolesByType  axe's list of W3C widget roles, rather than a private
+     *                   set maintained in this file.
+     *
+     * One exception is spelled out rather than delegated: axe's `getRole()`
+     * answers `textbox` for `input[type="hidden"]` (measured, 4.13.0), which
+     * would put every CSRF token in a form on the list of controls an agent
+     * has lost. `type` is one fixed HTML attribute value, not an open set of
+     * browser mechanisms, so naming it here does not recreate the fault this
+     * file was rewritten to remove.
+     */
+    const isControl = memo((el) => {
+      if (el.tagName === 'INPUT' && el.type === 'hidden') return false;
+      if (el.matches(':disabled')) return false;
+      const tabindex = axe.utils.parseTabindex(el.getAttribute('tabindex'));
+      if (tabindex !== null && tabindex < 0) return false;
+      // `roleOf` swallows a thrown role lookup as `null`, so an element axe
+      // could not classify falls through to the tabindex answer below.
+      const role = roleOf(el);
+      if (role && WIDGET_ROLES.has(role)) return true;
+      return tabindex !== null && tabindex >= 0;
+    });
+
+    /**
+     * The tabbable controls *inside* an element, excluding the element itself.
+     *
+     * `getTabbableElements` wants one of axe's virtual nodes rather than a DOM
+     * element, and returns nothing useful for a node axe never walked.
+     */
+    const tabbableWithin = (el) => {
+      try {
+        const vNode = axe.utils.getNodeFromTree(el);
+        if (!vNode) return [];
+        return dom.getTabbableElements(vNode).filter((v) => v.actualNode !== el);
+      } catch {
+        return [];
+      }
+    };
+
+    /**
+     * What a control SAYS it operates.
+     *
+     * Two forms, and only two, because only these two are the author writing
+     * the relationship down: an ARIA IDREF (`aria-controls` / `aria-owns`), and
+     * the one native disclosure HTML has, where a `<summary>` operates the
+     * `<details>` it is the summary of. `aria-labelledby` and
+     * `aria-describedby` are IDREFs too and are deliberately not here — a
+     * heading that labels a panel is not the button that opens it.
+     *
+     * Resolution goes through `axe.commons.dom.idrefs` rather than
+     * `getElementById` here, for the reason the rest of this file gives: an
+     * IDREF attribute is a *list* with its own resolution rules, and that is
+     * exactly the kind of thing this file stopped owning. If the helper ever
+     * goes missing the catch returns "declares nothing", which costs findings
+     * in the safe direction — an undeclared trigger can never rescue anything,
+     * so the failure is a false positive rather than a false clean.
+     */
+    const declaredTargets = memo((el) => {
+      const targets = [];
+      try {
+        for (const attr of ['aria-controls', 'aria-owns']) {
+          if (!el.hasAttribute(attr)) continue;
+          for (const target of dom.idrefs(el, attr)) {
+            if (target && target.nodeType === 1) targets.push(target);
+          }
+        }
+      } catch {
+        // Resolution failed; this element is treated as declaring nothing.
+      }
+      if (el.tagName === 'SUMMARY') {
+        const details = el.parentElement;
+        if (details && details.tagName === 'DETAILS') targets.push(details);
+      }
+      return targets;
+    });
+
+    /**
+     * ── The one predicate: does X actually operate Y? ─────────────────────
+     *
+     * Three probes used to answer this three different ways, and all three
+     * answered it with PROXIMITY — shares a parent, is the parent, sits in the
+     * same box. Proximity is not a relationship, and each of the three shipped
+     * a false clean because of it. Measured, against the same fixtures on main:
+     *
+     *   A `<summary>Help</summary>` in one column of a nav "announced" the
+     *   `display: none` mega-menu beside it, because a `<summary>` was taken to
+     *   announce anything it shared a parent with. Six links an agent cannot
+     *   find, published as zero, on the headline metric.
+     *
+     *   A hamburger beside `<button aria-haspopup="dialog">Chat</button>` was
+     *   rescued from `ghostControls`, because *something* nearby announced
+     *   *something*. That is the commonest mobile header on the web, and it is
+     *   exactly what that probe exists to catch.
+     *
+     * So the question is asked once, here, and the answer is yes only when the
+     * relationship is real:
+     *
+     *   1. The trigger DECLARES what it operates, and this region is that
+     *      target, inside it, or around it. A trigger that names its target has
+     *      told us what it is about — and, just as importantly, what it is not
+     *      about. That is what stops a `<summary>` from claiming the panel next
+     *      door: its `<details>` is right there, and the panel is not in it.
+     *   2. The region is inside the trigger. Nothing to infer.
+     *   3. The trigger declares NO target, announces a disclosure, and is
+     *      PAIRED with the region: its own sibling, or inside a sibling that is
+     *      nothing but packaging around it. This is the plain WAI-ARIA
+     *      disclosure — `<button aria-expanded>Products</button>` beside its
+     *      `<ul>` — where `aria-controls` is optional and most authors omit it.
+     *      Adjacency is the only evidence there is, and it is admissible
+     *      *because the trigger named nothing that rules the region out*.
+     *      Order matters: a trigger that declared a target never reaches here.
+     *
+     * Rule 3 is the one that has to be kept honest, and it took two goes.
+     * "Same parent" let a mega-menu trigger carrying only `aria-expanded` reach
+     * across a nav and announce the hover-only menu two branches away, taking
+     * five unfindable links to zero — the `<summary>` false clean again, one
+     * level out. "Same parent, and the trigger's branch holds no other control"
+     * then let a Filters widget whose panel is plain text do the same thing to
+     * six more, because a panel with nothing focusable in it counted as
+     * nothing at all.
+     *
+     * So the branch holding the trigger has to be PACKAGING and nothing else:
+     * every element in it is the trigger, inside the trigger, or a wrapper
+     * around it. Layout divs and component boundaries pass, which is what the
+     * inert-wrapper family requires; a branch that also holds a panel, a label
+     * or any other content is a different component, and its trigger is about
+     * ITS contents. Where that is wrong it over-reports, which is the direction
+     * this file is allowed to be wrong in.
+     *
+     * Rule 1 has a second half, and it is the fix for a measured false clean of
+     * its own. `t.contains(region)` is not a fact about the page, it is an
+     * INFERENCE: "open t and the region arrives". That inference is only sound
+     * while t is closed. Measured, against an `<details open>` whose body also
+     * holds a `:hover`-only submenu — the summary declares its `<details>`, the
+     * `<details>` contains the panel, so containment fired and the panel came
+     * back announced: main published 6 links an agent cannot find, this file
+     * published 0. Opening that `<details>` reveals nothing, because it is
+     * already open and something else is doing the hiding.
+     *
+     * So a trigger whose own declared state says OPEN cannot explain a region
+     * that is still hidden. `<details open>` and `aria-expanded="true"` are the
+     * two ways a trigger says that, and a trigger that says nothing about its
+     * state is treated as closed — which is what main does, and the direction
+     * that keeps a correct closed accordion from being reported as a defect.
+     * The narrowing is confined to the containment inference: where the trigger
+     * names the region itself, the author wrote the relationship down and it is
+     * honoured whatever the state.
+     */
+    const operates = (trigger, region) => {
+      if (!trigger || !region || trigger === region) return false;
+      if (region.contains(trigger)) return false; // the trigger is part of the region
+
+      const declared = declaredTargets(trigger);
+      if (declared.length > 0) {
+        return declared.some((t) => {
+          if (t === region || region.contains(t)) return true;
+          return t.contains(region) && declaresClosed(trigger);
+        });
+      }
+      if (trigger.contains(region)) return true;
+      if (!announces(trigger)) return false;
+
+      const group = region.parentElement;
+      if (!group) return false;
+      const branch = [...group.children].find((c) => c === trigger || c.contains(trigger));
+      if (!branch) return false;
+      if (branch === trigger) return true;
+      return [...branch.querySelectorAll('*')].every(
+        (n) => n === trigger || trigger.contains(n) || n.contains(trigger)
+      );
+    };
+
+    /**
+     * The control that opens a hidden region, if one is discoverable from the
+     * markup. Shared by both hiding probes so they cannot disagree about what
+     * counts as announced.
+     *
+     * Ancestors count. A disclosure typically puts `aria-controls` on the panel
+     * it owns, and the component hides something *inside* that panel — so the
+     * hidden element itself is named by nothing, while the thing an agent
+     * actually operates sits one level up. Checking only the hidden element
+     * reported a correctly built mega-menu as 560 unfindable links, because the
+     * button pointed at the wrapper rather than the inner block it hides.
+     *
+     * If any ancestor is announced, everything inside it is reachable: open that
+     * ancestor and the content arrives.
+     *
+     * Every candidate goes through `operates()`, and nothing is returned that
+     * does not. The old version returned the first interactive element it found
+     * in a sibling subtree and let the caller decide — which is how a
+     * `<summary>` three levels down an unrelated `<details>` came back as the
+     * trigger for a mega-menu.
+     */
+    const disclosureFor = (el) => {
+      /**
+       * The explicit contract first: something points at this, or at anything
+       * containing it, by id.
+       *
+       * `getAccessibleRefs` widens what the old `[aria-controls="…"]` query
+       * could see — `aria-owns` was invisible to it, and on the fixture that
+       * cost one of two correctly-announced panels — but it widens in both
+       * useful and useless directions, because `aria-labelledby` and
+       * `aria-describedby` are IDREFs too. `operates()` is what sorts them out;
+       * an announcing operator wins outright, and a non-announcing one is kept
+       * only so the run file can say what was found.
+       */
+      let operator = null;
+      for (let n = el; n && n !== document.documentElement; n = n.parentElement) {
+        for (const ref of referrersTo(n)) {
+          if (!operates(ref, el)) continue;
+          if (announces(ref)) return ref;
+          operator ??= ref;
+        }
+      }
+      // Otherwise the conventional shape: a trigger sitting beside the panel.
+      const parent = el.parentElement;
+      if (parent) {
+        for (const c of [...parent.children].filter((c) => c !== el)) {
+          const candidate =
+            c.matches(NATIVE_INTERACTIVE) || c.getAttribute('role') === 'button'
+              ? c
+              : c.querySelector('button,a[href],[role="button"],summary');
+          if (candidate && operates(candidate, el)) return candidate;
+        }
+      }
+      return operator;
+    };
+
+    /**
+     * Does this trigger tell an agent that something is hidden behind it?
+     *
+     * `<summary>` counts without any ARIA at all. The browser gives a closed
+     * `<details>` an expanded state for free — measured over CDP, Chromium
+     * exposes the trigger as `DisclosureTriangle` with `expanded=false` — and a
+     * native accordion is exactly the correct implementation this scanner keeps
+     * being caught reporting as a defect. Requiring authored ARIA on it would
+     * invent a sixth false-positive class on the way to fixing five.
+     *
+     * Note what this does NOT say: *which* region the trigger announces. It
+     * used to be read as if it did, and a `<summary>` returning an unconditional
+     * true is what published six unfindable links as zero. `announces()` says
+     * "this is a disclosure trigger"; `operates()` says "of this region". Both
+     * are required, everywhere, and they are never interchangeable.
+     */
+    function announces(el) {
+      if (!el) return false;
+      if (el.tagName === 'SUMMARY') return true;
+      return (
+        el.hasAttribute('aria-expanded') ||
+        el.hasAttribute('aria-haspopup') ||
+        el.hasAttribute('aria-controls')
+      );
+    }
+
+    /**
+     * Does this trigger's own state say the thing it operates is shut?
+     *
+     * Only `operates()`'s containment inference asks, and the block comment
+     * there says why: "open this and the region arrives" is a claim about a
+     * closed disclosure, and it is false about an open one. The two states a
+     * trigger can actually declare are a `<details>` without `open` and
+     * `aria-expanded`; anything that declares neither is read as closed, which
+     * is main's behaviour and keeps a correct `aria-haspopup`-only trigger
+     * working.
+     *
+     * `aria-expanded` is read off the trigger and the `open` attribute off the
+     * `<details>` the trigger belongs to, because those are the elements the
+     * state actually lives on — a `<summary>` carries no state of its own.
+     */
+    function declaresClosed(trigger) {
+      if (trigger.tagName === 'SUMMARY') {
+        const details = trigger.parentElement;
+        if (details && details.tagName === 'DETAILS' && details.hasAttribute('open')) return false;
+      }
+      return trigger.getAttribute('aria-expanded') !== 'true';
+    }
+
+    /* ---------------------------------------------------------------- */
+    /* 1 + 2. Named controls (the original checks, unchanged)            */
+    /* ---------------------------------------------------------------- */
+
+    const namelessButtons = [];
+    const namelessLinks = [];
+    const emptyHref = [];
+
+    for (const el of document.querySelectorAll('button,[role="button"]')) {
+      if (!inTree(el)) continue;
+      if (!accessibleName(el)) namelessButtons.push(trunc(el.outerHTML));
+    }
+
+    for (const el of document.querySelectorAll('a[href]')) {
+      if (!inTree(el)) continue;
+      if (!accessibleName(el)) namelessLinks.push(trunc(el.outerHTML));
+      if (el.getAttribute('href') === '') emptyHref.push(trunc(el.outerHTML));
+    }
+
+    const hasMain = !!document.querySelector('main,[role="main"]');
+
+    /* ---------------------------------------------------------------- */
+    /* 1. PRESENCE — controls that never declare themselves as controls  */
+    /* ---------------------------------------------------------------- */
+
+    /**
+     * ── One candidate gate, asked once ───────────────────────────────────
+     *
+     * Elements that look operable to a sighted mouse user but carry no
+     * interactive role. `cursor: pointer` is the strongest available signal
+     * from the DOM alone — a real click listener can't be read from page
+     * script. Node confirms these against the browser's own listener registry
+     * over CDP (see `confirmClickListeners` in core.mjs); this list is the
+     * candidate net, not the verdict.
+     *
+     * This used to be written out THREE times — once in the loop below, once in
+     * a `isCandidateShaped` helper the origination test consulted, and once in
+     * the innermost-descendant test — and the three drifted. The middle copy
+     * implemented five of the eight gates, so it answered "that ancestor is a
+     * candidate" about an element the loop would never have reported, the child
+     * deferred to it, and both vanished. Measured against main on a 300×100
+     * clickable card holding a nameless dismiss control and a "Read more" link:
+     * main published `div.dismiss`, this file published nothing at all. One copy
+     * cannot drift.
+     */
+    const isCandidate = memo((el) => {
+      if (!el || el.nodeType !== 1) return false;
+      if (!el.matches(CANDIDATE_TAGS)) return false;
+      if (!inTree(el)) return false;
+      if (el.closest(NATIVE_INTERACTIVE)) return false; // already inside a real control
+      const role = roleOf(el);
+      if (role && WIDGET_ROLES.has(role)) return false; // declares itself properly
+      // A real click listener can't be read from page script; these two are what
+      // the DOM makes available.
+      if (!el.hasAttribute('onclick') && getComputedStyle(el).cursor !== 'pointer') return false;
+      // A pointer cursor on a big layout block is styling, not a control.
+      const rect = el.getBoundingClientRect();
+      if (rect.width > 640 || rect.height > 480) return false;
+      if (rect.width === 0 && rect.height === 0) return false;
+      return true;
+    });
+
+    /**
+     * ── The rescue the sibling rule exists for, and nothing else ─────────
+     *
+     * react-select's dropdown chevron is a role-less, nameless `div` with a
+     * real click listener and no way for a keyboard to reach it. Every test
+     * below says ghost and it is nothing of the kind: the
+     * `<input role="combobox">` beside it operates the same widget, an agent
+     * tabs to that, and the menu opens. Reporting it describes the library's
+     * DOM rather than a barrier.
+     *
+     * ── What this used to be, and the two false cleans it shipped ────────
+     *
+     * First it asked only that SOME element under the same parent satisfy
+     * `announces() && inTree() && inTabOrder()`. Nothing tied that element to
+     * this one. Measured against main on a 400×60 header holding a nameless,
+     * role-less, unreachable `div.burger`, the burger was rescued — reported by
+     * main, silent here — beside `<button aria-haspopup="dialog">`, beside
+     * `<button aria-expanded aria-controls="acct">`, and beside
+     * `<details><summary>Search</summary></details>`. A hamburger next to an
+     * account, chat or search disclosure is the commonest mobile header on the
+     * web.
+     *
+     * Narrowing it to "an announcing text-entry widget" moved the hole rather
+     * than closing it. Measured against main on the same header, the burger was
+     * still silenced by `<input type="search" aria-expanded aria-controls>`, by
+     * a bare `<input role="combobox">` with no name, by
+     * `<input aria-label="Filter" aria-controls>` whose role is `textbox` and
+     * which has no popup of any kind, and by a combobox one wrapper OUTSIDE the
+     * burger's own header — because the search climbed ancestors until the box
+     * got bigger than 640×480, and a mobile header never does.
+     *
+     * ── What it asks now ─────────────────────────────────────────────────
+     *
+     * Three things, and the suppression is refused unless all three hold. Each
+     * one closes one of the measured shapes above:
+     *
+     *   1. The neighbour is a `combobox` — the one role ARIA pairs with a
+     *      separate popup button — and it is a control an agent can
+     *      DEMONSTRABLY USE: in the tree, in the tab order, and named. That is
+     *      the invariant this whole file is being rebuilt around. A finding may
+     *      be suppressed only when the thing it defers to is itself published
+     *      or is genuinely usable; deferring to a nameless input is deferring
+     *      to nothing.
+     *   2. The search stops dead at the first ancestor that publishes a role of
+     *      its own. A widget does not span a `banner`, a `navigation`, a `main`
+     *      or a `list` — those are page structure, and everything on the far
+     *      side of one is a different component. This is what replaces the
+     *      640×480 climb, and it is what makes all four header shapes above
+     *      report again: the climb never leaves `<header>`.
+     *   3. That ancestor is the WIDGET, not a chunk of page: every element
+     *      inside it is the candidate, the combobox, inside one of them, or a
+     *      role-less wrapper around one of them. react-select passes at every
+     *      depth it ships — `IndicatorsContainer` and `ValueContainer` are
+     *      exactly such wrappers — and a header that also holds a logo, a
+     *      heading or a second control does not.
+     *
+     * The residual risk, stated rather than hidden: a nameless clickable and a
+     * named combobox alone together inside a role-less div are indistinguishable
+     * from react-select by anything in the DOM, and are rescued. That is far
+     * narrower than "any announcing neighbour", it costs a false positive
+     * rather than a false clean wherever it is wrong, and every ghost finding is
+     * still gated on the browser's own listener registry before it is published.
+     */
+    const isUsableControl = (el) => {
+      if (!inTree(el) || !inTabOrder(el)) return false;
+      const name = accessibleName(el);
+      return !!name && name !== UNCOMPUTED_NAME;
+    };
+
+    const isUsableCombobox = (el) => roleOf(el) === POPUP_PAIRED_ROLE && isUsableControl(el);
+
+    const isWidgetPackaging = (scope, el, combobox) =>
+      [...scope.querySelectorAll('*')].every((n) => {
+        if (n === el || el.contains(n)) return true;
+        if (n === combobox || combobox.contains(n)) return true;
+        // A wrapper around either half is packaging only if it is packaging.
+        if (n.contains(el) || n.contains(combobox)) return !roleOf(n);
+        return false;
+      });
+
+    const operatedByCombobox = (el) => {
+      for (let scope = el.parentElement; scope; scope = scope.parentElement) {
+        if (scope === document.body || scope === document.documentElement) return false;
+        if (roleOf(scope)) return false; // a page region, not a widget
+        const combobox = [...scope.querySelectorAll(FOCUSABLE)].find(
+          (c) => c !== el && !el.contains(c) && isUsableCombobox(c)
+        );
+        if (!combobox) continue;
+        return isWidgetPackaging(scope, el, combobox);
+      }
+      return false;
+    };
+
+    /**
+     * The other rescue, and the only one that needs no inference at all: some
+     * usable control in the document DECLARES this element as what it operates.
+     *
+     * No climb and no adjacency — `getAccessibleRefs` answers who points here,
+     * and `operates()` rules on whether that pointing is operation. That is
+     * deliberately the SAME `operates()` the disclosure probes use. There were
+     * two implementations of "does X operate Y" in this file, with different
+     * containment rules, and that divergence is how two of the false-positive
+     * classes arose: one of them read an IDREF as operation while the other did
+     * not. One implementation cannot disagree with itself.
+     */
+    const operatedByDeclaration = (el) =>
+      referrersTo(el).some((ref) => isUsableControl(ref) && operates(ref, el));
+
+    /**
+     * Would this element be published on its own evidence, before any question
+     * of which of two nested elements is "the" control?
+     *
+     * Split out from the loop because the de-duplication below has to ask it
+     * about an ANCESTOR, and the invariant it enforces is stated in terms of
+     * publication: a finding may be suppressed only when the thing it defers to
+     * is itself published.
+     *
+     * `exposedName`, not `accessibleName`, and the difference is a measured
+     * false negative rather than a nicety. Every element that reaches this line
+     * has already failed the role test in `isCandidate` — that is what it is
+     * doing here — and Chromium exposes NO name on a role-less element unless an
+     * author wrote one. `accessibleText` does not make that distinction: it
+     * computes name-from-content for anything it is handed. Measured against
+     * Chromium's own tree over CDP, on a `<div>` with no role:
+     *
+     *     <span aria-hidden>glyph</span>   chromium ""      axe ""
+     *     <svg><title>Menu</title>         chromium ""      axe "Menu"
+     *     <span>Menu</span>                chromium ""      axe "Menu"
+     *     Menu                             chromium ""      axe "Menu"
+     *     <img alt="Menu">                 chromium ""      axe "Menu"
+     *     aria-label="Menu"                chromium "Menu"  axe "Menu"
+     *
+     * Only the last row is a name an agent can read. On the other four the probe
+     * was skipping a dead control on the strength of text the browser never
+     * publishes. Elements that DO carry a role keep the full accname algorithm —
+     * that is what `namelessButtons` and `namelessLinks` are built on, where
+     * name-from-content is exactly right and the browser agrees.
+     *
+     * The three rescues are here rather than in the loop for the same reason:
+     * an ancestor that is rescued has not been published, so it cannot stand in
+     * for anything.
+     *
+     *   A wrapper around a working control is not a dead end. If the element
+     *   contains a real, tabbable, in-tree control, an agent uses that.
+     *   `getTabbableElements` rather than a list of native tags, which is what
+     *   the first version of this guard used: that list held no `[role]` and no
+     *   `[tabindex]`, so it rescued react-select and went on flagging a correct
+     *   `<div role="button" tabindex="0" aria-label="…">` one level down.
+     *
+     *   A control that declares it operates this one, which is the author
+     *   writing the relationship down and needs no inference.
+     *
+     *   And the combobox pairing above, for a widget whose working control is a
+     *   sibling rather than a descendant.
+     */
+    /**
+     * Did this element's click signal start here, or did it flow down from an
+     * ancestor that is itself a candidate?
+     *
+     * `cursor` inherits and `onclick` does not, so an `onclick` attribute is
+     * always the element's own. Everything else is a proxy: if a candidate
+     * ancestor exists then it computes to `pointer` too, and this element may
+     * simply be standing in its shadow.
+     */
+    const inheritsSignal = (el) => {
+      if (el.hasAttribute('onclick')) return false;
+      for (let n = el.parentElement; n; n = n.parentElement) {
+        if (isCandidate(n)) return true;
+      }
+      return false;
+    };
+
+    const isReportable = memo((el) => {
+      if (!isCandidate(el)) return false;
+      const role = roleOf(el);
+      const name = role ? accessibleName(el) : exposedName(el);
+      // No accessible name *and* no way for a keyboard to reach it. An agent
+      // cannot identify it, cannot operate it, and — because it carries no role
+      // — no automated audit will ever mention it. This is the hamburger.
+      if (name || inTabOrder(el)) return false;
+      if (tabbableWithin(el).length > 0) return false;
+      if (operatedByDeclaration(el)) return false;
+      if (operatedByCombobox(el)) return false;
+
+      /**
+       * An element that never carried the signal itself takes the STRICTER name
+       * test, and this is the one place `accessibleText` earns its place on a
+       * role-less element.
+       *
+       * The evidence is weaker here by construction: the only reason this looks
+       * clickable is that something above it does. On a clickable promo card
+       * that is exactly what the card's paragraph of copy is — measured, a
+       * `<p class="copy">Save 20% when you renew…</p>` inside a `cursor: pointer`
+       * card is in the candidate net, in the tree, nameless by the authored-name
+       * test and out of the tab order, so it read as a dead control the moment
+       * the card around it was excused. Copy text is not a control, name-from-
+       * content is what says so, and requiring it only for inherited signals
+       * keeps the measured false negative it would otherwise cause: a hamburger
+       * drawn with `<svg><title>Menu</title>` owns its own `cursor` rule, so it
+       * is judged on the authored name Chromium actually publishes.
+       */
+      if (inheritsSignal(el) && accessibleName(el)) return false;
+      return true;
+    });
+
+    /**
+     * One control is one candidate — and the tie is broken by PUBLICATION.
+     *
+     * `cursor` inherits. A hamburger whose own rule says `cursor: pointer`
+     * hands `pointer` to the glyph inside it, to the glyph's wrapper, and to
+     * anything else in there, none of which any author made clickable. Read
+     * literally, the computed style says a single control is three or four, and
+     * the probe then adjudicates each of them separately — which is how one
+     * hamburger became a candidate that had a name, a candidate that had no
+     * listener, and no published finding at all. The icon-technique family is
+     * the receipt: five behaviourally identical hamburgers, five glyph
+     * techniques, scoring 1, 0, 1, 1, 1 on candidates and 1, 0, 0, 0, 1 on
+     * published controls. The glyph decided whether the control was found.
+     *
+     * The fix for that was an ORIGINATION rule — credit an inherited cursor to
+     * the outermost element that has it — and it leaked twice, both times the
+     * same way: it deferred to an ancestor that was never going to be reported.
+     * A `<ul style="cursor:pointer">` over three role-less `<li>` (main 3, this
+     * file 0). An 800×200 promo card over the size gate holding a 24×24 dismiss
+     * (main `div.dismiss`, this file nothing). A 300×100 card UNDER the size
+     * gate holding a dismiss and a "Read more" link, where the card absorbed the
+     * signal and was then rescued by the link (main `div.dismiss`, this file
+     * nothing). Every one is a silent deletion, which is the incident class this
+     * project has already shipped twice.
+     *
+     * So the rule is no longer about where the STYLE originates. It is the
+     * invariant, applied literally: this element is dropped only when an
+     * ancestor is itself going to be PUBLISHED in its place. The hamburger's
+     * glyph still goes, because the hamburger is published. The `<ul>`'s
+     * options, the promo card's dismiss and the rescued card's dismiss all stay,
+     * because nothing above them is published and dropping them would leave the
+     * page reading clean.
+     *
+     * The one exception is `onclick`, which is the only signal that is provably
+     * this element's own rather than inherited: an author wrote it here. Nothing
+     * above can stand in for that.
+     *
+     * The rule runs in both directions, and the second half is what keeps the
+     * count at one rather than moving it around. An element that is a candidate
+     * but is NOT itself publishable — a card rescued by the link inside it, a
+     * chevron rescued by its combobox — steps aside for a publishable descendant
+     * where there is one, because that descendant is the same click described
+     * from further in. Where there is none it stays as the magnitude's one
+     * entry, which is what `clickableNoRole` is counting.
+     *
+     * The cost of getting this wrong in the other direction is one nesting level
+     * in a `selector`, on a widget that is still counted exactly once — against
+     * a whole control going unreported. That is not a close trade.
+     */
+    const representsAControl = (el) => {
+      if (!el.hasAttribute('onclick')) {
+        for (let n = el.parentElement; n; n = n.parentElement) {
+          if (isReportable(n)) return false; // published in its place
+        }
+      }
+      if (isReportable(el)) return true;
+      // Nothing to publish, and the signal is not even this element's own — the
+      // card's paragraph of copy again. The element that DOES own the signal is
+      // already the entry for it, so counting this one as well would report a
+      // page as more clickable for having text on it.
+      if (inheritsSignal(el)) return false;
+      return ![...el.querySelectorAll(CANDIDATE_TAGS)].some(isReportable);
+    };
+
+    const ghostControls = [];
+    const ghostEls = [];
+    let clickableNoRole = 0;
+    for (const el of document.querySelectorAll(CANDIDATE_TAGS)) {
+      if (!isCandidate(el)) continue;
+      // Dropped only because something else is published in its place. See
+      // `representsAControl`: a suppression that leaves nothing behind is a
+      // false clean, not a refinement.
+      if (!representsAControl(el)) continue;
+
+      // Every element that responds to a click without declaring a role. Most
+      // are harmless: a whole card made clickable for convenience, with a real
+      // link inside it. Counted as a magnitude, not listed.
+      clickableNoRole += 1;
+
+      // The harmful subset, and the only one worth naming. `isReportable` holds
+      // the reasoning, because the de-duplication above has to ask the same
+      // question about an ancestor.
+      if (!isReportable(el)) continue;
+
+      ghostControls.push({
+        selector: describe(el),
+        html: trunc(el.outerHTML),
+        tag: el.tagName.toLowerCase(),
+        testId: el.getAttribute('data-test-id') || null,
+        hasOnClickAttr: el.hasAttribute('onclick'),
+        cursorPointer: getComputedStyle(el).cursor === 'pointer',
+        keyboardReachable: false,
+        // Filled in by Node over CDP — the browser's own listener registry is
+        // the authority on whether this is really a control.
+        confirmedListener: null,
+      });
+      ghostEls.push(el);
+    }
+
+    // Live handles, same order as ghostCandidates, so Node can confirm each one
+    // against the browser's real listener registry over CDP.
+    window.__ghostCandidateEls = ghostEls;
+
+    /* ---------------------------------------------------------------- */
+    /* 4 + 5. Regions: one classification, two probes                    */
+    /* ---------------------------------------------------------------- */
+
+    /**
+     * The two hiding probes used to own separate enumerations, and they
+     * disagreed. `removedFromTree` knew six mechanisms; `hidesItself`, three
+     * hundred lines below it, knew four. A panel hidden with
+     * `content-visibility: hidden` fell in the gap and was reported by
+     * *neither* — the one outcome a defensive tool must never produce.
+     *
+     * They are one function now, and that is the point. There is a single pass
+     * over candidate regions, a single question asked of axe, and exactly three
+     * answers; a region cannot be seen differently by the two probes because
+     * neither probe decides. Widening the set of mechanisms happens in axe, for
+     * both, at once. The old divergence is not corrected here, it is impossible.
+     */
+    const OUT_OF_TREE = 'out-of-tree'; // nothing here is in the tree at all
+    const OFF_SCREEN = 'off-screen'; //  in the tree, but not where a person can see it
+    const ON_SCREEN = 'on-screen'; //    fine
+
+    /**
+     * Content an ancestor will scroll into view is not off screen.
+     *
+     * `isVisibleOnScreen` knows about overflow clipping, which the six
+     * geometric lines below it never did. That is a real widening, and on one
+     * shape it widens past what this probe means. Measured on a plain two-slide
+     * `display: flex` carousel, three links per slide, varying only the
+     * container's `overflow` — everything else byte-identical:
+     *
+     *   overflow    axe isVisibleOnScreen   Chromium scrollLeft on focus
+     *   hidden      false                   0 → 306   (revealed)
+     *   auto        true                    0 → 306   (revealed)
+     *   scroll      true                    0 → 306   (revealed)
+     *   clip        true                    0 → 0     (NOT revealed)
+     *   visible     true                    n/a
+     *
+     * So the one value that produced a finding is the one where the browser
+     * demonstrably brings the content on screen when a keyboard reaches it, and
+     * the one value where the content really is stranded — `clip`, which is not
+     * scrollable at all — reported nothing. Through the real `model.ts` that
+     * made `overflow: hidden` alone the difference between `pageVerdict`
+     * `clear` and `blocking`, on a page where an agent reads every link out of
+     * the tree with names and destinations intact. The scanner's own rule is
+     * "hidden is not unfindable", and there is nothing unfindable here.
+     *
+     * A scroll container is therefore treated as on screen for the content it
+     * can scroll to, which is what axe already answers for `auto` and `scroll`
+     * and what makes all five variants agree. Two things keep this from
+     * becoming the false clean it would otherwise be:
+     *
+     *   The scrollport must be non-empty. A collapsed accordion — `max-height:
+     *   0; overflow: hidden` — has `clientHeight` 0, so nothing can be scrolled
+     *   into it and it stays reported. Measured: `clientH` 0 against
+     *   `scrollH` 19, still reported after this change.
+     *
+     *   The region must lie inside the scrollable extent. A drawer parked at
+     *   `translateX(-100%)` sits at a negative offset that no `scrollLeft` can
+     *   reach, so it stays reported too.
+     *
+     *   And the region must be IN FLOW, which is the correction to the first
+     *   version of this rescue. A scroll container scrolls the content laid out
+     *   inside it; something absolutely positioned at `left: 100%` or shoved out
+     *   by `translateX(100%)` is not laid out inside it, it is parked outside
+     *   it. The distinction is not academic — it is the difference between a
+     *   carousel slide and an off-canvas drawer, and without it the rescue told
+     *   two mirror images opposite stories. Measured, an `overflow: hidden`
+     *   wrapper holding four tabbable links: `translateX(-100%)` reported by
+     *   main and by this file, `translateX(100%)` and `left: 100%` reported by
+     *   main and SILENT here, because positive overflow contributes to
+     *   `scrollWidth` and negative overflow does not. The same drawer, mirrored,
+     *   answered differently — which is a metamorphic violation on this suite's
+     *   own criterion, and an off-canvas drawer whose links stay in the tab
+     *   order is the original phantom menu this tool is named for.
+     *
+     * `overflow` is read here rather than asked of axe, and it is the one list
+     * in this file that decides something. It is a five-value W3C-specified
+     * set, not an open set of browser mechanisms — the same latitude the
+     * `input[type="hidden"]` exception takes, for the same reason. axe's own
+     * `getScroll` cannot stand in for it: measured, it answers "not scrollable"
+     * for `overflow: hidden`, which is precisely the case that has to be
+     * caught.
+     *
+     * The known gap, stated rather than papered over: `overflow: clip` really
+     * does strand its content, and axe calls it visible, so nothing reports it.
+     * That is a false negative on main too. Closing it is a widening of what
+     * this probe finds rather than a correction to it, and it does not belong
+     * in a fix for a regression.
+     */
+    const SCROLLABLE_OVERFLOW = new Set(['auto', 'scroll', 'hidden', 'overlay']);
+
+    /**
+     * Is anything between the region and its scroll container taking it out of
+     * that container's flow?
+     *
+     * `position: absolute` / `fixed` and a `transform` are the two ways a drawer
+     * gets parked off-canvas, and neither is content the container laid out.
+     * Reading the region's own box would not answer this: a translated drawer
+     * and a scrolled slide land in the same place.
+     */
+    const displacedFromFlow = (el, container) => {
+      for (let n = el; n && n !== container; n = n.parentElement) {
+        const s = getComputedStyle(n);
+        if (s.position === 'absolute' || s.position === 'fixed') return true;
+        if (s.transform && s.transform !== 'none') return true;
+        if (s.translate && s.translate !== 'none') return true;
+      }
+      return false;
+    };
+
+    const scrollRevealable = (el) => {
+      const rect = el.getBoundingClientRect();
+      for (let n = el.parentElement; n && n !== document.body; n = n.parentElement) {
+        const s = getComputedStyle(n);
+        const scrollsX = SCROLLABLE_OVERFLOW.has(s.overflowX);
+        const scrollsY = SCROLLABLE_OVERFLOW.has(s.overflowY);
+        if (!scrollsX && !scrollsY) continue;
+        // Nothing can be scrolled into a scrollport with no area.
+        if (n.clientWidth === 0 || n.clientHeight === 0) continue;
+        // Parked outside the container rather than laid out inside it. No outer
+        // container can undo that, so this is an answer rather than a skip.
+        if (displacedFromFlow(el, n)) return false;
+
+        // Where the region sits in the container's own scrollable content box.
+        const box = n.getBoundingClientRect();
+        const left = rect.left - box.left + n.scrollLeft - n.clientLeft;
+        const top = rect.top - box.top + n.scrollTop - n.clientTop;
+        if (left < 0 || top < 0) continue; // behind the scroll origin — unreachable
+        if (scrollsX && left + rect.width > n.scrollWidth) continue;
+        if (scrollsY && top + rect.height > n.scrollHeight) continue;
+        // Clipped on an axis the container cannot scroll is still stranded.
+        if (!scrollsX && left + rect.width > n.clientWidth) continue;
+        if (!scrollsY && top + rect.height > n.clientHeight) continue;
         return true;
       }
-    }
-    return false;
-  };
+      return false;
+    };
 
-  /** aria-label → aria-labelledby → text → title → child img[alt] → value. */
-  const accessibleName = (el) => {
-    const aria = el.getAttribute('aria-label');
-    if (aria && aria.trim()) return aria.trim();
-
-    const labelledby = el.getAttribute('aria-labelledby');
-    if (labelledby) {
-      const resolved = labelledby
-        .split(/\s+/)
-        .map((id) => document.getElementById(id)?.textContent ?? '')
-        .join(' ')
-        .trim();
-      if (resolved) return resolved;
-    }
-
-    const text = (el.textContent ?? '').trim();
-    if (text) return text;
-
-    const title = el.getAttribute('title');
-    if (title && title.trim()) return title.trim();
-
-    const alt = el.querySelector('img[alt]')?.getAttribute('alt');
-    if (alt && alt.trim()) return alt.trim();
-
-    const value = el.getAttribute('value');
-    if (value && value.trim()) return value.trim();
-
-    return '';
-  };
-
-  const isFocusable = (el) =>
-    !el.hasAttribute('disabled') && el.getAttribute('tabindex') !== '-1';
-
-  const controllerOf = (el) => {
-    if (!el.id) return null;
-    try {
-      return document.querySelector(`[aria-controls="${CSS.escape(el.id)}"]`);
-    } catch {
-      return null; // exotic id that won't escape
-    }
-  };
-
-  /**
-   * The control that opens a hidden region, if one is discoverable from the
-   * markup. Shared by both hiding probes so they cannot disagree about what
-   * counts as announced.
-   *
-   * Ancestors count. A disclosure typically puts `aria-controls` on the panel
-   * it owns, and the component hides something *inside* that panel — so the
-   * hidden element itself is named by nothing, while the thing an agent
-   * actually operates sits one level up. Checking only the hidden element
-   * reported a correctly built mega-menu as 560 unfindable links, because the
-   * button pointed at the wrapper rather than the inner block it hides.
-   *
-   * If any ancestor is announced, everything inside it is reachable: open that
-   * ancestor and the content arrives.
-   */
-  const disclosureFor = (el) => {
-    // The explicit contract first: something points at this, or at anything
-    // containing it, by id.
-    for (let n = el; n && n !== document.documentElement; n = n.parentElement) {
-      const byControls = controllerOf(n);
-      if (byControls) return byControls;
-    }
-    // Otherwise the conventional shape: a trigger sitting beside the panel.
-    const parent = el.parentElement;
-    if (!parent) return null;
-    for (const c of [...parent.children].filter((c) => c !== el)) {
-      if (c.matches(NATIVE_INTERACTIVE) || c.getAttribute('role') === 'button') return c;
-      const inner = c.querySelector('button,a[href],[role="button"]');
-      if (inner) return inner;
-    }
-    return null;
-  };
-
-  /* ---------------------------------------------------------------- */
-  /* 1 + 2. Named controls (the original checks, unchanged)            */
-  /* ---------------------------------------------------------------- */
-
-  const namelessButtons = [];
-  const namelessLinks = [];
-  const emptyHref = [];
-
-  for (const el of document.querySelectorAll('button,[role="button"]')) {
-    if (removedFromTree(el)) continue;
-    if (!accessibleName(el)) namelessButtons.push(trunc(el.outerHTML));
-  }
-
-  for (const el of document.querySelectorAll('a[href]')) {
-    if (removedFromTree(el)) continue;
-    if (!accessibleName(el)) namelessLinks.push(trunc(el.outerHTML));
-    if (el.getAttribute('href') === '') emptyHref.push(trunc(el.outerHTML));
-  }
-
-  const hasMain = !!document.querySelector('main,[role="main"]');
-
-  /* ---------------------------------------------------------------- */
-  /* 1. PRESENCE — controls that never declare themselves as controls  */
-  /* ---------------------------------------------------------------- */
-
-  /**
-   * Candidates: elements that look operable to a sighted mouse user but carry
-   * no interactive role. `cursor: pointer` is the strongest available signal
-   * from the DOM alone — a real click listener can't be read from page script.
-   * Node confirms these against the browser's own listener registry over CDP
-   * (see `confirmClickListeners` in core.mjs); this list is the candidate net,
-   * not the verdict.
-   */
-  const ghostControls = [];
-  const ghostEls = [];
-  let clickableNoRole = 0;
-  for (const el of document.querySelectorAll('div,span,li,i,svg,p,section,header,figure')) {
-    if (removedFromTree(el)) continue;
-    if (el.closest(NATIVE_INTERACTIVE)) continue; // already inside a real control
-
-    const role = (el.getAttribute('role') || '').toLowerCase();
-    if (INTERACTIVE_ROLES.has(role)) continue; // declares itself properly
-
-    const cs = getComputedStyle(el);
-    const hasOnClick = el.hasAttribute('onclick');
-    const pointer = cs.cursor === 'pointer';
-    if (!hasOnClick && !pointer) continue;
-
-    // A pointer cursor on a big layout block is styling, not a control.
-    const rect = el.getBoundingClientRect();
-    if (rect.width > 640 || rect.height > 480) continue;
-    if (rect.width === 0 && rect.height === 0) continue;
-
-    // If a descendant is itself a candidate, prefer the innermost — that's the
-    // control; the parent is usually just a padded hit area.
-    const innerCandidate = [...el.querySelectorAll('div,span,i,svg')].some((d) => {
-      if (d.closest(NATIVE_INTERACTIVE)) return false;
-      if (INTERACTIVE_ROLES.has((d.getAttribute('role') || '').toLowerCase())) return false;
-      return d.hasAttribute('onclick') || getComputedStyle(d).cursor === 'pointer';
-    });
-    if (innerCandidate) continue;
-
-    // Every element that responds to a click without declaring a role. Most
-    // are harmless: a whole card made clickable for convenience, with a real
-    // link inside it. Counted as a magnitude, not listed.
-    clickableNoRole += 1;
-
-    // The harmful subset, and the only one worth naming: no accessible name
-    // *and* no way for a keyboard to reach it. An agent cannot identify it,
-    // cannot operate it, and — because it carries no role — no automated
-    // audit will ever mention it. This is the hamburger.
-    const name = accessibleName(el);
-    const reachable = el.tabIndex >= 0;
-    if (name || reachable) continue;
+    const docWidth = document.documentElement.scrollWidth;
 
     /**
-     * A wrapper around a working control is not a dead end.
+     * The geometry main decides on, kept as an INDEPENDENT sufficient condition.
      *
-     * The defect being measured is "there is no way to operate this". If the
-     * element contains a real, focusable, in-tree control, there is a way — an
-     * agent uses that. react-select is the standard case: an unlabelled outer
-     * `div` around an `<input>` carrying `aria-expanded` and `aria-autocomplete`.
-     * Reporting the wrapper describes the library's DOM, not a barrier.
-     */
-    const worksThroughDescendant = [...el.querySelectorAll(NATIVE_INTERACTIVE)].some(
-      (d) => isFocusable(d) && !removedFromTree(d)
-    );
-    if (worksThroughDescendant) continue;
-
-    ghostControls.push({
-      selector: describe(el),
-      html: trunc(el.outerHTML),
-      tag: el.tagName.toLowerCase(),
-      testId: el.getAttribute('data-test-id') || null,
-      hasOnClickAttr: hasOnClick,
-      cursorPointer: pointer,
-      keyboardReachable: false,
-      // Filled in by Node over CDP — the browser's own listener registry is
-      // the authority on whether this is really a control.
-      confirmedListener: null,
-    });
-    ghostEls.push(el);
-  }
-
-  // Live handles, same order as ghostCandidates, so Node can confirm each one
-  // against the browser's real listener registry over CDP.
-  window.__ghostCandidateEls = ghostEls;
-
-  /* ---------------------------------------------------------------- */
-  /* 4. NO GHOSTS — regions in the tree but not on screen              */
-  /* ---------------------------------------------------------------- */
-
-  /**
-   * "Hidden by appearance only": still in the accessibility tree, still full
-   * of tabbable controls, but not visible. Deliberately defined by the
-   * *property* rather than by a selector, so it catches any component that
-   * makes this mistake — not just the one that was known about when this was
-   * written.
-   *
-   * Below-the-fold is normal and is not a fault: only content pushed off the
-   * left/right of the document, collapsed to zero, or fully transparent counts.
-   */
-  const docWidth = document.documentElement.scrollWidth;
-
-  const hidingMechanism = (el, cs, rect) => {
-    const why = [];
-    if (rect.width === 0 || rect.height === 0) why.push('collapsed to zero size');
-    if (rect.right <= 0) why.push('translated off the left edge');
-    if (rect.left >= docWidth) why.push('translated off the right edge');
-    if (rect.bottom + window.scrollY <= 0) why.push('positioned above the document');
-    if (parseFloat(cs.opacity) === 0) why.push('opacity: 0');
-    if (cs.clipPath && cs.clipPath !== 'none') why.push(`clip-path: ${cs.clipPath}`);
-    return why;
-  };
-
-  const panels = [];
-  for (const el of document.querySelectorAll('div,nav,ul,section,aside,form')) {
-    if (removedFromTree(el)) continue; // correctly hidden — nothing to report
-
-    /**
-     * Tree membership is per element, not per container.
+     * Delegating on-screen visibility to axe is a widening in almost every
+     * direction — it knows about overflow clipping, scroll containers and
+     * stacking that these six lines never covered. But "almost" is not "every",
+     * and a primitive that answers `true` where main's geometry answered "off
+     * screen" would take a panel main reports and publish nothing in its place.
+     * That is a silent deletion, and this file is not allowed to produce one at
+     * a shape production already catches.
      *
-     * A wrapper can be collapsed to zero height while its contents are
-     * `display: none` — which is what a correctly built disclosure looks like
-     * while closed. Counting the wrapper's descendants without this filter
-     * reported 160 tabbable controls on a menu where nothing was reachable at
-     * all, turning a correct implementation into a defect.
+     * So the two are OR'd rather than swapped. axe can only ADD findings here;
+     * it can never remove one main would have made. The cost is that main's own
+     * over-reporting on this list — any `clip-path` at all, for instance —
+     * is inherited along with its coverage, which is the correct direction for a
+     * branch whose whole claim is "never worse than production".
      */
-    const focusables = [...el.querySelectorAll(FOCUSABLE)]
-      .filter(isFocusable)
-      .filter((f) => !removedFromTree(f));
-    if (focusables.length < 3) continue; // a panel, not a stray control
+    const geometricallyOffScreen = (el) => {
+      const cs = getComputedStyle(el);
+      const rect = el.getBoundingClientRect();
+      return (
+        rect.width === 0 ||
+        rect.height === 0 ||
+        rect.right <= 0 ||
+        rect.left >= docWidth ||
+        rect.bottom + window.scrollY <= 0 ||
+        parseFloat(cs.opacity) === 0 ||
+        (!!cs.clipPath && cs.clipPath !== 'none')
+      );
+    };
 
-    const cs = getComputedStyle(el);
-    const rect = el.getBoundingClientRect();
-    const why = hidingMechanism(el, cs, rect);
-    if (why.length === 0) continue; // visible, as it should be
+    const classify = (el) => {
+      const controls = [...el.querySelectorAll(FOCUSABLE)].filter(isControl);
+      if (controls.length < MIN_CONTROLS) return null; // a stray control, not a panel
 
-    panels.push({ el, cs, rect, why, focusables });
-  }
-
-  // Keep only the outermost of any nested set — an off-screen menu contains
-  // off-screen submenus, and reporting all of them inflates the count.
-  const outermost = panels.filter((p) => !panels.some((q) => q !== p && q.el.contains(p.el)));
-
-  const hiddenPanels = outermost.map(({ el, cs, rect, why, focusables }) => {
-    // pointer-events is often set on a wrapper rather than the panel itself.
-    let pointerEvents = cs.pointerEvents;
-    for (let n = el; n && n !== document.documentElement; n = n.parentElement) {
-      if (getComputedStyle(n).pointerEvents === 'none') {
-        pointerEvents = 'none';
-        break;
+      const reachable = controls.filter(inTree);
+      // Judged on the contents, not the container. `content-visibility: hidden`
+      // and `hidden="until-found"` leave the element itself in the tree and drop
+      // everything inside it, so asking about the box would answer "visible"
+      // about a region an agent cannot read a single link out of.
+      if (reachable.length === 0) return { state: OUT_OF_TREE, controls, reachable };
+      if (geometricallyOffScreen(el) || (!onScreen(el) && !scrollRevealable(el))) {
+        return { state: OFF_SCREEN, controls, reachable };
       }
+      return { state: ON_SCREEN, controls, reachable };
+    };
+
+    const REGION_SELECTOR = 'div,nav,ul,section,aside,form,details';
+    const regions = [];
+    for (const el of document.querySelectorAll(REGION_SELECTOR)) {
+      const result = classify(el);
+      if (result && result.state !== ON_SCREEN) regions.push({ el, ...result });
     }
 
     /**
-     * 3. OPERABILITY, at the panel level. A closed panel is fine if something
-     * keyboard-reachable opens it. If the only trigger is hover, there is no
-     * such element, and the whole panel is unreachable without a mouse.
-     *
-     * Same resolver as the reachability probe, so the two can't disagree about
-     * whether a panel is announced — they were built weeks apart and one used
-     * a sibling-only heuristic that missed `aria-controls` entirely.
+     * Keep only the outermost of any nested set, per state — an off-screen menu
+     * contains off-screen submenus, and reporting all of them inflates the
+     * count. Nesting is compared within a state rather than across: a closed
+     * accordion body inside an on-screen wrapper is still the outermost thing
+     * that is closed.
      */
-    const trigger = disclosureFor(el);
+    const outermostOf = (state) => {
+      const inState = regions.filter((r) => r.state === state);
+      return inState.filter((r) => !inState.some((o) => o !== r && o.el.contains(r.el)));
+    };
+
+    /**
+     * Why a region isn't visible, for a human reading the run file.
+     *
+     * This list is allowed to be incomplete, and that is the entire difference
+     * between it and the enumeration it replaces. It used to *decide* whether a
+     * region counted, so a mechanism missing from it cost a finding. It decides
+     * nothing now — axe has already ruled on the region by the time this runs —
+     * so a mechanism missing from it costs a sentence of explanation.
+     *
+     * The walk starts at one of the controls rather than at the region, because
+     * the mechanism is as often below the region as above it. Measured on
+     * insureon's general-liability page: the region is a plain `div.block`, and
+     * the thing that removes its five links from the tree is an accordion body
+     * three levels *inside* it, carrying `hidden="until-found"` and
+     * `height: 0` under `overflow: hidden`. Walking up from the region found
+     * nothing to say; walking up from a link names it.
+     */
+    const describeHiding = (el, control) => {
+      // The region's own answer first, so an inherited property is credited to
+      // the element that sets it rather than to whichever link inherited it.
+      const fromRegion = hidingWalk(el, el);
+      if (fromRegion) return fromRegion;
+      return hidingWalk(control ?? el, el) ?? ['not in the accessibility tree'];
+    };
+
+    const hidingWalk = (from, el) => {
+      for (let n = from; n && n !== document.documentElement; n = n.parentElement) {
+        const s = getComputedStyle(n);
+        const at = n === el ? '' : ` (on ${describe(n)})`;
+        if (s.display === 'none') return [`display: none${at}`];
+        if (s.visibility === 'hidden' || s.visibility === 'collapse') {
+          return [`visibility: ${s.visibility}${at}`];
+        }
+        if (s.contentVisibility === 'hidden') return [`content-visibility: hidden${at}`];
+        if (n.getAttribute('aria-hidden') === 'true') return [`aria-hidden="true"${at}`];
+        if (n.hasAttribute('inert')) return [`inert${at}`];
+        if (n.hasAttribute('hidden')) {
+          const value = n.getAttribute('hidden');
+          return [`hidden${value ? `="${value}"` : ''}${at}`];
+        }
+        if (n.tagName === 'DETAILS' && !n.hasAttribute('open')) {
+          return [`inside a closed <details>${at}`];
+        }
+        if (s.overflow !== 'visible') {
+          const r = n.getBoundingClientRect();
+          if (r.width === 0 || r.height === 0) {
+            return [`collapsed to zero size under overflow: ${s.overflow}${at}`];
+          }
+        }
+      }
+      return null;
+    };
+
+    /**
+     * Why a region isn't on screen, for a human reading the run file. Same six
+     * lines `geometricallyOffScreen` decides on, plus a fallback for the cases
+     * only axe saw — "translated off the left edge" tells someone what to look
+     * for in a way that "isVisibleOnScreen: false" does not.
+     *
+     * Below-the-fold is normal and is not a fault. Confirmed rather than
+     * assumed: axe answers `isVisibleOnScreen: true` for a block 4,000px down
+     * the page and for content scrolled out of view inside a scroll container.
+     */
+    const describeOffScreen = (el, cs, rect) => {
+      const why = [];
+      if (rect.width === 0 || rect.height === 0) why.push('collapsed to zero size');
+      if (rect.right <= 0) why.push('translated off the left edge');
+      if (rect.left >= docWidth) why.push('translated off the right edge');
+      if (rect.bottom + window.scrollY <= 0) why.push('positioned above the document');
+      if (parseFloat(cs.opacity) === 0) why.push('opacity: 0');
+      if (cs.clipPath && cs.clipPath !== 'none') why.push(`clip-path: ${cs.clipPath}`);
+      if (why.length === 0) why.push('not rendered on screen');
+      return why;
+    };
+
+    /* ---------------------------------------------------------------- */
+    /* 4. NO GHOSTS — regions in the tree but not on screen              */
+    /* ---------------------------------------------------------------- */
+
+    /**
+     * "Hidden by appearance only": still in the accessibility tree, still full
+     * of tabbable controls, but not visible. Deliberately defined by the
+     * *property* rather than by a selector, so it catches any component that
+     * makes this mistake — not just the one that was known about when this was
+     * written.
+     */
+    const hiddenPanels = outermostOf(OFF_SCREEN).map(({ el, reachable }) => {
+      const cs = getComputedStyle(el);
+      const rect = el.getBoundingClientRect();
+
+      // pointer-events is often set on a wrapper rather than the panel itself.
+      let pointerEvents = cs.pointerEvents;
+      for (let n = el; n && n !== document.documentElement; n = n.parentElement) {
+        if (getComputedStyle(n).pointerEvents === 'none') {
+          pointerEvents = 'none';
+          break;
+        }
+      }
+
+      /**
+       * 3. OPERABILITY, at the panel level. A closed panel is fine if something
+       * keyboard-reachable opens it. If the only trigger is hover, there is no
+       * such element, and the whole panel is unreachable without a mouse.
+       *
+       * Same resolver as the reachability probe, so the two can't disagree about
+       * whether a panel is announced — they were built weeks apart and one used
+       * a sibling-only heuristic that missed `aria-controls` entirely.
+       */
+      const trigger = disclosureFor(el);
+
+      return {
+        selector: describe(el),
+        why: describeOffScreen(el, cs, rect),
+        transform: cs.transform === 'none' ? null : cs.transform,
+        display: cs.display,
+        visibility: cs.visibility,
+        opacity: cs.opacity,
+        maxHeight: cs.maxHeight,
+        ariaHidden: el.getAttribute('aria-hidden'),
+        inert: el.hasAttribute('inert'),
+        pointerEvents,
+        exposedInTree: true, // by construction — every control here is in the tree
+        links: el.querySelectorAll('a[href]').length,
+        buttons: el.querySelectorAll('button,[role="button"]').length,
+        focusable: reachable.length,
+        tabbable: reachable.filter(inTabOrder).length,
+        hasKeyboardTrigger: !!trigger,
+        triggerHasAriaExpanded: trigger ? trigger.hasAttribute('aria-expanded') : false,
+        sample: trunc(el.outerHTML.slice(0, TRUNCATE)),
+      };
+    });
+
+    /* ---------------------------------------------------------------- */
+    /* 5. REACHABILITY — out of the tree, and nothing announces it       */
+    /* ---------------------------------------------------------------- */
+
+    /**
+     * The mirror of `hiddenPanels`. That probe reports regions still in the tree
+     * but off screen; this one reports regions genuinely out of the tree, which
+     * every other probe here deliberately skips.
+     *
+     * Being out of the tree is not itself a fault — it is how a closed menu is
+     * supposed to behave. The fault is being out of the tree with nothing in the
+     * tree that says so. A disclosure button with `aria-expanded`, or a plain
+     * `<summary>`, is a promise an agent can act on; a `:hover` rule is not
+     * reachable and not discoverable.
+     *
+     * ── A known limitation, written down rather than implied ─────────────
+     *
+     * One shape is UNDECIDABLE as this metric is defined, and it is worth being
+     * explicit about because it looks like a bug and is not one: a
+     * `<button aria-expanded>` carrying no IDREF, sharing a parent with an
+     * unrelated `:hover` mega-menu, publishes that menu's six unfindable links
+     * as zero. Measured, and identical on main — this is not a regression, it is
+     * the metric's edge.
+     *
+     * It cannot be closed by tightening `operates()` rule 3, because the
+     * metamorphic suite requires the opposite answer for the same markup:
+     * `trigger-placement`'s `sibling-expanded` variant is a bare
+     * `<button aria-expanded>` beside its panel, and the tool has already
+     * decided the conventional sibling shape counts — most authors omit
+     * `aria-controls`, and refusing to read adjacency would report every correct
+     * plain disclosure on the web. Two pages with the same DOM need different
+     * answers, and nothing in the DOM separates them.
+     *
+     * The only real fix is a change to what the scanner measures — behavioural
+     * evidence rather than markup — and that is a design decision, not a patch.
+     * Until then the honest state is a documented false clean at one shape,
+     * bounded by `announces()` requiring a declared disclosure and by rule 3
+     * requiring the trigger's branch to be packaging and nothing else.
+     */
+    const unreachableAll = outermostOf(OUT_OF_TREE).map(({ el, controls }) => {
+      const trigger = disclosureFor(el);
+      // A trigger only counts if an agent could find and use it: in the tree,
+      // and advertising that it controls something.
+      const triggerInTree = !!trigger && inTree(trigger);
+
+      return {
+        selector: describe(el),
+        why: describeHiding(el, controls[0]),
+        inNav: !!el.closest('nav,[role="navigation"]'),
+        links: el.querySelectorAll('a[href]').length,
+        buttons: el.querySelectorAll('button,[role="button"]').length,
+        focusable: controls.length,
+        hasTrigger: !!trigger,
+        triggerInTree,
+        /** The whole point: is this findable from the tree, or only by hovering? */
+        announced: triggerInTree && announces(trigger),
+        triggerSelector: trigger ? describe(trigger) : null,
+        sample: trunc(el.outerHTML.slice(0, TRUNCATE)),
+      };
+    });
+
+    // Report every one in the totals, but list only the largest few — a page can
+    // legitimately hold dozens of hidden blocks, and a run file is read by humans.
+    const unreachableRanked = [...unreachableAll].sort((a, b) => b.focusable - a.focusable);
+    const unreachablePanels = unreachableRanked.slice(0, 20);
+    const unannounced = unreachableAll.filter((p) => !p.announced);
+    const unreachableTotals = {
+      panels: unreachableAll.length,
+      unannouncedPanels: unannounced.length,
+      /** Controls an agent cannot find at all — the number that matters. */
+      unannouncedFocusable: unannounced.reduce((s, p) => s + p.focusable, 0),
+      unannouncedLinks: unannounced.reduce((s, p) => s + p.links, 0),
+    };
+
+    /**
+     * The headline, measured directly rather than inferred from the panels: of
+     * everywhere this page says you can go, how much of it can an agent see?
+     *
+     * Counted per element rather than per landmark so overlapping navs — a header
+     * nav inside a wrapper nav — can't double-count a link.
+     */
+    const navSeen = new Set();
+    for (const nav of document.querySelectorAll('nav,[role="navigation"]')) {
+      for (const a of nav.querySelectorAll('a[href]')) navSeen.add(a);
+    }
+    const navLinks = {
+      total: navSeen.size,
+      inTree: [...navSeen].filter(inTree).length,
+    };
+
+    /**
+     * Kept for continuity: every historical run and every chart keys off
+     * `phantomMenu`. It is now simply the largest hidden panel, which on both
+     * brands is the mega-menu — but it no longer depends on a class name that
+     * a redesign could rename out from under us.
+     */
+    const worst = [...hiddenPanels].sort((a, b) => b.focusable - a.focusable)[0] ?? null;
+    const phantomMenu = worst
+      ? {
+          transform: worst.transform,
+          display: worst.display,
+          visibility: worst.visibility,
+          ariaHidden: worst.ariaHidden,
+          inert: worst.inert,
+          pointerEvents: worst.pointerEvents,
+          exposedInTree: worst.exposedInTree,
+          links: worst.links,
+          buttons: worst.buttons,
+          focusable: worst.focusable,
+          tabbable: worst.tabbable,
+          hasKeyboardTrigger: worst.hasKeyboardTrigger,
+          triggerHasAriaExpanded: worst.triggerHasAriaExpanded,
+        }
+      : null;
 
     return {
-      selector: describe(el),
-      why,
-      transform: cs.transform === 'none' ? null : cs.transform,
-      display: cs.display,
-      visibility: cs.visibility,
-      opacity: cs.opacity,
-      maxHeight: cs.maxHeight,
-      ariaHidden: el.getAttribute('aria-hidden'),
-      inert: el.hasAttribute('inert'),
-      pointerEvents,
-      exposedInTree: true, // by construction — removedFromTree() excluded the rest
-      links: el.querySelectorAll('a[href]').length,
-      buttons: el.querySelectorAll('button,[role="button"]').length,
-      focusable: focusables.length,
-      tabbable: focusables.filter((f) => f.tabIndex >= 0).length,
-      hasKeyboardTrigger: !!trigger,
-      triggerHasAriaExpanded: trigger ? trigger.hasAttribute('aria-expanded') : false,
-      sample: trunc(el.outerHTML.slice(0, TRUNCATE)),
+      namelessButtons,
+      namelessLinks,
+      emptyHref,
+      hasMain,
+      ghostControls,
+      clickableNoRole,
+      hiddenPanels,
+      phantomMenu,
+      unreachablePanels,
+      unreachableTotals,
+      navLinks,
     };
-  });
-
-  /* ---------------------------------------------------------------- */
-  /* 5. REACHABILITY — out of the tree, and nothing announces it       */
-  /* ---------------------------------------------------------------- */
-
-  /**
-   * The mirror of `hiddenPanels`. That probe reports regions still in the tree
-   * but off screen; this one reports regions genuinely out of the tree, which
-   * every other probe here deliberately skips.
-   *
-   * Being out of the tree is not itself a fault — it is how a closed menu is
-   * supposed to behave. The fault is being out of the tree with nothing in the
-   * tree that says so. A disclosure button with `aria-expanded` is a promise an
-   * agent can act on; a `:hover` rule is not reachable and not discoverable.
-   */
-  const hidesItself = (el) => {
-    const s = getComputedStyle(el);
-    const why = [];
-    // `display` computes per element, so this matches only the element that
-    // sets it — which is what makes it the boundary of the hidden subtree.
-    if (s.display === 'none') why.push('display: none');
-    if (s.visibility === 'hidden') why.push('visibility: hidden');
-    if (el.getAttribute('aria-hidden') === 'true') why.push('aria-hidden="true"');
-    if (el.hasAttribute('inert')) why.push('inert');
-    return why;
-  };
-
-  const unreachableAll = [];
-  for (const el of document.querySelectorAll('div,nav,ul,section,aside,form')) {
-    const why = hidesItself(el);
-    if (why.length === 0) continue;
-    // Only the outermost hidden container: if an ancestor is already out of the
-    // tree, this one is a detail of it, not a separate finding.
-    if (el.parentElement && removedFromTree(el.parentElement)) continue;
-
-    const focusables = [...el.querySelectorAll(FOCUSABLE)].filter(isFocusable);
-    if (focusables.length < 3) continue; // a panel, not a stray control
-
-    const trigger = disclosureFor(el);
-    // A trigger only counts if an agent could find and use it: in the tree,
-    // and advertising that it controls something.
-    const triggerInTree = !!trigger && !removedFromTree(trigger);
-    const announces =
-      !!trigger &&
-      (trigger.hasAttribute('aria-expanded') ||
-        trigger.hasAttribute('aria-haspopup') ||
-        trigger.hasAttribute('aria-controls'));
-
-    unreachableAll.push({
-      selector: describe(el),
-      why,
-      inNav: !!el.closest('nav,[role="navigation"]'),
-      links: el.querySelectorAll('a[href]').length,
-      buttons: el.querySelectorAll('button,[role="button"]').length,
-      focusable: focusables.length,
-      hasTrigger: !!trigger,
-      triggerInTree,
-      /** The whole point: is this findable from the tree, or only by hovering? */
-      announced: triggerInTree && announces,
-      triggerSelector: trigger ? describe(trigger) : null,
-      sample: trunc(el.outerHTML.slice(0, TRUNCATE)),
-    });
   }
-
-  // Report every one in the totals, but list only the largest few — a page can
-  // legitimately hold dozens of hidden blocks, and a run file is read by humans.
-  const unreachableRanked = [...unreachableAll].sort((a, b) => b.focusable - a.focusable);
-  const unreachablePanels = unreachableRanked.slice(0, 20);
-  const unannounced = unreachableAll.filter((p) => !p.announced);
-  const unreachableTotals = {
-    panels: unreachableAll.length,
-    unannouncedPanels: unannounced.length,
-    /** Controls an agent cannot find at all — the number that matters. */
-    unannouncedFocusable: unannounced.reduce((s, p) => s + p.focusable, 0),
-    unannouncedLinks: unannounced.reduce((s, p) => s + p.links, 0),
-  };
-
-  /**
-   * The headline, measured directly rather than inferred from the panels: of
-   * everywhere this page says you can go, how much of it can an agent see?
-   *
-   * Counted per element rather than per landmark so overlapping navs — a header
-   * nav inside a wrapper nav — can't double-count a link.
-   */
-  const navSeen = new Set();
-  for (const nav of document.querySelectorAll('nav,[role="navigation"]')) {
-    for (const a of nav.querySelectorAll('a[href]')) navSeen.add(a);
-  }
-  const navLinks = {
-    total: navSeen.size,
-    inTree: [...navSeen].filter((a) => !removedFromTree(a)).length,
-  };
-
-  /**
-   * Kept for continuity: every historical run and every chart keys off
-   * `phantomMenu`. It is now simply the largest hidden panel, which on both
-   * brands is the mega-menu — but it no longer depends on a class name that
-   * a redesign could rename out from under us.
-   */
-  const worst = [...hiddenPanels].sort((a, b) => b.focusable - a.focusable)[0] ?? null;
-  const phantomMenu = worst
-    ? {
-        transform: worst.transform,
-        display: worst.display,
-        visibility: worst.visibility,
-        ariaHidden: worst.ariaHidden,
-        inert: worst.inert,
-        pointerEvents: worst.pointerEvents,
-        exposedInTree: worst.exposedInTree,
-        links: worst.links,
-        buttons: worst.buttons,
-        focusable: worst.focusable,
-        tabbable: worst.tabbable,
-      }
-    : null;
-
-  return {
-    namelessButtons,
-    namelessLinks,
-    emptyHref,
-    hasMain,
-    ghostControls,
-    clickableNoRole,
-    hiddenPanels,
-    phantomMenu,
-    unreachablePanels,
-    unreachableTotals,
-    navLinks,
-  };
 }

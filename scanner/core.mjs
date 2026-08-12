@@ -77,6 +77,54 @@ export function launchOptions() {
 }
 
 /**
+ * Which browser actually produced this run.
+ *
+ * Three different Chromium majors — 148, 149 and 151 — were used against these
+ * sites inside a single working session, and not one run file on disk names the
+ * engine that measured it. Both published runs were produced by probe code that
+ * no longer exists and by an unrecorded browser, and nothing anywhere says so.
+ * Every number this tool publishes is a comparison between two runs, and that
+ * comparison is only honest if you can see when the thing doing the measuring
+ * changed — the same argument that pins `axe-core` to an exact version and
+ * records `meta.axeVersion` on every run.
+ *
+ * Pass the options you actually launched with. `browserType.executablePath()`
+ * cannot stand in for them: it reports the build Playwright would have chosen,
+ * not the one it was pointed at. Measured — launched from `chromium-1228` via
+ * `PLAYWRIGHT_CHROMIUM_PATH`, it still answered `chromium-1234`. A provenance
+ * field that quietly names the wrong binary is worse than an absent one.
+ *
+ * Returns only the keys it could establish, so a caller can spread it into
+ * `meta` and have "not recorded" stay absent rather than become a value. Call
+ * it while the browser is still open.
+ */
+export function browserProvenance(browser, launchOpts = {}) {
+  const provenance = {};
+  try {
+    const name = browser?.browserType?.()?.name?.();
+    const version = browser?.version?.();
+    if (version) {
+      const label = name ? `${name.charAt(0).toUpperCase()}${name.slice(1)}` : 'Browser';
+      provenance.browserVersion = `${label} ${version}`;
+    }
+  } catch {
+    // An engine we could not ask is recorded as absent, never as a guess.
+  }
+  // With no override in play, Playwright launched its own build and
+  // `executablePath()` is the honest answer; with one, it is not.
+  let executablePath = launchOpts?.executablePath ?? process.env.PLAYWRIGHT_CHROMIUM_PATH ?? null;
+  if (!executablePath) {
+    try {
+      executablePath = browser?.browserType?.()?.executablePath?.() ?? null;
+    } catch {
+      executablePath = null;
+    }
+  }
+  if (executablePath) provenance.browserPath = executablePath;
+  return provenance;
+}
+
+/**
  * The device profiles a scan can run at, exported so a caller assembling a run
  * file records what was actually measured rather than repeating the numbers and
  * hoping they stay in step.
@@ -218,10 +266,35 @@ async function confirmClickListeners(page, controls) {
   try {
     cdp = await page.context().newCDPSession(page);
 
-    // Map scriptId -> url so a finding can name what attached its listener.
+    /**
+     * Map scriptId -> url so a finding can name what attached its listener.
+     *
+     * Subscribe BEFORE enabling, and not the other way round. `Debugger.enable`
+     * replays a `scriptParsed` for every script the page has already parsed, and
+     * it replays them against the session as the command resolves — so a handler
+     * attached after the `await` gets none of them. Every script on a loaded page
+     * has already parsed by the time this runs, which is the whole set.
+     *
+     * Measured on the metamorphic tracker fixture, Chromium 149.0.7827.55, the
+     * two orders on the same page: subscribe-after collected 0 script urls and
+     * every published control came back `listenerScript: null`; subscribe-first
+     * collected the urls and named `sgtracker.js`. Through the real `scanPage`,
+     * both the own-handler and the own-handler-plus-tracker page published six
+     * controls with `listenerScript` null on all six.
+     *
+     * That field is not decoration. The Insureon incident was diagnosed by it —
+     * all thirty-seven confirmed listeners resolving to one line of one analytics
+     * file is what identified fourteen reported defects as telemetry, and it is
+     * what `SHARED_HANDLER_SHARE` below was written from. A run that confirms a
+     * listener and cannot say what attached it cannot repeat that diagnosis.
+     *
+     * The guard itself is unaffected either way: it keys on
+     * `scriptId:lineNumber:columnNumber`, which comes from the listener, not from
+     * this map. Only the attribution was lost.
+     */
     const scripts = new Map();
-    await cdp.send('Debugger.enable').catch(() => {});
     cdp.on('Debugger.scriptParsed', (e) => scripts.set(e.scriptId, e.url));
+    await cdp.send('Debugger.enable').catch(() => {});
 
     const { result } = await cdp.send('Runtime.evaluate', {
       expression: 'window.__ghostCandidateEls',
@@ -256,9 +329,20 @@ async function confirmClickListeners(page, controls) {
       }
     }
 
-    // Pass two: a handler bound to most candidates is not what makes any one
-    // of them a control.
-    const total = found.size;
+    /**
+     * Pass two: a handler bound to most candidates is not what makes any one
+     * of them a control.
+     *
+     * The denominator is the candidates that carry *some* activation listener,
+     * not every candidate examined. Counting all of them silently weakens the
+     * guard as the tracker's share falls: measured, a tracker bound to 3 of 8
+     * examined candidates scores 0.375, slips under the 0.5 threshold, and
+     * three phantom controls come back — the same fourteen-false-positive
+     * failure this guard was added to stop, just at a lower listener density.
+     * Elements with no listener at all say nothing about whether a handler is
+     * page-wide telemetry, so they are not evidence either way.
+     */
+    const total = [...found.values()].filter((entries) => entries.length > 0).length;
     const shared = new Set(
       [...frequency.entries()]
         .filter(([, n]) => total >= 4 && n / total >= SHARED_HANDLER_SHARE)
@@ -335,6 +419,46 @@ export async function scanPage(context, url, { axeSource: providedAxeSource } = 
     const axeReady = await page.evaluate(() => typeof window.axe?.run === 'function');
     if (!axeReady) {
       return { url, error: 'axe-core did not load in the page — nothing was measured.' };
+    }
+
+    /**
+     * The same proof, for the other half of what axe is used for.
+     *
+     * `probes.mjs` no longer computes tree membership, accessible names,
+     * focusability, IDREF resolution or on-screen visibility itself — it asks
+     * `axe.commons`, which is a published-but-undocumented internal rather than
+     * part of axe's API. A version bump that kept `axe.run` and moved
+     * `axe.commons` would not break the scan; it would make every probe in that
+     * file measure nothing and report a spotless page. That is the exact shape
+     * of the two false-clean incidents this scanner has already shipped, so it
+     * gets the same treatment the CSP failure got: an explicit error, and a
+     * page that contributes zero.
+     */
+    const commonsReady = await page.evaluate(() => {
+      const c = window.axe?.commons;
+      return (
+        typeof c?.dom?.isVisibleToScreenReaders === 'function' &&
+        typeof c?.dom?.isVisibleOnScreen === 'function' &&
+        typeof c?.dom?.isInTabOrder === 'function' &&
+        typeof c?.dom?.getTabbableElements === 'function' &&
+        typeof c?.text?.accessibleText === 'function' &&
+        typeof c?.aria?.getAccessibleRefs === 'function' &&
+        typeof c?.aria?.getRolesByType === 'function' &&
+        typeof c?.aria?.getRole === 'function' &&
+        typeof window.axe?.utils?.parseTabindex === 'function' &&
+        typeof window.axe?.utils?.getNodeFromTree === 'function' &&
+        typeof window.axe?.setup === 'function' &&
+        typeof window.axe?.teardown === 'function'
+      );
+    });
+    if (!commonsReady) {
+      return {
+        url,
+        error:
+          'axe.commons is missing or has changed shape in this axe-core build, so the ' +
+          'probes could not measure tree membership, names, focusability or visibility. ' +
+          'Nothing was measured — this is a packaging fault, not a fault on the page.',
+      };
     }
 
     const axeResults = await page.evaluate(async () => window.axe.run(document));

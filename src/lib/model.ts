@@ -86,6 +86,19 @@ export interface PhantomMenu {
   buttons: number;
   focusable: number;
   tabbable: number;
+  /**
+   * Whether anything announces this panel. Optional because no run on disk
+   * carries them: `phantomMenu` is a projection of the largest `hiddenPanel`
+   * (probes.mjs:497) and the projection drops the two trigger fields the panel
+   * itself records. Until the scanner carries them through,
+   * `phantomPanelState()` recovers them by matching this projection back to the
+   * panel it came from — and returns null, not "fine", when it cannot.
+   *
+   * Names deliberately identical to `HiddenPanel`'s, so a future
+   * carry-through is a copy rather than a translation.
+   */
+  hasKeyboardTrigger?: boolean;
+  triggerHasAriaExpanded?: boolean;
 }
 
 /**
@@ -246,6 +259,33 @@ export interface RunMeta {
   viewports?: Partial<Record<ViewportName, ViewportSpec>>;
   primaryViewport?: ViewportName;
   label?: string;
+  /* ----------------------------------------------------------------
+   * Provenance: which engine produced these numbers.
+   *
+   * Every one of these is optional, and every one of them must render as
+   * "not recorded" rather than as a value, because the three run files in
+   * `data/runs` predate the fields entirely.
+   *
+   * They exist because of a discovery that invalidates comparison across the
+   * existing series: three Chromium majors (148, 149 and 151) were driven
+   * against these sites inside a single session, and no run file anywhere says
+   * which one wrote it. Both published runs were also produced by probe code
+   * that no longer exists — `a2cd211` rewrote five predicates underneath them —
+   * so a trend line drawn through them is joining measurements taken with
+   * different instruments. `axeVersion` above records the rule engine and
+   * always has; these record the browser and the probes, which is where the
+   * rest of the movement comes from.
+   *
+   * Recording them does not repair the historical runs. It makes the
+   * discontinuity visible, so the first run that carries a `probeVersion` can
+   * be marked as a new baseline rather than read as a regression.
+   * ---------------------------------------------------------------- */
+  /** Short git SHA of the `scanner/` directory contents at scan time. */
+  probeVersion?: string;
+  /** Full browser version string, e.g. "Chromium 149.0.7827.55". */
+  browserVersion?: string;
+  /** The executable actually launched — the default download or an override. */
+  browserPath?: string;
 }
 
 /**
@@ -333,17 +373,343 @@ export const VERDICT_LABEL: Record<Verdict, string> = {
 };
 
 /**
+ * What the largest off-screen panel on this page actually is.
+ *
+ * - `none` — nothing off-screen holds a focusable control. Not a finding.
+ * - `announced` — the controls are off screen, but a keyboard-reachable
+ *   trigger carrying `aria-expanded` says the region exists and how to open
+ *   it. This is what a *correct* closed menu looks like.
+ * - `unannounced` — controls are off screen and nothing in the tree says so.
+ *   An agent cannot find them; this is the dead end the tool exists to report.
+ *
+ * `null` means the run never recorded enough to tell, which is not the same
+ * as `none` and must never be rendered as one.
+ */
+export type PhantomPanelState = 'none' | 'announced' | 'unannounced';
+
+/** A keyboard-reachable trigger that declares the panel's state. */
+export function hiddenPanelAnnounced(panel: HiddenPanel): boolean | null {
+  /**
+   * The type promises two booleans; a JSON file read off disk promises
+   * nothing. Every panel in the four run files present today carries both
+   * (checked), and both have been in `probes.mjs` since the first commit — but
+   * run files arrive from a client-assembled full scan and from whatever
+   * scanner build produced them, and this codebase is one field rename away
+   * from reading `undefined` here.
+   *
+   * A panel that records no trigger measured the panel, not the trigger. The
+   * answer is "unknown", never "no trigger" — the second would manufacture a
+   * defect out of a missing field.
+   */
+  if (typeof panel.hasKeyboardTrigger !== 'boolean') return null;
+  if (typeof panel.triggerHasAriaExpanded !== 'boolean') return null;
+  /**
+   * Both halves are required, and that is the definition the README already
+   * states: "a closed dialog with an `aria-expanded` trigger is fine; a
+   * `:hover` mega-menu is not." A trigger that is keyboard-reachable but
+   * silent about state still leaves an agent with no way to know there is
+   * anything behind it — which is the live production case on both brands'
+   * mobile drawers, and it stays reported.
+   */
+  return panel.hasKeyboardTrigger && panel.triggerHasAriaExpanded;
+}
+
+export function phantomPanelState(page: ScannedPage): PhantomPanelState | null {
+  const pm = page.phantomMenu;
+  if (!pm) return 'none'; // no off-screen panel at all — measured, and clean
+  if (pm.focusable === 0) return 'none'; // an empty region traps nobody
+
+  // Prefer the panel's own answer if the scanner ever carries it through.
+  if (typeof pm.hasKeyboardTrigger === 'boolean' && typeof pm.triggerHasAriaExpanded === 'boolean') {
+    return pm.hasKeyboardTrigger && pm.triggerHasAriaExpanded ? 'announced' : 'unannounced';
+  }
+
+  /**
+   * Otherwise recover it from `hiddenPanels`, which `phantomMenu` is derived
+   * from: probes.mjs takes the panel with the most focusable controls and
+   * copies a subset of its fields. Match on that same "largest" rule and
+   * verify the identity on `focusable` + `links` before trusting it — replayed
+   * over all three files in `data/runs`, the two agree on 64 of the 64 pages
+   * that carry both. If they ever disagree, the projection is not this panel
+   * and the honest answer is that we do not know.
+   */
+  const panels = page.hiddenPanels;
+  if (!panels || panels.length === 0) return null;
+  const largest = [...panels].sort((a, b) => b.focusable - a.focusable)[0];
+  if (largest.focusable !== pm.focusable || largest.links !== pm.links) return null;
+
+  const announced = hiddenPanelAnnounced(largest);
+  if (announced === null) return null;
+  return announced ? 'announced' : 'unannounced';
+}
+
+/**
+ * False-positive class 1, at the verdict layer.
+ *
+ * This was `(page.phantomMenu?.focusable ?? 0) > 0` — every page holding a
+ * closed panel with anything focusable inside it was declared blocking. That
+ * is the same definition error `c354f70` removed from `aggregate.ts`, one
+ * layer up: it counts *hidden*, when the defect is *unannounced*. Replayed
+ * over every page of every run file, it is wrong on exactly two of them — both
+ * 11 Aug runs call Insureon's desktop home page blocking on the strength of a
+ * four-control accordion whose trigger carries `aria-expanded`. A correct
+ * disclosure, reported as an agent dead end. Nothing else moves: the mobile
+ * drawers holding 68 and 69 controls have a keyboard trigger that says nothing
+ * about state, and they stay blocking.
+ *
+ * Hidden is not unfindable. Only unfindable is a defect.
+ *
+ * `null` is a real answer: the run recorded trapped controls but nothing about
+ * what opens them. Do not collapse it to `false` — a check that did not run is
+ * not a check that passed.
+ */
+export function phantomBlocking(page: ScannedPage): boolean | null {
+  const state = phantomPanelState(page);
+  if (state === null) return null;
+  return state === 'unannounced';
+}
+
+/**
+ * The page verdict with its inputs kept visible.
+ *
+ * `verdict` is `null` when an input was never measured and the answer genuinely
+ * turns on it. That is the same shape `ScorecardRow.met` uses for a check a run
+ * predates, and for the same reason: "nobody looked" is not a pass.
+ */
+export interface PageVerdict {
+  verdict: Verdict | null;
+  /** null = this run never recorded what announces the panel. */
+  phantomBlocking: boolean | null;
+  /** True when any input to the verdict was absent from the run. */
+  notMeasured: boolean;
+}
+
+/**
  * Deliberately not a weighted score out of 100 — that invites treating an
- * arbitrary formula as ground truth. This is three honest buckets: is there
- * a critical failure or a reachable-but-dead control (the phantom menu),
- * is there a serious one, or neither.
+ * arbitrary formula as ground truth. This is three honest buckets, plus the
+ * absence of one: is there a critical failure or a control an agent cannot
+ * find, is there a serious one, neither, or did the run not measure enough to
+ * say.
+ */
+export function pageVerdict(page: ScannedPage): PageVerdict {
+  const hasImpact = (impact: string) => (page.violations ?? []).some((v) => v.impact === impact);
+  const phantom = phantomPanelState(page);
+  const blocking = phantom === null ? null : phantom === 'unannounced';
+  const notMeasured = phantom === null;
+
+  // A critical violation settles it whatever the panel turns out to be, so
+  // this branch stays answerable even on a run with no panel data.
+  if (hasImpact('critical') || blocking === true) {
+    return { verdict: 'blocking', phantomBlocking: blocking, notMeasured };
+  }
+  if (blocking === null) {
+    return { verdict: null, phantomBlocking: null, notMeasured };
+  }
+  /**
+   * An announced panel is not a dead end, but controls that stay in the tab
+   * order while off screen are still a degraded experience — which is exactly
+   * how `PROBE_CHECKS` grades `hidden-panel-controls`: serious, not critical.
+   * Going straight from "blocking" to "clear" would overcorrect the false
+   * positive into a false clean.
+   */
+  if (hasImpact('serious') || phantom === 'announced') {
+    return { verdict: 'needs-work', phantomBlocking: blocking, notMeasured };
+  }
+  return { verdict: 'clear', phantomBlocking: blocking, notMeasured };
+}
+
+/**
+ * The three-bucket verdict, for callers that must render something.
+ *
+ * The indeterminate case resolves to `blocking`, and that is a refusal to
+ * certify rather than a claim: on a run with no panel data we know controls are
+ * trapped off screen and know nothing about what announces them. Calling it
+ * clear is the false-clean pattern that has already shipped twice here.
+ * Callers that can show a caveat should use `pageVerdict()` and render
+ * `verdict === null` as "not measured".
+ *
+ * In practice this branch is unreachable on anything the dashboard renders:
+ * all three files in `data/runs/` carry `hiddenPanels`, and the only run that
+ * does not is the retired 7 Aug baseline in `src/lib/fixtures/`, which nothing
+ * displays. Every page it affects keeps the verdict it has today.
  */
 export function verdictForPage(page: ScannedPage): Verdict {
-  const hasImpact = (impact: string) => (page.violations ?? []).some((v) => v.impact === impact);
-  const phantomBlocking = (page.phantomMenu?.focusable ?? 0) > 0;
-  if (hasImpact('critical') || phantomBlocking) return 'blocking';
-  if (hasImpact('serious')) return 'needs-work';
-  return 'clear';
+  return pageVerdict(page).verdict ?? 'blocking';
+}
+
+/* ------------------------------------------------------------------ */
+/* What counts as a defect                                             */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Does this ghost control count?
+ *
+ * `cursor: pointer` is a style; the browser's listener registry is the
+ * authority. An element the registry says has no handler of its own is not a
+ * control however it looks, so `confirmedListener === false` drops out.
+ * `null` still counts — that means CDP could not answer, which is uncertainty,
+ * not absence, and uncertainty is not allowed to shrink a defect count.
+ *
+ * Exported because this predicate was written out by hand in two places and
+ * the two drifted: `aggregate.ts:432` filtered on it and `aggregate.ts:543`
+ * did not, so one screen showed two different numbers for the same row.
+ * One definition, imported.
+ */
+export function countsAsGhostControl(control: GhostControl): boolean {
+  return control.confirmedListener !== false;
+}
+
+export type PageDefectKey =
+  | 'namelessButtons'
+  | 'namelessLinks'
+  | 'emptyHref'
+  | 'noMain'
+  | 'ghostControls'
+  | 'hiddenPanels'
+  | 'unannouncedPanels'
+  | 'unannouncedFocusable'
+  | 'unannouncedLinks';
+
+export interface PageDefectDefinition {
+  key: PageDefectKey;
+  label: string;
+  /** What an agent hits, in one line. */
+  why: string;
+  /**
+   * The count for one page — or `null` when this run never measured it, which
+   * is not zero and must not render as one.
+   */
+  count: (page: ScannedPage) => number | null;
+}
+
+/**
+ * The defect set. A correct page has every one of these at zero.
+ *
+ * This list exists because "what counts as a defect" had been restated in nine
+ * separate comment blocks across `aggregate.ts`, `compare.ts` and `issues.ts`,
+ * and restatements drift: two of the five false-positive classes were a metric
+ * counting *hidden* where the defect is *unannounced*, and each had to be
+ * found and fixed separately because no two call sites shared a definition.
+ *
+ * Deliberately not summed. These count different entities — controls, links
+ * and regions — and `unannouncedLinks` is a subset of `unannouncedFocusable`,
+ * so any total is double counting dressed up as a score. The same reasoning
+ * that keeps `verdictForPage` down to three buckets applies here.
+ */
+export const PAGE_DEFECTS: readonly PageDefectDefinition[] = [
+  {
+    key: 'namelessButtons',
+    label: 'Buttons with no accessible name',
+    why: 'An agent can see the control and cannot say what it does.',
+    count: (p) => p.namelessButtons?.length ?? null,
+  },
+  {
+    key: 'namelessLinks',
+    label: 'Links with no accessible name',
+    why: 'A destination with nothing to identify it by.',
+    count: (p) => p.namelessLinks?.length ?? null,
+  },
+  {
+    key: 'emptyHref',
+    label: 'Links with an empty destination',
+    why: 'Announced as a link, goes nowhere.',
+    count: (p) => p.emptyHref?.length ?? null,
+  },
+  {
+    key: 'noMain',
+    label: 'Missing main landmark',
+    why: 'Nothing marks where the content starts, so an agent reads the chrome first.',
+    /** Absence is unknown; only an explicit `false` is the defect. */
+    count: (p) => (typeof p.hasMain === 'boolean' ? (p.hasMain ? 0 : 1) : null),
+  },
+  {
+    key: 'ghostControls',
+    label: "Controls an agent can't identify",
+    why: 'Real click listener, no role, no name, not in the tab order. No rule engine can see these.',
+    count: (p) => (p.ghostControls ? p.ghostControls.filter(countsAsGhostControl).length : null),
+  },
+  {
+    key: 'hiddenPanels',
+    label: 'Off-screen panels still in the tab order',
+    why: 'Still in the tree, still tabbable, not on screen — focus lands somewhere invisible.',
+    count: (p) => p.hiddenPanels?.length ?? null,
+  },
+  {
+    key: 'unannouncedPanels',
+    label: 'Regions nothing announces',
+    why: 'Out of the tree with nothing in the tree saying they exist.',
+    count: (p) => p.unreachableTotals?.unannouncedPanels ?? null,
+  },
+  {
+    key: 'unannouncedFocusable',
+    label: 'Controls an agent cannot find',
+    why: 'The number that matters: controls an agent can neither see nor discover.',
+    count: (p) => p.unreachableTotals?.unannouncedFocusable ?? null,
+  },
+  {
+    key: 'unannouncedLinks',
+    label: 'Links an agent cannot find',
+    why: 'Hidden with nothing announcing them. A hover-only menu does this; a disclosure button does not.',
+    count: (p) => p.unreachableTotals?.unannouncedLinks ?? null,
+  },
+];
+
+/**
+ * Measurements that are expected to be non-zero on a page with nothing wrong,
+ * written down so nobody promotes one back into the defect set. Every entry
+ * here has been reported as a defect at some point, and each time the fix was
+ * to remember what the number actually describes.
+ */
+export const NON_DEFECT_METRICS: ReadonlyArray<{ key: string; why: string }> = [
+  {
+    key: 'clickableNoRole',
+    why: 'A magnitude, not a target: mostly convenience click targets wrapping a real link.',
+  },
+  {
+    key: 'unreachableTotals.panels',
+    why: 'Every region out of the tree, announced ones included. A closed menu behind a disclosure button lives here and is correct.',
+  },
+  {
+    key: 'unreachablePanels',
+    why: 'The list behind the totals — it carries announced panels too. Filter on `announced === false` before counting anything.',
+  },
+  {
+    key: 'navLinks.inTree < navLinks.total',
+    why: 'Descriptive. A correctly closed menu is out of the tree by design; the defect is `unannouncedLinks`, not the gap.',
+  },
+];
+
+/**
+ * Every defect count for one page, plus what this run could not answer.
+ *
+ * `clean` is `boolean | null` on purpose, mirroring `ScorecardRow.met`: true
+ * only when everything was measured and everything was zero, and `null` — not
+ * `false`, and never `true` — when something was not measured at all.
+ */
+export function pageDefectCounts(page: ScannedPage): Record<PageDefectKey, number | null> {
+  const out = {} as Record<PageDefectKey, number | null>;
+  for (const defect of PAGE_DEFECTS) out[defect.key] = defect.count(page);
+  return out;
+}
+
+export function pageDefectSummary(page: ScannedPage): {
+  counts: Record<PageDefectKey, number | null>;
+  /** Non-zero defects, in the canonical order of `PAGE_DEFECTS`. */
+  present: Array<{ key: PageDefectKey; label: string; count: number }>;
+  /** Defects this run never measured. Render as "not measured", never as 0. */
+  notMeasured: PageDefectKey[];
+  clean: boolean | null;
+} {
+  const counts = pageDefectCounts(page);
+  const present: Array<{ key: PageDefectKey; label: string; count: number }> = [];
+  const notMeasured: PageDefectKey[] = [];
+  for (const defect of PAGE_DEFECTS) {
+    const count = counts[defect.key];
+    if (count === null) notMeasured.push(defect.key);
+    else if (count > 0) present.push({ key: defect.key, label: defect.label, count });
+  }
+  const clean = present.length > 0 ? false : notMeasured.length > 0 ? null : true;
+  return { counts, present, notMeasured, clean };
 }
 
 /**

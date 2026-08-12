@@ -32,6 +32,46 @@ interface Progress {
 }
 
 /**
+ * Which engine measured a batch, as the API route reports it.
+ *
+ * Mirrors the provenance block on `RunMeta` — `probeVersion`, `browserVersion`,
+ * `browserPath` — plus `scannedBy`, which the route has always computed and
+ * this component has always thrown away. That is why it is here: a run file
+ * assembled in the browser used to name its axe version and nothing else, so
+ * it was indistinguishable from a run taken on a laptop with a different
+ * Chromium and probe code from a different week. Three Chromium majors were
+ * driven against these sites in one session, and not one run file says which.
+ *
+ * Every field is `string | null` and never optional. `null` means the server
+ * answered and could not establish it; the field being *missing from the run
+ * file altogether* is reserved for runs written before provenance existed.
+ */
+interface RunProvenance {
+  probeVersion: string | null;
+  browserVersion: string | null;
+  browserPath: string | null;
+  scannedBy: string | null;
+}
+
+const PROVENANCE_KEYS = ['probeVersion', 'browserVersion', 'browserPath', 'scannedBy'] as const;
+
+const NOT_RECORDED = 'not recorded';
+
+/**
+ * A response from a deployment older than the provenance block has no
+ * `provenance` key at all, and reads as all-null rather than as an error. That
+ * is the right answer: nothing was recorded, and nothing is claimed.
+ */
+function readProvenance(body: { provenance?: Partial<RunProvenance>; scannedBy?: string }): RunProvenance {
+  return {
+    probeVersion: body?.provenance?.probeVersion ?? null,
+    browserVersion: body?.provenance?.browserVersion ?? null,
+    browserPath: body?.provenance?.browserPath ?? null,
+    scannedBy: body?.scannedBy ?? null,
+  };
+}
+
+/**
  * The full 20-page scan, run from the browser in small batches.
  *
  * A scheduled scan takes ~100 seconds and writes a file, which is why it
@@ -58,18 +98,24 @@ export function FullScanRunner({ targets }: { targets: ScanTarget[] }) {
   const [error, setError] = useState<string | null>(null);
   const [runFile, setRunFile] = useState<string | null>(null);
   const [label, setLabel] = useState('');
+  const [engine, setEngine] = useState<RunProvenance | null>(null);
+  const [engineChanged, setEngineChanged] = useState(false);
 
   async function run() {
     const total = targets.length * viewports.length;
     setStatus('running');
     setError(null);
     setRunFile(null);
+    setEngine(null);
+    setEngineChanged(false);
     setProgress({ done: 0, total, current: null, currentViewport: null, failures: 0 });
 
     const startedAt = new Date().toISOString();
     const byViewport: Record<string, Record<string, Record<string, PageResult>>> = {};
     const viewportSpecs: Record<string, ViewportSpec> = {};
     let axeVersion: string | null = null;
+    let provenance: RunProvenance | null = null;
+    let mixedEngine = false;
     let failures = 0;
     let done = 0;
 
@@ -96,6 +142,28 @@ export function FullScanRunner({ targets }: { targets: ScanTarget[] }) {
           if (!res.ok) throw new Error(body?.error ?? `Scan failed with ${res.status}`);
 
           if (body.viewportSpec) viewportSpecs[viewport] = body.viewportSpec;
+
+          /**
+           * One run file, ~14 requests, and no guarantee they all land on the
+           * same server process. A deploy that lands mid-run genuinely swaps
+           * the engine underneath a scan, which is the very thing this field
+           * exists to expose — so a disagreement between batches is recorded
+           * as "not recorded" for whichever field disagreed, rather than as
+           * whichever answer happened to arrive first. A single wrong-looking
+           * SHA in a run file is worse than no SHA: it would be read as
+           * evidence that every page in the file was measured by that code.
+           */
+          const seen = readProvenance(body);
+          if (!provenance) {
+            provenance = seen;
+          } else {
+            for (const key of PROVENANCE_KEYS) {
+              if (provenance[key] !== seen[key]) {
+                provenance[key] = null;
+                mixedEngine = true;
+              }
+            }
+          }
           // Results come back in request order, so they pair positionally.
           batch.forEach((target, n) => {
             const result = body.results?.[n];
@@ -124,11 +192,28 @@ export function FullScanRunner({ targets }: { targets: ScanTarget[] }) {
           axeVersion,
           primaryViewport,
           viewports: viewportSpecs,
+          /* --------------------------------------------------------------
+           * Which engine produced these numbers. Same four keys the CLI
+           * writes, so a run taken here and a run taken by the scheduled
+           * scan are attributable in exactly the same way — the file should
+           * not be able to say how it was taken only by implication.
+           *
+           * `scannedBy` will read "hosted" here and "cli" from scan.mjs.
+           * That is not bookkeeping about who ran it: the two paths launch
+           * different Chromium builds, @sparticuz's here and the full
+           * Playwright download there.
+           * -------------------------------------------------------------- */
+          probeVersion: provenance?.probeVersion ?? null,
+          browserVersion: provenance?.browserVersion ?? null,
+          browserPath: provenance?.browserPath ?? null,
+          scannedBy: provenance?.scannedBy ?? null,
           ...(label.trim() ? { label: label.trim() } : {}),
         },
         byViewport,
       };
       setRunFile(JSON.stringify(run, null, 2));
+      setEngine(provenance);
+      setEngineChanged(mixedEngine);
       setStatus('done');
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
@@ -273,6 +358,25 @@ export function FullScanRunner({ targets }: { targets: ScanTarget[] }) {
               ? ' The pages that failed contribute zero and are flagged in the file — treat the totals as incomplete, and check targets.mjs, since a failure usually means a URL moved.'
               : ''}
           </p>
+          {/*
+            Shown, not just written, because the point of recording the engine
+            is that somebody notices when it is the wrong one. Anything the
+            server could not establish reads "not recorded" and is stored as
+            null — never blank, never a plausible-looking guess.
+          */}
+          <p className="mt-2 text-xs leading-relaxed text-faint">
+            Engine ·{' '}
+            <span className="font-mono">probes {engine?.probeVersion ?? NOT_RECORDED}</span> ·{' '}
+            <span className="font-mono">{engine?.browserVersion ?? NOT_RECORDED}</span> ·{' '}
+            <span className="font-mono">{engine?.scannedBy ?? NOT_RECORDED}</span>
+          </p>
+          {engineChanged ? (
+            <p className="mt-1.5 text-xs leading-relaxed text-critical">
+              The server reported more than one engine during this run — a deploy probably landed
+              mid-scan. The fields that disagreed are stored as not recorded, because the pages in
+              this file were not all measured by the same code.
+            </p>
+          ) : null}
           <div className="mt-3 flex flex-wrap items-center gap-4">
             <button
               type="button"
