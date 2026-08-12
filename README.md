@@ -31,14 +31,18 @@ check, it stopped being a destination and became a section of Overview.
 | **Live scan server** | Small HTTP server. Runs the same engine on demand, against whatever URL you give it. | `scanner/server.mjs` |
 | **Viewer** | Next.js app. Only ever *reads* run files — plus one page that talks to the live scan server directly from the browser. | `src/` |
 
-The viewer and the scanner share no code and no dependencies — a full
-scheduled scan takes 3–5 minutes, so it could never live in an API route, and
-keeping them apart is what makes the viewer a pure static export you can host
-anywhere or hand over as a folder. The live scan server is the one exception
-to "the viewer only reads files": its `/scan` endpoint is a real request that
-takes real time, so it's a small standalone server, not a Next.js route —
-static export and on-demand server-side browser automation genuinely can't
-live in the same build.
+The viewer and the scanner share no code and no dependencies. A full scheduled
+scan takes 3–5 minutes, so it could never live behind a request — that is why
+`scan.mjs` stays a CLI, and why **Measure → Run full scan** drives the browser
+through the target list three URLs at a time instead of asking for all twenty
+at once.
+
+A *single-page* scan is fast enough to serve on demand, and there are two ways
+to get one: `/api/scan` on the host, and `scanner/server.mjs` on your own
+machine. Both exist on purpose. The hosted route makes Measure and Compare work
+for anyone who opens the dashboard; the local server exists because that route
+is deliberately capped at three URLs and an allowlist, which is right for a
+public endpoint and wrong for scanning a staging box you own.
 
 What keeps "static" and "live" from becoming two different measurements that
 quietly drift apart is that **both call `scanPage()` in `core.mjs`.** Nothing
@@ -50,31 +54,34 @@ about what's measured changes based on how the scan was triggered.
 npm install
 cd scanner && npm install && cd ..   # once — also downloads Chromium
 
-npm run dev      # viewer on :3000 AND the scan server on :4790, one Ctrl-C stops both
-npm test         # asserts the baseline numbers — run after touching aggregate.ts or the fixtures
-npm run build    # static export into out/
+npm run dev         # viewer on :3000 AND the scan server on :4790, one Ctrl-C stops both
+npm test            # the aggregate and compare maths, against frozen fixtures — no browser
+npm run metamorphic # the probes, against generated markup — needs Chromium, ~3 minutes
+npm run build       # production build into .next/
+npm start           # serves that build, scan server alongside, same one-command shape
 ```
 
-`out/` works from any static host, or opened straight off the filesystem.
-`npm start` serves it with the scan server alongside, same one-command shape.
+`npm run build` is a Node build, not a folder of files: every page is
+prerendered at build time, but `/api/scan` is a real route and needs a host that
+can run it. Static export was dropped deliberately — the reasoning is at the top
+of `next.config.js`, and the short version is that it cost Measure and Compare
+their entire audience, since a static build has no server and a scan could only
+run on a machine where someone had cloned the repo.
 
 ### Why it's two processes and not one
 
-A scan drives a real browser for ~100 seconds. That can't live inside a
-statically exported site, and it can't live behind a Next API route while
-`output: 'export'` is set — a static build has no server to run one. So the
-scan server stays a separate process.
+Not because a scan cannot live behind a route — it does, at `/api/scan`. The
+local server exists because that route is capped at three URLs per request and
+restricted to an allowlist of our own domains. Both caps are correct for an
+endpoint that fetches a URL it is handed on a public host, and both are in the
+way when you are scanning a staging box from your own machine. Point the Scanner
+control on Measure or Compare at `localhost:4790` and neither applies.
 
 What it does *not* need to be is a separate thing you remember to start.
 `scripts/dev.mjs` runs both, prefixes their output, and shuts both down
 together; if the scanner's dependencies are missing the viewer still starts and
 Measure/Compare explain what to install. `npm run dev:viewer` and
 `npm run scan-server` still run them individually when you want that.
-
-Dropping `output: 'export'` would collapse this to a single process with the
-scanner behind an API route. The trade is that the built artefact stops being a
-folder you can host anywhere or hand over as files, and starts needing a Node
-host. That's a deployment decision, not a code one.
 
 All the logic is in `src/lib/`. Components are deliberately dumb.
 
