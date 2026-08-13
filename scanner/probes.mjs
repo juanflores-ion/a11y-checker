@@ -1462,8 +1462,31 @@ export function collectMeasurements() {
         const at = n === el ? '' : ` (on ${describe(n)})`;
         const found = (why) => ({ at: n, why: `${why}${at}` });
         if (s.display === 'none') return found('display: none');
+        /**
+         * `visibility` INHERITS, and that changes who gets the credit.
+         *
+         * Every descendant of a `visibility: hidden` element computes to
+         * `hidden` as well, so a walk that stops at the first element reporting
+         * it names whichever node it happened to start from rather than the one
+         * that set it. `display`, `content-visibility` and `overflow` do not
+         * inherit and need no such guard; the attribute checks below are read
+         * off the element itself and cannot inherit either.
+         *
+         * Measured on ION's mobile drawer, which is `visibility: hidden` and
+         * correctly announced by `<button aria-controls="mobile-nav-drawer">`:
+         * the plain wrappers inside it — `div.megaMenu_FuyPN`, `ul.navList_FuyPN`,
+         * neither carrying an id or a style of its own — were each credited as
+         * hiding themselves, judged as independent regions nothing announces,
+         * and the monotonicity rule then suppressed the drawer's real
+         * announcement. 68 links an agent CAN find, published as 68 it cannot.
+         * A correct fix reported as a defect, which is the failure this file
+         * exists to prevent, and the same shape as `cursor: pointer` inheriting
+         * onto a decorative glyph.
+         */
         if (s.visibility === 'hidden' || s.visibility === 'collapse') {
-          return found(`visibility: ${s.visibility}`);
+          const parent = n.parentElement;
+          const inherited = !!parent && getComputedStyle(parent).visibility === s.visibility;
+          if (!inherited) return found(`visibility: ${s.visibility}`);
         }
         if (s.contentVisibility === 'hidden') return found('content-visibility: hidden');
         if (n.getAttribute('aria-hidden') === 'true') return found('aria-hidden="true"');
