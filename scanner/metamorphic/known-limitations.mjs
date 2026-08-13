@@ -192,22 +192,6 @@ export const ACCEPTED_PINNED_MISSES = [];
 export const NOT_ASSERTED = [
   {
     shape:
-      'A <button aria-expanded> accordion sharing a parent with an unrelated :hover ' +
-      'mega-menu. Six links an agent cannot find are published as 0.',
-    wouldContradict: 'trigger-placement',
-    because:
-      'Undecidable as the metric is defined, and identical on main, so it is not a ' +
-      'regression. A bare aria-expanded trigger declares no target: nothing in the DOM ' +
-      'says what it controls, and this tool has already decided that the conventional ' +
-      'sibling shape counts — trigger-placement asserts exactly that over its ' +
-      'sibling-expanded and sibling-haspopup variants, on markup indistinguishable from ' +
-      'this. A family asserting the opposite would make the suite red whichever way ' +
-      'probes.mjs was written. Deciding it means changing what "announced" means — either ' +
-      'requiring an IDREF, which reports every correct disclosure that omits one, or ' +
-      'giving the metric a confidence band. Both are product decisions, not fixes.',
-  },
-  {
-    shape:
       'A region stranded by overflow: clip. Nothing reports it — not this branch, and not ' +
       'main.',
     because:
