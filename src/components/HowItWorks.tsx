@@ -752,11 +752,22 @@ const TERMS: Term[] = [
         <p>
           A hidden region counts as reachable when something an agent can find says the region
           exists. That means a control that is itself in the list and declares it opens something:
-          a button carrying <span className="font-mono text-xs">aria-expanded</span>,{' '}
-          <span className="font-mono text-xs">aria-haspopup</span> or{' '}
-          <span className="font-mono text-xs">aria-controls</span>, or a plain{' '}
-          <span className="font-mono text-xs">&lt;summary&gt;</span>, which the browser announces
-          for free.
+          a control whose markup <em>names the region it opens</em>:{' '}
+          <span className="font-mono text-xs">aria-controls</span>,{' '}
+          <span className="font-mono text-xs">aria-owns</span>,{' '}
+          <span className="font-mono text-xs">popovertarget</span> or{' '}
+          <span className="font-mono text-xs">commandfor</span> resolving to it, or a plain{' '}
+          <span className="font-mono text-xs">&lt;summary&gt;</span>, where the spec names the
+          region for you.
+        </p>
+        <p className="mt-2">
+          <strong>Position is not a relationship.</strong> A button carrying only{' '}
+          <span className="font-mono text-xs">aria-expanded</span> or{' '}
+          <span className="font-mono text-xs">aria-haspopup</span> says that{' '}
+          <em>something</em> opens. It never says what. A sighted person reads the answer off the
+          layout; an agent cannot compute it, and this tool measures what an agent can do. So a
+          hamburger sitting next to a hidden drawer does not announce it — not because the site is
+          badly built, but because the connection was never written down.
         </p>
         <p className="mt-2">
           A <span className="font-mono text-xs">:hover</span> rule qualifies as none of those. It
@@ -770,9 +781,14 @@ const TERMS: Term[] = [
       <MarkupContrast
         rows={[
           {
-            code: '<button aria-expanded="false">Products</button>',
-            verdict: 'Announced. An agent can name it, and knows it is closed.',
+            code: '<button aria-expanded="false" aria-controls="mega">Products</button>',
+            verdict: 'Announced. It names the region, so an agent knows what opens.',
             tone: 'good',
+          },
+          {
+            code: '<button aria-expanded="false">Products</button>',
+            verdict: 'Not announced. Something opens — but nothing says what.',
+            tone: 'bad',
           },
           {
             code: '.nav-item:hover .mega-menu { display: block }',
@@ -782,9 +798,9 @@ const TERMS: Term[] = [
         ]}
       />
     ),
-    costLabel: 'Why the bar is set high:',
+    costLabel: 'What this rule costs, and why it is still the rule:',
     cost:
-      'Where a page verdict is decided the bar is deliberately higher still — the trigger has to carry aria-expanded specifically, not merely exist. A definition that is sharpened must never be able to make production look better than the published runs already said it was.',
+      'A disclosure that works perfectly for a person, but names no target, now reports as unfindable. That is a real cost and it is accepted, because the alternative is worse: pairing a trigger to a region by position is guesswork, and every false clean this scanner ever shipped on this metric came through some version of it — a <summary> three levels down an unrelated <details>, a cookie-preferences button five wrappers away, a chat button in a header. Each fix narrowed which neighbours counted and the next shape stayed open. The rule is fixed now and does not move to match a site: if a site disagrees with it, the site is what changes.',
   },
   {
     term: 'Trapped',

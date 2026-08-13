@@ -337,6 +337,15 @@ export function collectMeasurements() {
     const HTML_INVOKER_ATTRS = ['popovertarget', 'commandfor'];
 
     /**
+     * Every attribute by which an author writes down "this control opens that
+     * region". One list, because two lists drift: `declaredTargets` resolved
+     * `aria-owns` while `announces()` did not know about it, so a correctly
+     * announced panel came back with its trigger found and its verdict
+     * unannounced. Caught by trigger-placement's `aria-owns` variant.
+     */
+    const REFERENCE_ATTRS = ['aria-controls', 'aria-owns', ...HTML_INVOKER_ATTRS];
+
+    /**
      * Asked once for the page, because the referrer lookup below is the one
      * place in this file that runs a document-wide `querySelectorAll` per
      * candidate rather than a cached index — `getAccessibleRefs` has an index
@@ -479,7 +488,7 @@ export function collectMeasurements() {
     const declaredTargets = memo((el) => {
       const targets = [];
       try {
-        for (const attr of ['aria-controls', 'aria-owns', ...HTML_INVOKER_ATTRS]) {
+        for (const attr of REFERENCE_ATTRS) {
           if (!el.hasAttribute(attr)) continue;
           for (const target of dom.idrefs(el, attr)) {
             if (target && target.nodeType === 1) targets.push(target);
@@ -578,17 +587,7 @@ export function collectMeasurements() {
           return t.contains(region) && declaresClosed(trigger);
         });
       }
-      if (trigger.contains(region)) return true;
-      if (!announces(trigger)) return false;
-
-      const group = region.parentElement;
-      if (!group) return false;
-      const branch = [...group.children].find((c) => c === trigger || c.contains(trigger));
-      if (!branch) return false;
-      if (branch === trigger) return true;
-      return [...branch.querySelectorAll('*')].every(
-        (n) => n === trigger || trigger.contains(n) || n.contains(trigger)
-      );
+      return trigger.contains(region);
     };
 
     /**
@@ -653,32 +652,46 @@ export function collectMeasurements() {
         }
       }
       /**
-       * Otherwise the conventional shape: a trigger sitting beside the panel —
-       * and only IMMEDIATELY beside it.
+       * The one relationship that is declared without an id: `<summary>` opens
+       * the `<details>` it is the summary of.
        *
-       * This used to walk every child of the parent and take the first one
-       * `operates()` accepted, where production stopped at the first interactive
-       * sibling whatever it was. That difference is a silent deletion, and it
-       * was measured through the real `scanPage()` on a `:hover` mega-menu whose
-       * column holds a plain "Help" link before it and an unrelated "Manage
-       * cookie preferences" button two children after it: production published
-       * six links an agent cannot find, this file scanned past the link, reached
-       * the button, and published 0.
-       *
-       * Adjacency is the only evidence rule 3 of `operates()` has, so it has to
-       * mean adjacent. A trigger separated from its panel by a heading is now
-       * over-reported, which is the direction this file is allowed to be wrong
-       * in; a trigger that names its target is unaffected, because it was
-       * already answered by the IDREF walk above.
+       * The spec writes this edge, so it is as machine-determinable as
+       * `aria-controls` — an agent reading the tree gets a `DisclosureTriangle`
+       * with an expanded state and knows exactly what it governs. It used to be
+       * found by accident, because the sibling scan queried for `summary`; that
+       * scan is gone, and losing this with it reported the body of every correct
+       * native accordion as unfindable. Caught by hiding-mechanism scoring
+       * `closed-details` against the seven other mechanisms, not by review.
        */
-      for (const c of [el.previousElementSibling, el.nextElementSibling]) {
-        if (!c) continue;
-        const candidate =
-          c.matches(NATIVE_INTERACTIVE) || c.getAttribute('role') === 'button'
-            ? c
-            : c.querySelector('button,a[href],[role="button"],summary');
-        if (candidate && operates(candidate, el)) return candidate;
+      for (let n = el.parentElement; n && n !== document.documentElement; n = n.parentElement) {
+        if (n.tagName !== 'DETAILS') continue;
+        const summary = [...n.children].find((c) => c.tagName === 'SUMMARY');
+        if (summary && operates(summary, el)) return summary;
       }
+
+      /**
+       * There is no second chance beyond that, and it is the rule rather than an
+       * omission.
+       *
+       * This used to fall back on adjacency: a trigger sitting beside the panel
+       * counted as opening it. That is a visual inference, not a relationship. A
+       * `<button aria-expanded>` says something opens; it does not say WHAT. A
+       * sighted person reads the answer off the layout. An agent cannot compute
+       * it, and this tool measures what an agent can do, so a relationship
+       * nobody wrote down does not exist here.
+       *
+       * The heuristic was not merely unsound in theory. Every measured false
+       * clean on this metric came through it: a `<summary>` three levels down an
+       * unrelated `<details>`, a "Manage cookie preferences" button five
+       * wrappers away, an `aria-haspopup` chat button in a header. Each time the
+       * fix was to narrow which neighbours count, and each narrowing left the
+       * next shape open, because the evidence itself is the problem.
+       *
+       * The cost is real and accepted: a correct-for-humans disclosure that
+       * names no target now reports as unfindable. That is the honest answer for
+       * an agent, and it over-reports, which is the direction this file is
+       * allowed to be wrong in.
+       */
       return operator;
     };
 
@@ -717,10 +730,22 @@ export function collectMeasurements() {
       if (!el) return false;
       if (el.tagName === 'SUMMARY') return true;
 
-      // State declarations. These name no target, so there is nothing that
-      // could fail to resolve — the trigger is simply saying "I am a thing that
-      // opens", and that claim stands on its own.
-      if (el.hasAttribute('aria-expanded') || el.hasAttribute('aria-haspopup')) return true;
+      /**
+       * `aria-expanded` and `aria-haspopup` are deliberately NOT enough on their
+       * own, and this is the rule the whole probe now rests on.
+       *
+       * They are state declarations: they say "I am a thing that opens". They
+       * name nothing, so they cannot say WHAT opens. Reading them as an
+       * announcement requires pairing them with a region by position, and
+       * position is a visual inference an agent cannot make. Measured on both
+       * brands' mobile drawers: a hamburger carrying `aria-expanded` beside a
+       * `visibility: hidden` container with no `id` — nothing in the markup
+       * connects the two, and the old sibling heuristic credited 68 links to a
+       * relationship that was never written down.
+       *
+       * A trigger becomes an announcement by naming its target, or by being a
+       * `<summary>`, where the spec names it for you.
+       */
 
       /**
        * Reference declarations have to actually reference something.
@@ -743,7 +768,6 @@ export function collectMeasurements() {
        * `operates()` — two implementations of one question is how the last two
        * false-positive classes arose.
        */
-      const REFERENCE_ATTRS = ['aria-controls', ...HTML_INVOKER_ATTRS];
       if (!REFERENCE_ATTRS.some((attr) => el.hasAttribute(attr))) return false;
       return declaredTargets(el).length > 0;
     }

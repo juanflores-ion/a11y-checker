@@ -140,28 +140,50 @@ export const FAMILIES = [
   },
 
   {
-    id: 'trigger-placement',
-    title: 'An announced panel is announced however the relationship is expressed',
+    id: 'declared-relationship',
+    title: 'A declared relationship announces its panel however it is written',
     why:
-      'disclosureFor() resolves a trigger two ways — an ARIA IDREF in either ' +
-      'direction, then the conventional sibling shape — and the two paths were written ' +
-      'weeks apart. The pre-migration version read only the first [aria-controls], so ' +
-      'aria-owns was invisible to it and one of two correctly-announced panels came ' +
-      'back reported. Each variant below announces the same panel by a different ' +
-      'relationship; remote-controls is the one no sibling scan can rescue, and ' +
-      'closed-details is the one that needs no ARIA at all. This family also holds the ' +
-      'hiding axis still while the trigger moves, which is what makes the closed-details ' +
-      'member of the hiding family interpretable.',
+      'The scanner counts a hidden region as findable only when the markup DECLARES ' +
+      'which control opens it, because that is the only form an agent can compute. ' +
+      'Every variant below writes that declaration a different way — aria-controls at ' +
+      'the wrapper, aria-controls at the inner panel, aria-owns, a trigger in the site ' +
+      'header nowhere near what it opens, and a native <summary> where the spec writes ' +
+      'the edge for you. All five say the same thing, so all five must score the same. ' +
+      'This family caught the drift it exists for on its first run: declaredTargets() ' +
+      'resolved aria-owns while announces() did not know the attribute, so the trigger ' +
+      'was found and the verdict still came back unannounced. Both now read one list.',
     ...preservesEverything(),
     variants: [
       { id: 'sibling-controls', options: { trigger: 'sibling-controls' } },
       { id: 'sibling-inner-controls', options: { trigger: 'sibling-inner-controls' } },
-      { id: 'sibling-haspopup', options: { trigger: 'sibling-haspopup' } },
-      { id: 'sibling-expanded', options: { trigger: 'sibling-expanded' } },
       { id: 'aria-owns', options: { trigger: 'aria-owns' } },
-      { id: 'nested-trigger', options: { trigger: 'nested-trigger' } },
       { id: 'remote-controls', options: { trigger: 'remote-controls' } },
       { id: 'closed-details', options: { trigger: 'closed-details' } },
+    ],
+  },
+
+  {
+    id: 'undeclared-relationship',
+    title: 'An undeclared trigger announces nothing, wherever it stands',
+    why:
+      'The mirror of declared-relationship, and the rule that replaced two months of ' +
+      'narrowing heuristics. aria-expanded and aria-haspopup are STATE: they say ' +
+      'something opens, never what. Pairing one with a region requires reading the ' +
+      'layout, which a sighted person does and an agent cannot, so this scanner does ' +
+      'not credit it. Every measured false clean on the headline metric came through ' +
+      'the heuristic that did — a <summary> three levels down an unrelated <details>, ' +
+      'a "Manage cookie preferences" button five wrappers away, an aria-haspopup chat ' +
+      'button in a header — and each fix narrowed which neighbours counted while the ' +
+      'next shape stayed open. Measured on both brands: a hamburger carrying ' +
+      'aria-expanded beside a visibility:hidden drawer with no id, 68 and 64 links ' +
+      'credited to a relationship nobody wrote down. These three variants move the ' +
+      'undeclared trigger around; none of them may rescue the panel, so all three ' +
+      'must score the same. This family is what stops the heuristic growing back.',
+    ...preservesEverything(),
+    variants: [
+      { id: 'sibling-haspopup', options: { trigger: 'sibling-haspopup' } },
+      { id: 'sibling-expanded', options: { trigger: 'sibling-expanded' } },
+      { id: 'nested-trigger', options: { trigger: 'nested-trigger' } },
     ],
   },
 
@@ -522,13 +544,11 @@ export const FAMILIES = [
       'region\'s parent, and a region whose parent is the <nav> is adjacent to every ' +
       'component on the site. Two levels out from the bug being fixed, in the metric being ' +
       'fixed. It costs one variant to make that permanent.\n\n' +
-      'Deliberately NOT here: a bare <button aria-expanded> sibling carrying no IDREF. ' +
-      'Nothing in the DOM says what it controls, and this tool has already decided that ' +
-      'the conventional sibling shape counts — trigger-placement asserts exactly that, ' +
-      'over sibling-expanded and sibling-haspopup. A family asserting the opposite would ' +
-      'contradict it, and the suite would be red whichever way the probe was written. The ' +
-      'cases below are the ones where the DOM answers the question: a <summary> owns its ' +
-      'own <details> and an IDREF resolves where it resolves.',
+      'A bare <button aria-expanded> sibling carrying no IDREF used to be excluded here ' +
+      'as undecidable. It is decided now: it declares no target, so it announces ' +
+      'nothing, and undeclared-relationship asserts that directly. The cases below are ' +
+      'the ones where the DOM answers WHICH region: a <summary> owns its own <details> ' +
+      'and an IDREF resolves where it resolves.',
     preserves: [
       ...METRIC_KEYS.filter(
         (k) => !['unannouncedPanels', 'unannouncedFocusable', 'unannouncedLinks'].includes(k)
