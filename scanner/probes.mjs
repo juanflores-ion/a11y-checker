@@ -311,6 +311,45 @@ export function collectMeasurements() {
     });
 
     /**
+     * The two attributes HTML gives a button for naming what it opens.
+     *
+     * `popovertarget` and `commandfor` are how a disclosure is written today
+     * without any ARIA at all, and neither is an ARIA IDREF, so nothing that
+     * asks axe about IDREFs can see them. Measured over CDP against Chromium's
+     * own accessibility tree, 149.0.7827.55, four buttons on one page:
+     *
+     *   <button popovertarget="m1">                  expanded=false
+     *   <button command="toggle-popover" commandfor>  expanded=false
+     *   <button aria-expanded="false" aria-controls>  expanded=false
+     *   <button>                                      (no expanded property)
+     *
+     * The browser already treats the first two as disclosure triggers and
+     * publishes exactly what it publishes for the third. A probe that does not
+     * would report a correct popover menu as content nothing announces — the
+     * "the better the implementation, the more confidently it was flagged"
+     * signature this whole file was rewritten to remove, and a false positive
+     * rather than a false clean only because nobody has shipped one yet.
+     *
+     * Two fixed HTML attribute names, not an open set of browser mechanisms —
+     * the same latitude the `input[type="hidden"]` exception takes, for the
+     * same reason.
+     */
+    const HTML_INVOKER_ATTRS = ['popovertarget', 'commandfor'];
+
+    /**
+     * Asked once for the page, because the referrer lookup below is the one
+     * place in this file that runs a document-wide `querySelectorAll` per
+     * candidate rather than a cached index — `getAccessibleRefs` has an index
+     * and these attributes have none. `referrersTo` is called for every ghost
+     * candidate and for every id inside every hidden region: measured over
+     * insureon's ten desktop pages today, that is 66 clickable-no-role
+     * candidates and 53 unreachable panels' worth of ids, on pages where
+     * neither attribute appears at all.
+     */
+    const HTML_INVOKER_SELECTOR = HTML_INVOKER_ATTRS.map((a) => `[${a}]`).join(',');
+    const pageHasHtmlInvokers = !!document.querySelector(HTML_INVOKER_SELECTOR);
+
+    /**
      * Everything in the document that points at this element by an ARIA IDREF —
      * `aria-controls`, `aria-owns`, `aria-labelledby` and the rest, in both
      * directions. axe indexes every idref attribute in the spec once per root
@@ -320,14 +359,33 @@ export function collectMeasurements() {
      * The old version read only the first `[aria-controls="…"]`, which missed
      * `aria-owns` outright: on the fixture it found the controller for one of
      * two correctly-announced panels and reported the other as unfindable.
+     *
+     * The HTML invokers are queried rather than indexed because axe has no
+     * index for them. Without this half a *remote* popover trigger — the shape
+     * `remote-controls` tests for ARIA, where nothing is a sibling of the panel
+     * — is invisible from the panel's side, and a correct menu reads as
+     * unannounced however well it is built.
      */
     const referrersTo = (el) => {
       if (!el.id) return [];
+      const refs = [];
       try {
-        return aria.getAccessibleRefs(el);
+        refs.push(...aria.getAccessibleRefs(el));
       } catch {
-        return [];
+        // Resolution failed; the ARIA half contributes nothing.
       }
+      if (pageHasHtmlInvokers) {
+        try {
+          const id = CSS.escape(el.id);
+          refs.push(
+            ...document.querySelectorAll(HTML_INVOKER_ATTRS.map((a) => `[${a}="${id}"]`).join(','))
+          );
+        } catch {
+          // An id that will not escape. Costs findings in the safe direction —
+          // a trigger nothing found can never rescue anything.
+        }
+      }
+      return refs;
     };
 
     /**
@@ -377,13 +435,18 @@ export function collectMeasurements() {
      * The tabbable controls *inside* an element, excluding the element itself.
      *
      * `getTabbableElements` wants one of axe's virtual nodes rather than a DOM
-     * element, and returns nothing useful for a node axe never walked.
+     * element, and returns nothing useful for a node axe never walked. Returns
+     * DOM elements rather than axe's virtual nodes because the only caller has
+     * to put each one to `isUsableControl`, which takes an element.
      */
     const tabbableWithin = (el) => {
       try {
         const vNode = axe.utils.getNodeFromTree(el);
         if (!vNode) return [];
-        return dom.getTabbableElements(vNode).filter((v) => v.actualNode !== el);
+        return dom
+          .getTabbableElements(vNode)
+          .map((v) => v.actualNode)
+          .filter((n) => n && n !== el);
       } catch {
         return [];
       }
@@ -392,12 +455,18 @@ export function collectMeasurements() {
     /**
      * What a control SAYS it operates.
      *
-     * Two forms, and only two, because only these two are the author writing
-     * the relationship down: an ARIA IDREF (`aria-controls` / `aria-owns`), and
-     * the one native disclosure HTML has, where a `<summary>` operates the
-     * `<details>` it is the summary of. `aria-labelledby` and
-     * `aria-describedby` are IDREFs too and are deliberately not here — a
-     * heading that labels a panel is not the button that opens it.
+     * Four forms, and only four, because only these are the author writing the
+     * relationship down: an ARIA IDREF (`aria-controls` / `aria-owns`), the two
+     * HTML invoker attributes (`popovertarget` / `commandfor`), and the native
+     * disclosure, where a `<summary>` operates the `<details>` it is the summary
+     * of. `aria-labelledby` and `aria-describedby` are IDREFs too and are
+     * deliberately not here — a heading that labels a panel is not the button
+     * that opens it.
+     *
+     * `popovertarget` and `commandfor` are the same statement written in HTML
+     * rather than in ARIA, and they resolve the same way: `HTML_INVOKER_ATTRS`
+     * above has the CDP measurement showing Chromium publishes the identical
+     * disclosure state for all three.
      *
      * Resolution goes through `axe.commons.dom.idrefs` rather than
      * `getElementById` here, for the reason the rest of this file gives: an
@@ -410,7 +479,7 @@ export function collectMeasurements() {
     const declaredTargets = memo((el) => {
       const targets = [];
       try {
-        for (const attr of ['aria-controls', 'aria-owns']) {
+        for (const attr of ['aria-controls', 'aria-owns', ...HTML_INVOKER_ATTRS]) {
           if (!el.hasAttribute(attr)) continue;
           for (const target of dom.idrefs(el, attr)) {
             if (target && target.nodeType === 1) targets.push(target);
@@ -557,23 +626,58 @@ export function collectMeasurements() {
        * only so the run file can say what was found.
        */
       let operator = null;
-      for (let n = el; n && n !== document.documentElement; n = n.parentElement) {
+      const named = [];
+      for (let n = el; n && n !== document.documentElement; n = n.parentElement) named.push(n);
+      /**
+       * And at anything INSIDE it, which is the half the ancestor walk cannot
+       * reach. A trigger carrying `aria-controls="megaPanel"` while the wrapper
+       * around `megaPanel` is what hides names this region as surely as one
+       * pointing at the wrapper does — `operates()` already accepts
+       * `region.contains(target)` and has since the migration.
+       *
+       * It only became reachable when this function stopped being handed the
+       * outermost region and started being handed the block that actually
+       * hides. Measured by ablation — this one line removed, both probes in a
+       * single `page.evaluate` — on a fixture whose trigger declares an inner
+       * panel with two meaningless wrappers between it and the wrapper that
+       * hides: without the line, `unannouncedLinks` 6 and `announced=false`;
+       * with it, 0 and `announced=true`. Six links published as unfindable
+       * that a `<button aria-expanded aria-controls>` demonstrably opens.
+       */
+      named.push(...el.querySelectorAll('[id]'));
+      for (const n of named) {
         for (const ref of referrersTo(n)) {
           if (!operates(ref, el)) continue;
           if (announces(ref)) return ref;
           operator ??= ref;
         }
       }
-      // Otherwise the conventional shape: a trigger sitting beside the panel.
-      const parent = el.parentElement;
-      if (parent) {
-        for (const c of [...parent.children].filter((c) => c !== el)) {
-          const candidate =
-            c.matches(NATIVE_INTERACTIVE) || c.getAttribute('role') === 'button'
-              ? c
-              : c.querySelector('button,a[href],[role="button"],summary');
-          if (candidate && operates(candidate, el)) return candidate;
-        }
+      /**
+       * Otherwise the conventional shape: a trigger sitting beside the panel —
+       * and only IMMEDIATELY beside it.
+       *
+       * This used to walk every child of the parent and take the first one
+       * `operates()` accepted, where production stopped at the first interactive
+       * sibling whatever it was. That difference is a silent deletion, and it
+       * was measured through the real `scanPage()` on a `:hover` mega-menu whose
+       * column holds a plain "Help" link before it and an unrelated "Manage
+       * cookie preferences" button two children after it: production published
+       * six links an agent cannot find, this file scanned past the link, reached
+       * the button, and published 0.
+       *
+       * Adjacency is the only evidence rule 3 of `operates()` has, so it has to
+       * mean adjacent. A trigger separated from its panel by a heading is now
+       * over-reported, which is the direction this file is allowed to be wrong
+       * in; a trigger that names its target is unaffected, because it was
+       * already answered by the IDREF walk above.
+       */
+      for (const c of [el.previousElementSibling, el.nextElementSibling]) {
+        if (!c) continue;
+        const candidate =
+          c.matches(NATIVE_INTERACTIVE) || c.getAttribute('role') === 'button'
+            ? c
+            : c.querySelector('button,a[href],[role="button"],summary');
+        if (candidate && operates(candidate, el)) return candidate;
       }
       return operator;
     };
@@ -588,6 +692,21 @@ export function collectMeasurements() {
      * being caught reporting as a defect. Requiring authored ARIA on it would
      * invent a sixth false-positive class on the way to fixing five.
      *
+     * `popovertarget` and `commandfor` count for the same reason `<summary>`
+     * does: the browser gives the trigger a disclosure state without any ARIA
+     * being written. Measured over CDP, Chromium 149.0.7827.55 publishes
+     * `expanded=false` on a `popovertarget` button and on a
+     * `command`/`commandfor` button, identically to `aria-expanded="false"`,
+     * and publishes nothing on a plain `<button>` — the table is at
+     * `HTML_INVOKER_ATTRS`. Requiring authored ARIA on top of them would invent
+     * a false-positive class against the most modern correct way to write a
+     * disclosure, which is the exact signature this file exists to kill.
+     *
+     * A bare `command` with no `commandfor` is deliberately NOT enough. It
+     * invokes nothing, so treating it as a disclosure would be a suppression
+     * that defers to a control that does not exist — the shape of every
+     * false clean this project has shipped.
+     *
      * Note what this does NOT say: *which* region the trigger announces. It
      * used to be read as if it did, and a `<summary>` returning an unconditional
      * true is what published six unfindable links as zero. `announces()` says
@@ -597,11 +716,36 @@ export function collectMeasurements() {
     function announces(el) {
       if (!el) return false;
       if (el.tagName === 'SUMMARY') return true;
-      return (
-        el.hasAttribute('aria-expanded') ||
-        el.hasAttribute('aria-haspopup') ||
-        el.hasAttribute('aria-controls')
-      );
+
+      // State declarations. These name no target, so there is nothing that
+      // could fail to resolve — the trigger is simply saying "I am a thing that
+      // opens", and that claim stands on its own.
+      if (el.hasAttribute('aria-expanded') || el.hasAttribute('aria-haspopup')) return true;
+
+      /**
+       * Reference declarations have to actually reference something.
+       *
+       * `aria-controls`, `popovertarget` and `commandfor` all name an id. A
+       * button naming an id that is not on the page declares a relationship to
+       * nothing: it reveals nothing, an agent that finds it and presses it gets
+       * nothing, and treating it as a disclosure is a suppression deferring to a
+       * control that does not exist — the shape of every false clean this
+       * project has shipped.
+       *
+       * Measured: `<button popovertarget="missing">` standing beside a
+       * `:hover`-only menu published that menu's six links as zero, because the
+       * attribute alone satisfied this test and the sibling scan then reached
+       * the button. `aria-controls` has always had the same hole; it is closed
+       * here too rather than only for the two attributes that exposed it.
+       *
+       * Resolution goes through the same `declaredTargets` every other caller
+       * uses, so "declares a target" cannot mean one thing here and another in
+       * `operates()` — two implementations of one question is how the last two
+       * false-positive classes arose.
+       */
+      const REFERENCE_ATTRS = ['aria-controls', ...HTML_INVOKER_ATTRS];
+      if (!REFERENCE_ATTRS.some((attr) => el.hasAttribute(attr))) return false;
+      return declaredTargets(el).length > 0;
     }
 
     /**
@@ -869,7 +1013,21 @@ export function collectMeasurements() {
       // cannot identify it, cannot operate it, and — because it carries no role
       // — no automated audit will ever mention it. This is the hamburger.
       if (name || inTabOrder(el)) return false;
-      if (tabbableWithin(el).length > 0) return false;
+      /**
+       * `isUsableControl`, not "there is something tabbable in here", and the
+       * two lines below are why: they are the same rescue and they already ask
+       * that question. This one did not, so it was the one place in the file
+       * where a finding could be dropped in favour of something an agent cannot
+       * use — the invariant every regression in this project has broken.
+       *
+       * Measured through the real `scanPage()`, Chromium 149.0.7827.55, on a
+       * nameless unreachable burger whose only tabbable descendant is
+       * `<a href aria-hidden="true">`: production published `div.burger` and
+       * this file published nothing at all. An `aria-hidden` link is not in the
+       * tree, so the burger's only "way through" is a control no agent can
+       * reach, and deferring to it left the page reading clean.
+       */
+      if (tabbableWithin(el).some(isUsableControl)) return false;
       if (operatedByDeclaration(el)) return false;
       if (operatedByCombobox(el)) return false;
 
@@ -1168,16 +1326,57 @@ export function collectMeasurements() {
       );
     };
 
+    /**
+     * ── What decides a region, and what only decides its numbers ─────────
+     *
+     * The WIDE net answers "is this a panel at all" and "is any of it in the
+     * tree". `isControl` answers only "what do we count and report". They were
+     * the same question until a review found what that costs: one
+     * `[contenteditable="true"]` in a hidden panel deleted the whole panel.
+     * `FOCUSABLE` nets a bare contenteditable `div` and `isControl` throws it
+     * away — axe gives it no role and it carries no `tabindex` — so a panel of
+     * two links and one editor counted 2 controls, fell under `MIN_CONTROLS`,
+     * and `classify` returned `null`. Measured through the real `scanPage()`,
+     * Chromium 149.0.7827.55: production reported 1 panel, 3 focusable, 2
+     * unfindable links; this file reported nothing at all, from NEITHER hiding
+     * probe. A silent deletion, which is the incident class this project has
+     * already shipped twice.
+     *
+     * Splitting them is the structural fix rather than the narrow one. Adding a
+     * contenteditable branch to `isControl` would close this shape and leave the
+     * mechanism intact: any future narrowing of what counts as a control could
+     * delete a region again, and it would do it silently. With the gate on the
+     * wide net, narrowing `isControl` can only ever change a count.
+     *
+     * The STATE test keeps the narrow list wherever the narrow list has
+     * anything to say, and that asymmetry is deliberate. Judging every region on
+     * the wide net would be a NARROWING of `out-of-tree` — a panel holding one
+     * in-tree disabled input beside three `hidden` links would stop being
+     * reported — and a rule that reports less than production is the failure
+     * this whole branch exists to prevent, whichever direction it comes from.
+     * Only the one case where the narrow list has nothing left to say falls back
+     * to the wide net, because `reachable.length === 0` out of an EMPTY control
+     * list would call a visible panel of three bare contenteditables "out of the
+     * tree" — a finding invented out of a filter.
+     *
+     * The cost, stated: the gate now admits regions whose focusables are all
+     * `tabindex="-1"` or disabled, which production's gate did not, so a hidden
+     * block of those is reported with a control count of 0. That is noise in the
+     * over-reporting direction — the direction this file is allowed to be wrong
+     * in — against a whole panel going unreported.
+     */
     const classify = (el) => {
-      const controls = [...el.querySelectorAll(FOCUSABLE)].filter(isControl);
-      if (controls.length < MIN_CONTROLS) return null; // a stray control, not a panel
+      const focusable = [...el.querySelectorAll(FOCUSABLE)];
+      if (focusable.length < MIN_CONTROLS) return null; // a stray control, not a panel
 
+      const controls = focusable.filter(isControl);
       const reachable = controls.filter(inTree);
       // Judged on the contents, not the container. `content-visibility: hidden`
       // and `hidden="until-found"` leave the element itself in the tree and drop
       // everything inside it, so asking about the box would answer "visible"
       // about a region an agent cannot read a single link out of.
-      if (reachable.length === 0) return { state: OUT_OF_TREE, controls, reachable };
+      const outOfTree = controls.length > 0 ? reachable.length === 0 : !focusable.some(inTree);
+      if (outOfTree) return { state: OUT_OF_TREE, controls, reachable };
       if (geometricallyOffScreen(el) || (!onScreen(el) && !scrollRevealable(el))) {
         return { state: OFF_SCREEN, controls, reachable };
       }
@@ -1204,13 +1403,21 @@ export function collectMeasurements() {
     };
 
     /**
-     * Why a region isn't visible, for a human reading the run file.
+     * WHICH element hides a region, and by what mechanism. One answer, in two
+     * halves, because a caller needs each half and they must never disagree.
      *
-     * This list is allowed to be incomplete, and that is the entire difference
-     * between it and the enumeration it replaces. It used to *decide* whether a
-     * region counted, so a mechanism missing from it cost a finding. It decides
-     * nothing now — axe has already ruled on the region by the time this runs —
-     * so a mechanism missing from it costs a sentence of explanation.
+     * The sentence is for a human reading the run file, and this list is allowed
+     * to be incomplete — that is the entire difference between it and the
+     * enumeration it replaces. It used to *decide* whether a region counted, so
+     * a mechanism missing from it cost a finding. It decides nothing now, so a
+     * mechanism missing from it costs a sentence of explanation.
+     *
+     * The ELEMENT decides something, and that is new: `unreachableAll` asks
+     * `disclosureFor` about it rather than about the region, which is the fix
+     * for a measured false clean. The numbers are at that call site. Nothing
+     * here changed to make that possible except the return shape — if a
+     * mechanism is missing from the list the caller falls back to the region,
+     * which is exactly what it did before.
      *
      * The walk starts at one of the controls rather than at the region, because
      * the mechanism is as often below the region as above it. Measured on
@@ -1220,36 +1427,34 @@ export function collectMeasurements() {
      * `height: 0` under `overflow: hidden`. Walking up from the region found
      * nothing to say; walking up from a link names it.
      */
-    const describeHiding = (el, control) => {
+    const hidingOf = (el, control) =>
       // The region's own answer first, so an inherited property is credited to
       // the element that sets it rather than to whichever link inherited it.
-      const fromRegion = hidingWalk(el, el);
-      if (fromRegion) return fromRegion;
-      return hidingWalk(control ?? el, el) ?? ['not in the accessibility tree'];
-    };
+      hidingWalk(el, el) ?? hidingWalk(control ?? el, el);
 
     const hidingWalk = (from, el) => {
       for (let n = from; n && n !== document.documentElement; n = n.parentElement) {
         const s = getComputedStyle(n);
         const at = n === el ? '' : ` (on ${describe(n)})`;
-        if (s.display === 'none') return [`display: none${at}`];
+        const found = (why) => ({ at: n, why: `${why}${at}` });
+        if (s.display === 'none') return found('display: none');
         if (s.visibility === 'hidden' || s.visibility === 'collapse') {
-          return [`visibility: ${s.visibility}${at}`];
+          return found(`visibility: ${s.visibility}`);
         }
-        if (s.contentVisibility === 'hidden') return [`content-visibility: hidden${at}`];
-        if (n.getAttribute('aria-hidden') === 'true') return [`aria-hidden="true"${at}`];
-        if (n.hasAttribute('inert')) return [`inert${at}`];
+        if (s.contentVisibility === 'hidden') return found('content-visibility: hidden');
+        if (n.getAttribute('aria-hidden') === 'true') return found('aria-hidden="true"');
+        if (n.hasAttribute('inert')) return found('inert');
         if (n.hasAttribute('hidden')) {
           const value = n.getAttribute('hidden');
-          return [`hidden${value ? `="${value}"` : ''}${at}`];
+          return found(`hidden${value ? `="${value}"` : ''}`);
         }
         if (n.tagName === 'DETAILS' && !n.hasAttribute('open')) {
-          return [`inside a closed <details>${at}`];
+          return found('inside a closed <details>');
         }
         if (s.overflow !== 'visible') {
           const r = n.getBoundingClientRect();
           if (r.width === 0 || r.height === 0) {
-            return [`collapsed to zero size under overflow: ${s.overflow}${at}`];
+            return found(`collapsed to zero size under overflow: ${s.overflow}`);
           }
         }
       }
@@ -1374,27 +1579,133 @@ export function collectMeasurements() {
      * bounded by `announces()` requiring a declared disclosure and by rule 3
      * requiring the trigger's branch to be packaging and nothing else.
      */
-    const unreachableAll = outermostOf(OUT_OF_TREE).map(({ el, controls }) => {
-      const trigger = disclosureFor(el);
+    /**
+     * ── Ask about the block that HIDES, not the region it sits in ─────────
+     *
+     * `classify` calls a region out of the tree when every control inside it is
+     * out of the tree, so a wrapper, its wrapper and the whole `<nav>` above all
+     * answer the same way. Asking `disclosureFor` about the outer element runs
+     * the sibling scan several levels above the block that actually hides, where
+     * everything on the page is a neighbour.
+     *
+     * Measured with both probes in a single `page.evaluate` against one DOM,
+     * Chromium 149.0.7827.55, axe-core 4.13.0, and confirmed through the real
+     * `scanPage()`: a `:hover` mega-menu three levels inside a nav column, with
+     * a `<button aria-expanded>Manage cookie preferences</button>` five
+     * meaningless wrappers away in a sibling branch. Production published six
+     * links an agent cannot find; this file published 0.
+     *
+     * `hidingOf` already identifies the element for the `why` sentence, so there
+     * is one answer rather than two that can drift.
+     *
+     * Only downwards. Where the mechanism sits ABOVE the region — a closed
+     * `<details>` around it — the region stays the subject, because the
+     * `<summary>` that opens it is INSIDE the `<details>` and `operates()`
+     * correctly refuses a trigger that is part of the region it is asked about.
+     * Descending there would report every native accordion on the web as
+     * unannounced.
+     */
+    const verdictFor = (el, controls) => {
+      const hiding = hidingOf(el, controls[0]);
+      const hidden = hiding && el.contains(hiding.at) ? hiding.at : el;
+      const trigger = disclosureFor(hidden);
       // A trigger only counts if an agent could find and use it: in the tree,
       // and advertising that it controls something.
       const triggerInTree = !!trigger && inTree(trigger);
-
       return {
-        selector: describe(el),
-        why: describeHiding(el, controls[0]),
-        inNav: !!el.closest('nav,[role="navigation"]'),
-        links: el.querySelectorAll('a[href]').length,
-        buttons: el.querySelectorAll('button,[role="button"]').length,
-        focusable: controls.length,
-        hasTrigger: !!trigger,
+        hiding,
+        trigger,
         triggerInTree,
         /** The whole point: is this findable from the tree, or only by hovering? */
         announced: triggerInTree && announces(trigger),
-        triggerSelector: trigger ? describe(trigger) : null,
-        sample: trunc(el.outerHTML.slice(0, TRUNCATE)),
       };
-    });
+    };
+
+    /**
+     * ── A container is never cleaner than the things inside it ────────────
+     *
+     * `outermostOf` exists to stop a menu and its submenus being counted three
+     * times, and for that it is right. But it discards the inner regions
+     * *before* anything has asked how they fare, and then one verdict — derived
+     * from one hiding block — is applied to everything the container swallowed.
+     * That is the fault behind both measured false cleans on this metric:
+     *
+     *   ninth   a `<button aria-expanded>` five wrappers away, in a sibling
+     *           branch, silenced a `:hover` mega-menu. Production reported 6
+     *           links an agent cannot find; this file reported 0.
+     *   tenth   the fix for the ninth moved the question to the block that
+     *           actually hides — which is correct — but a portal root holding
+     *           two independent hidden blocks then took its whole verdict from
+     *           whichever block happened to hold the first control in document
+     *           order. One block was genuinely opened by a header button; the
+     *           other was `:hover`-only and nothing announced it. Reported 0.
+     *           Swapping the two children changed the answer to 9 without
+     *           changing anything about the page.
+     *
+     * Both are the same mistake, and it is not in the trigger search: an
+     * announcement that covers one block was allowed to cover its container.
+     *
+     * So judge every out-of-tree region on its own, then select what to report
+     * under one rule — **an announced container is not reported as announced
+     * while it still holds an unannounced region.** Publish the unannounced
+     * blocks instead, so the count describes only content that is genuinely
+     * unfindable rather than the whole wrapper. An announced region that
+     * neither contains nor sits inside a reported one is still reported on its
+     * own, which is what keeps a correct native accordion silent.
+     *
+     * The verdict no longer depends on which child comes first, and that is
+     * now asserted by a metamorphic family rather than by this comment.
+     */
+    /**
+     * Which regions get reported does not change — `outermostOf` is right that a
+     * menu and its submenus are one finding, and re-cutting that set moved
+     * counts on correct pages for no gain. What changes is the VERDICT: an
+     * announcement earned by one block inside the container no longer speaks
+     * for the container.
+     *
+     * A region that carries its own hiding mechanism is a unit that can be
+     * judged. One hidden by an ancestor — the body of a closed `<details>`, a
+     * panel inside an `inert` wrapper — is a detail of that ancestor's block and
+     * has no trigger of its own to find, because the `<summary>` is a sibling of
+     * its parent. Judging those would report the inside of a correct native
+     * accordion as unfindable, so they are not consulted.
+     */
+    const judgeable = regions
+      .filter((r) => r.state === OUT_OF_TREE)
+      .map(({ el, controls }) => ({ el, ...verdictFor(el, controls) }))
+      .filter(({ el, hiding }) => !hiding || el.contains(hiding.at));
+
+    /** True when something strictly inside this region is announced by nothing. */
+    const holdsUnannounced = (el) =>
+      judgeable.some((j) => j.el !== el && el.contains(j.el) && !j.announced);
+
+    const unreachableAll = outermostOf(OUT_OF_TREE).map(
+      ({ el, controls }) => {
+        const { hiding, trigger, triggerInTree, announced } = verdictFor(el, controls);
+        return {
+          selector: describe(el),
+          why: hiding ? [hiding.why] : ['not in the accessibility tree'],
+          inNav: !!el.closest('nav,[role="navigation"]'),
+          links: el.querySelectorAll('a[href]').length,
+          buttons: el.querySelectorAll('button,[role="button"]').length,
+          focusable: controls.length,
+          hasTrigger: !!trigger,
+          triggerInTree,
+          /**
+           * The whole point: is this findable from the tree, or only by hovering?
+           *
+           * The second clause is the monotonicity rule. A trigger that opens one
+           * block inside this region says nothing about the rest of it, and
+           * letting it speak for the container is what published six unfindable
+           * links as zero — twice, on the same metric, from two different
+           * causes.
+           */
+          announced: announced && !holdsUnannounced(el),
+          triggerSelector: trigger ? describe(trigger) : null,
+          sample: trunc(el.outerHTML.slice(0, TRUNCATE)),
+        };
+      }
+    );
 
     // Report every one in the totals, but list only the largest few — a page can
     // legitimately hold dozens of hidden blocks, and a run file is read by humans.

@@ -45,15 +45,40 @@
  *
  * ── Adding an entry is meant to cost something ───────────────────────────
  *
- * There is no wildcard, no `skip: true`, no per-family mute. An entry has to
- * name the family, the metric, and the measured value of EVERY variant in that
- * family — which you cannot write without having run it — plus who owns the
- * code the disagreement actually lives in, the evidence it was measured with,
- * and a reason in prose. `baselineProblems` below refuses the run if any of
- * that is missing, if the metric is one the family does not compare, if the
- * recorded values do not actually disagree, or if a variant is missing or
+ * There is no wildcard, no `skip: true`, no per-family mute. That sentence was
+ * here before it was true. `families.mjs` carried a field called `mayDiffer`
+ * that excused a metric from comparison on the strength of one sentence, and a
+ * reviewer used it exactly as an escape hatch gets used: a real, reproducible
+ * disagreement spliced into a family, `because: 'flaky'`, "AGREE, 1/1 families
+ * agree", exit 0, and not so much as a line in the baseline count. That field is
+ * now `pinnedInstead` and means the opposite — every variant states the value it
+ * expects — so this file is once again the only way to accept a failure, which
+ * is what the paragraph always claimed.
+ *
+ * An entry has to name the family, the metric, and the measured value of EVERY
+ * variant in that family — which you cannot write without having run it — plus
+ * who owns the code the disagreement actually lives in, the evidence it was
+ * measured with, and a reason in prose. `baselineProblems` below refuses the run
+ * if any of that is missing, if the metric is one the family does not compare,
+ * if the recorded values do not actually disagree, or if a variant is missing or
  * invented. That is deliberate friction: an escape hatch that costs one line
  * gets used as one.
+ *
+ * ── The prose has a floor, because it was also once a formality ──────────
+ *
+ * The same review satisfied all three prose fields with `owner: 'x'`,
+ * `evidence: 'x'`, `because: 'x'` and got a green run and a printed report
+ * reading `owner x / measured x / x`. The check was `typeof value === 'string'`
+ * and a non-empty test, which measures typing rather than thought.
+ *
+ * `baselineProblems` now asks for facts a person who ran the thing already has
+ * and a person who did not cannot invent cheaply: `evidence` must name a browser
+ * with a version, an axe-core version, a date and a runnable command; `owner`
+ * must name a file; each field has a length and a distinct-word floor; and no
+ * two fields may carry the same text. None of this can tell a careful lie from
+ * the truth — nothing can — and it is not trying to. It is making the lazy path
+ * cost more than the honest one, which is the only property that changes
+ * behaviour.
  *
  * One thing can never be accepted, at any price: `not measured`. A null is not
  * a disagreement about a page, it is the absence of a measurement, and this
@@ -76,9 +101,12 @@ import { METRIC_KEYS } from './metrics.mjs';
  * @property {string} family    family id, from families.mjs
  * @property {string} metric    metric key, from metrics.mjs, which that family preserves
  * @property {object} values    every variant id -> the value measured for it
- * @property {string} because   why this is accepted rather than fixed
- * @property {string} owner     the file or component the disagreement lives in
- * @property {string} evidence  what measured it: browser, axe, profile, date
+ * @property {string} because   why this is accepted rather than fixed; a paragraph, and
+ *                              `baselineProblems` enforces a length and distinct-word floor
+ * @property {string} owner     the file the disagreement lives in — must name one, with its
+ *                              extension, so the next person knows where to go
+ * @property {string} evidence  what measured it — must name a browser with a version, an
+ *                              axe-core version, a YYYY-MM-DD date, and the command
  */
 export const ACCEPTED_DISAGREEMENTS = [
   {
@@ -134,8 +162,8 @@ export const ACCEPTED_DISAGREEMENTS = [
  * @property {*}      expected  the pin, repeated here so a drifting pin is caught
  * @property {*}      actual    what the scanner returns instead
  * @property {string} because   why this is accepted rather than fixed
- * @property {string} owner     the file or component it lives in
- * @property {string} evidence  what measured it
+ * @property {string} owner     the file it lives in — same floor as above
+ * @property {string} evidence  what measured it — browser, axe-core, date, command
  */
 export const ACCEPTED_PINNED_MISSES = [];
 
@@ -216,6 +244,72 @@ export const NOT_ASSERTED = [
 
 const serialize = (v) => JSON.stringify(v ?? null);
 
+/* ------------------------------------------------------------------ */
+/* The prose floor                                                     */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Words, for counting DISTINCT ones.
+ *
+ * Distinct rather than total, because the cheapest way past a length check is
+ * the same token repeated — `'x x x x x x x x x x x x'` is 23 characters of
+ * nothing. Counting a word once however often it appears makes padding cost
+ * roughly what writing costs.
+ */
+const distinctWords = (value) =>
+  new Set(String(value).toLowerCase().match(/[a-z0-9][a-z0-9'’./-]*/g) ?? []);
+
+/**
+ * Tokens that carry no information about a specific measurement.
+ *
+ * `flaky` is on this list by name: it is the word the reviewer used to mute a
+ * real disagreement, and it is the word every muted test in every repository
+ * has been muted with. A field made only of these is refused whatever its
+ * length.
+ */
+const EMPTY_TOKENS = new Set([
+  'x', 'xx', 'xxx', 'y', 'z', 'a', 'an', 'the', 'it', 'is', 'to', 'of', 'and', 'or',
+  'todo', 'tbd', 'tba', 'fixme', 'wip', 'na', 'n/a', 'none', 'null', 'nil', 'undefined',
+  'placeholder', 'flaky', 'flakey', 'temp', 'tmp', 'test', 'testing', 'foo', 'bar', 'baz',
+  'asdf', 'qwerty', 'lorem', 'ipsum', 'reason', 'because', 'reasons', 'same', 'ditto',
+  'idk', 'unknown', 'whatever', 'later', 'skip', 'ignore', 'known', 'issue', 'broken',
+]);
+
+const normalize = (value) => String(value).trim().replace(/\s+/g, ' ').toLowerCase();
+
+/**
+ * Facts `evidence` must carry, and how each is recognised.
+ *
+ * Every one of these is something a person who actually ran the measurement can
+ * copy out of their terminal, and something a person who did not has to
+ * fabricate deliberately rather than by leaving a field short. The suite cannot
+ * check that the numbers are real — no validator can — so it checks that the
+ * lazy path is longer than the honest one.
+ */
+const EVIDENCE_FACTS = [
+  {
+    what: 'a browser with a version (e.g. “Chromium 149.0.7827.55”)',
+    test: /\b(chromium|chrome|firefox|webkit|safari|edge)\b[^,;\n]{0,20}?\bv?\d+\.\d+/i,
+  },
+  {
+    what: 'an axe-core version (e.g. “axe-core 4.13.0”)',
+    test: /\baxe[-\s]?core\b[^,;\n]{0,12}?v?\d+\.\d+\.\d+/i,
+  },
+  { what: 'the date it was measured, as YYYY-MM-DD', test: /\b\d{4}-\d{2}-\d{2}\b/ },
+  {
+    what: 'the command that produced it (e.g. “node scanner/metamorphic/run.mjs --family …”)',
+    test: /(^|[\s(`])(node|npm|npx|pnpm|yarn)\s+[\w./-]/,
+  },
+];
+
+/** What each prose field has to clear before it counts as having been written. */
+const PROSE_FLOOR = {
+  because: { minChars: 150, minWords: 24 },
+  owner: { minChars: 12, minWords: 3 },
+  evidence: { minChars: 40, minWords: 6 },
+  shape: { minChars: 60, minWords: 10 },
+};
+
 /**
  * Check the baseline is well-formed, against the families it refers to.
  *
@@ -228,10 +322,75 @@ const serialize = (v) => JSON.stringify(v ?? null);
 export function baselineProblems() {
   const problems = [];
 
+  /**
+   * `requireProse` used to be a non-empty-string test, and `owner: 'x'`,
+   * `evidence: 'x'`, `because: 'x'` passed it and printed as a green KNOWN
+   * limitation. The floors below are the same act as recording the measured
+   * values: an acceptance is a claim somebody has to be able to check, and a
+   * claim with no facts in it cannot be checked or contradicted.
+   */
   const requireProse = (entry, label, field) => {
     const value = entry[field];
     if (typeof value !== 'string' || value.trim().length === 0) {
       problems.push(`${label} has no ${field}`);
+      return;
+    }
+    const floor = PROSE_FLOOR[field];
+    const text = value.trim();
+    const words = distinctWords(text);
+    const a = /^[aeiou]/.test(field) ? 'an' : 'a';
+    if (text.length < floor.minChars) {
+      problems.push(
+        `${label} has ${a} ${field} of ${text.length} characters; an acceptance needs at ` +
+          `least ${floor.minChars}, because a reason nobody can check is not a reason`
+      );
+    }
+    if (words.size < floor.minWords) {
+      problems.push(
+        `${label} has ${a} ${field} of ${words.size} distinct word(s); at least ` +
+          `${floor.minWords} are needed. Repeating one token is not writing one`
+      );
+    }
+    if ([...words].every((word) => EMPTY_TOKENS.has(word))) {
+      problems.push(
+        `${label} has ${a} ${field} made only of filler (“${text.slice(0, 40)}”), which ` +
+          'says nothing about this measurement'
+      );
+    }
+    if (field === 'owner' && !/[\w./-]+\.(mjs|cjs|js|ts|tsx)\b/.test(text)) {
+      problems.push(
+        `${label} has an owner that names no file — say which file the disagreement ` +
+          'lives in, so the next person knows where to go and who to ask'
+      );
+    }
+    if (field === 'evidence') {
+      for (const fact of EVIDENCE_FACTS) {
+        if (!fact.test.test(text)) {
+          problems.push(`${label} has evidence that does not name ${fact.what}`);
+        }
+      }
+    }
+  };
+
+  /**
+   * Two fields carrying the same text are one field pasted twice, which is the
+   * `owner: 'x', evidence: 'x', because: 'x'` shape with longer strings. Checked
+   * across the whole entry rather than per field, because the tell is the
+   * repetition and not the content.
+   */
+  const requireDistinctFields = (entry, label, fields) => {
+    const seen = new Map();
+    for (const field of fields) {
+      if (typeof entry[field] !== 'string') continue;
+      const text = normalize(entry[field]);
+      if (text.length === 0) continue;
+      if (seen.has(text)) {
+        problems.push(
+          `${label} has the same text in ${seen.get(text)} and ${field} — they answer ` +
+            'different questions, so one of them has not been answered'
+        );
+      }
+      seen.set(text, field);
     }
   };
 
@@ -263,6 +422,7 @@ export function baselineProblems() {
     requireProse(entry, label, 'because');
     requireProse(entry, label, 'owner');
     requireProse(entry, label, 'evidence');
+    requireDistinctFields(entry, label, ['because', 'owner', 'evidence']);
 
     const values = entry.values;
     if (!values || typeof values !== 'object') {
@@ -336,6 +496,7 @@ export function baselineProblems() {
     requireProse(entry, label, 'because');
     requireProse(entry, label, 'owner');
     requireProse(entry, label, 'evidence');
+    requireDistinctFields(entry, label, ['because', 'owner', 'evidence']);
   }
 
   /* -- the coverage boundary --------------------------------------- */
@@ -344,6 +505,7 @@ export function baselineProblems() {
     const label = `not-asserted entry ${index + 1}`;
     requireProse(entry, label, 'shape');
     requireProse(entry, label, 'because');
+    requireDistinctFields(entry, label, ['shape', 'because']);
     if (entry.wouldContradict !== undefined) {
       if (!familyById(entry.wouldContradict)) {
         problems.push(
