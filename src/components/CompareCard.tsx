@@ -23,7 +23,14 @@ const STATUS_TONE: Record<RuleDiffStatus, string> = {
 const NOT_COMPARABLE_REASON: Record<NotComparable, string> = {
   'not-measured': 'a side was never measured',
   'viewport-mismatch': 'the two sides were measured at different device profiles',
+  'identity-mismatch': 'the two sides are not known to be the same page',
 };
+
+/** A recorded identity, in prose. `null` value means asked and unanswerable. */
+function identityLabel(id: { key: string; value: string | null } | null): string {
+  if (!id) return 'not recorded';
+  return id.value === null ? 'could not be identified' : id.value;
+}
 
 /** "desktop" -> "Desktop", and anything unrecognised through unchanged. */
 function viewportLabel(name: string): string {
@@ -56,7 +63,7 @@ export function CompareCard({ diff }: { diff: PageDiff }) {
    * is a diff however it's captioned. The two scans are still readable on their
    * own terms in the full detail below.
    */
-  const showFigures = !diff.viewportMismatch;
+  const showFigures = !diff.viewportMismatch && !diff.identityMismatch;
 
   return (
     <div className="space-y-5 rounded-card border border-rule bg-card p-5 shadow-card">
@@ -73,6 +80,20 @@ export function CompareCard({ diff }: { diff: PageDiff }) {
             device, so this pair is two different pages — the desktop nav alone accounts for
             roughly 56 links. No comparison is shown, because every number in it would be noise.
             Re-run both sides at one profile.
+          </p>
+        </Notice>
+      ) : null}
+
+      {diff.identityMismatch ? (
+        <Notice tone="error" title="Not comparable — not known to be the same page">
+          <p>
+            Before served <strong>{identityLabel(diff.identityMismatch.before)}</strong>, after
+            served <strong>{identityLabel(diff.identityMismatch.after)}</strong>. This URL returns
+            more than one document — Insureon&apos;s homepage is one item under a content test
+            that serves three, measured at 971, 893 and 1191 DOM nodes. Diffing two of them would
+            report every difference between the designs as a change somebody made, so no figures
+            are shown. Re-run until both sides land on the same one, or compare a page that
+            serves only itself.
           </p>
         </Notice>
       ) : null}

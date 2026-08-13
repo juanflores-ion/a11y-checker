@@ -16,7 +16,13 @@
  * `notMeasured` / `met: null` on the scorecard. Absence renders as absence on
  * both screens now, and by the same mechanism.
  */
-import { isFailedPage, type PageResult, type ScannedPage } from './model';
+import {
+  isFailedPage,
+  sameIdentity,
+  type PageIdentity,
+  type PageResult,
+  type ScannedPage,
+} from './model';
 
 export type RuleDiffStatus = 'resolved' | 'new' | 'improved' | 'worsened' | 'unchanged';
 
@@ -28,7 +34,7 @@ export type RuleDiffStatus = 'resolved' | 'new' | 'improved' | 'worsened' | 'unc
  * counts, each delta — is withheld rather than computed. A delta against
  * nothing, or against a different page, is not a measurement.
  */
-export type NotComparable = 'not-measured' | 'viewport-mismatch';
+export type NotComparable = 'not-measured' | 'viewport-mismatch' | 'identity-mismatch';
 
 export interface RuleDiffRow {
   id: string;
@@ -112,6 +118,25 @@ export interface PageDiff {
    * whether it was armed rather than leaving the answer to a code reading.
    */
   viewportMismatch?: { before: string; after: string };
+  /**
+   * Set when the two sides are not known to be the same document.
+   *
+   * A URL is assumed to name a page and sometimes does not. Insureon's homepage
+   * is one Sitecore item under a content test that returns one of three
+   * materially different documents — measured 13 Aug 2026, 971 / 893 / 1191 DOM
+   * nodes from the same URL. Diffing variant A against variant C would report
+   * every one of those differences as a change somebody made.
+   *
+   * This is `viewportMismatch`'s twin and exists for the identical reason: the
+   * failure this tool keeps designing out is comparing the wrong two things and
+   * printing a confident number. It fires when either side answered the identity
+   * question differently, when only one side answered, or when either was asked
+   * and could not tell — see `sameIdentity`, where unknown never equals unknown.
+   *
+   * It cannot fire when neither target declares an identity, which is every page
+   * but one, so this costs nothing where it buys nothing.
+   */
+  identityMismatch?: { before: PageIdentity | null; after: PageIdentity | null };
   /** Set when no cross-side figure on this pair means anything. */
   notComparable?: NotComparable;
 }
@@ -193,10 +218,19 @@ export function diffPages(
       ? { before: viewports.before, after: viewports.after }
       : undefined;
 
+  /**
+   * Only meaningful once both sides were actually scanned — an unmeasured side
+   * has no identity to disagree about, and `not-measured` is the truer answer.
+   */
+  const identityDiffers =
+    !!beforePage && !!afterPage && !sameIdentity(beforePage.identity, afterPage.identity);
+
   const notComparable: NotComparable | undefined = mismatch
     ? 'viewport-mismatch'
     : !beforePage || !afterPage
     ? 'not-measured'
+    : identityDiffers
+    ? 'identity-mismatch'
     : undefined;
 
   /**
@@ -242,6 +276,14 @@ export function diffPages(
     newCount: notComparable ? null : rules.filter((r) => r.status === 'new').length,
     viewports: { before: viewports?.before ?? null, after: viewports?.after ?? null },
     ...(mismatch ? { viewportMismatch: mismatch } : {}),
+    ...(identityDiffers
+      ? {
+          identityMismatch: {
+            before: beforePage?.identity ?? null,
+            after: afterPage?.identity ?? null,
+          },
+        }
+      : {}),
     ...(notComparable ? { notComparable } : {}),
   };
 }

@@ -316,3 +316,87 @@ test('a menu hidden behind a real disclosure button is not a regression', () => 
   assert.equal(diff.phantomBefore, 68);
   assert.equal(diff.phantomAfter, 0);
 });
+
+/**
+ * ── Page identity ────────────────────────────────────────────────────────
+ *
+ * A URL is assumed to name a page. Insureon's homepage is one Sitecore item
+ * under a content test and returns one of three materially different documents
+ * from the same URL — measured 13 Aug 2026 at 971, 893 and 1191 DOM nodes,
+ * each internally byte-stable. Diffing two of them reports every difference
+ * between two designs as a change somebody made.
+ *
+ * This is `viewportMismatch`'s twin, and the tests below are the same shape,
+ * because the failure is the same one: comparing the wrong two things and
+ * printing a confident number.
+ */
+const ident = (value: string | null) => ({ key: 'homepage-variant', value });
+
+test('two sides that served different documents are not comparable', () => {
+  const before = page({
+    identity: ident('Homepage-Hero-V2'),
+    violations: [{ id: 'link-name', impact: 'serious', n: 4 }],
+  });
+  const after = page({
+    identity: ident('Homepage-Hero-V3'),
+    violations: [{ id: 'link-name', impact: 'serious', n: 9 }],
+  });
+  const diff = diffPages('a', 'b', before, after);
+
+  assert.equal(diff.notComparable, 'identity-mismatch');
+  assert.equal(diff.identityMismatch?.before?.value, 'Homepage-Hero-V2');
+  assert.equal(diff.identityMismatch?.after?.value, 'Homepage-Hero-V3');
+  // And no figure survives, exactly as with a cross-viewport pair. "+5 link-name"
+  // here would be a property of the two designs, not of anything anyone did.
+  assert.deepEqual(diff.rules, []);
+  assert.equal(diff.totalChange, null);
+  assert.equal(diff.resolvedCount, null);
+  assert.equal(diff.newCount, null);
+});
+
+test('two sides that served the same document compare normally', () => {
+  const before = page({
+    identity: ident('Homepage-Hero-V3'),
+    violations: [{ id: 'link-name', impact: 'serious', n: 4 }],
+  });
+  const after = page({ identity: ident('Homepage-Hero-V3'), violations: [] });
+  const diff = diffPages('a', 'b', before, after);
+
+  assert.equal(diff.notComparable, undefined);
+  assert.equal(diff.identityMismatch, undefined);
+  assert.equal(diff.rules[0].status, 'resolved');
+});
+
+test('pages that declare no identity are unaffected', () => {
+  // Nineteen of the twenty targets are in this case, so the guard has to cost
+  // nothing where it buys nothing.
+  const diff = diffPages('a', 'b', page({}), page({}));
+  assert.equal(diff.notComparable, undefined);
+  assert.equal(diff.identityMismatch, undefined);
+});
+
+test('an unidentifiable page never matches another unidentifiable page', () => {
+  /**
+   * The whole point. Two pages that were both asked and could not answer are
+   * two unknowns, not a match — treating them as equal is how a diff of
+   * variant A against variant C would render as a confident delta. Absence of
+   * a measurement is not a value, here as everywhere else in this codebase.
+   */
+  const diff = diffPages('a', 'b', page({ identity: ident(null) }), page({ identity: ident(null) }));
+  assert.equal(diff.notComparable, 'identity-mismatch');
+});
+
+test('one side identified and the other not is not comparable', () => {
+  const diff = diffPages('a', 'b', page({ identity: ident('Homepage-Hero-V2') }), page({}));
+  assert.equal(diff.notComparable, 'identity-mismatch');
+});
+
+test('an unmeasured side reports not-measured, not identity-mismatch', () => {
+  // A failed scan has no identity to disagree about, and "a side was never
+  // measured" is the truer reason to show a reader.
+  const diff = diffPages('a', 'b', page({ identity: ident('Homepage-Hero-V2') }), {
+    url: 'b',
+    error: 'HTTP 503',
+  });
+  assert.equal(diff.notComparable, 'not-measured');
+});

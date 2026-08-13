@@ -32,7 +32,7 @@ import {
   launchOptions,
   scanPage,
 } from './core.mjs';
-import { targetList } from './targets.mjs';
+import { identityFor, targetList } from './targets.mjs';
 
 /* ------------------------------------------------------------------ */
 /* Args                                                                */
@@ -197,7 +197,9 @@ async function main() {
 
     for (const [i, target] of targets.entries()) {
       const progress = `${viewport.padEnd(7)} [${String(i + 1).padStart(2)}/${targets.length}]`;
-      const r = await scanPage(context, target.url);
+      const r = await scanPage(context, target.url, {
+        identity: identityFor(target.brand, target.key),
+      });
 
       if (r.error) {
         failures += 1;
