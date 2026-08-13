@@ -226,9 +226,64 @@ only way into mobile navigation.
 | `ghostControls` | Confirmed click listener, no role, no name, not in the tab order. An agent can neither identify nor operate these, and no rule will ever mention them. |
 | `clickableNoRole` | Magnitude: everything responding to a click without a role. Mostly harmless cards — context for the above. |
 | `hiddenPanels` | Any region still in the tree, still full of tabbable controls, that isn't on screen. Found by property, not by selector. |
-| `unreachablePanels` | The mirror: regions genuinely out of the tree that nothing in the tree announces. A closed dialog with an `aria-expanded` trigger is fine; a `:hover` mega-menu is not. |
+| `unreachablePanels` | The mirror: regions genuinely out of the tree that nothing in the tree announces. See the rule below for what "announces" means. |
 | `navLinks` | Of everywhere the page says you can go, how much of it is in the tree at all. |
 | `phantomMenu` | Kept for continuity — now derived as the largest `hiddenPanel` rather than a hardcoded `[class*="megaMenu"]`. |
+
+#### The measurement standard
+
+Two rules define what this tool is. Both are deliberate, both are frozen, and
+neither moves to accommodate a site.
+
+**1. The page is measured as delivered. Nothing is touched.** No clicking, no
+hovering, no typing, no scrolling, no focusing. Every probe is a read of the DOM
+and computed style exactly as the server sent it.
+
+That is what makes a number mean something. Two runs are comparable because
+neither one did anything to the page; a scheduled scan and a live scan are the
+same measurement because the same `scanPage()` reads the same delivered state.
+It also means a scan can never create a real enquiry, a real quote or a real
+lead in a live system, which is why it is safe to point at production.
+
+The cost is stated in **Known limitations**: anything that only exists after an
+interaction is not measured. That is a real gap, and it is the honest price of
+the property above. The way to close it is a written, checked-in script of steps
+— never the tool exploring on its own.
+
+**2. A relationship an agent cannot compute does not exist.** Spelled out below.
+
+#### The rule: what "announced" means
+
+**A hidden region counts as findable only when the markup names the control
+that opens it.** One of:
+
+- `aria-controls` or `aria-owns` resolving to the region
+- `popovertarget` or `commandfor` resolving to the region
+- a native `<summary>`, where the spec names its `<details>` for you
+
+**`aria-expanded` and `aria-haspopup` are not enough on their own.** They are
+*state*: they say something opens, never *what*. Pairing one with a region means
+reading the layout — which a sighted person does instantly and an agent cannot
+compute at all. This tool measures what an agent can do, so a relationship
+nobody wrote down does not exist here.
+
+This rule is **derived, not tuned, and it does not move to accommodate a site.**
+It replaced a heuristic that inferred the relationship from adjacency, and that
+heuristic produced every measured false clean this metric ever had: a
+`<summary>` three levels down an unrelated `<details>`, a "Manage cookie
+preferences" button five wrappers away in a sibling branch, an `aria-haspopup`
+chat button in a header. Each fix narrowed which neighbours counted and the next
+shape stayed open, because the evidence itself was the problem.
+
+What it costs, stated plainly: a disclosure that works perfectly for a person
+but names no target now reports as unfindable. That is accepted. It
+over-reports, which is the direction this file is allowed to be wrong in, and
+the fix on a site is one `id` and one attribute.
+
+Both directions are asserted by the metamorphic suite —
+`declared-relationship` (five ways of writing the edge, all announced) and
+`undeclared-relationship` (three placements of a trigger that names nothing,
+none of them rescuing anything).
 
 Listeners are confirmed over CDP against the browser's own registry, because
 `cursor: pointer` is a hint and hints can be wrong. If CDP is unavailable the
@@ -505,17 +560,25 @@ controls on a page whose elements do nothing when clicked, is in
 `scanner/metamorphic/families.mjs`. Practical effect: on any page that also
 runs analytics, the tool reports *fewer* controls than exist.
 
-**A disclosure trigger sharing a parent with an unrelated hover menu is
-undecidable as the metric is currently defined.** A `<button aria-expanded>`
-accordion beside a `:hover` mega-menu currently publishes six unfindable links
-as **0** — the trigger is accepted as announcing the menu. The metamorphic
-`trigger-placement` family's `sibling-expanded` variant requires the opposite
-answer for markup that is, element for element, the same. Both demands are
-reasonable; the definition of "announces" does not separate them. It resolves
-permissively today, which under-reports, and it resolves the same way on `main`
-— so this is a limitation, not a regression. Closing it means sharpening the
-definition, not patching a heuristic, and until somebody sharpens it this stays
-written down rather than implied.
+**Anything that only exists after an interaction is outside every number
+here.** The scanner reads a page as delivered and never clicks, hovers, types
+or scrolls. That is what makes two runs comparable, and it is what guarantees a
+scan can never create a real enquiry in a live system — but it means a modal, a
+wizard step or a panel constructed on click is not measured at all. Measured on
+both brands: the "Get Quotes" modal renders nothing into the page until the
+button is pressed — zero dialog elements before the click, one after. Three
+real defects were found inside that modal by hand, all three were fixed, and no
+figure on this dashboard moved, because no figure was looking.
+
+Closing it does *not* mean teaching the scanner to explore. Measured on one
+page, a version that searched for its own path answered between 2.5 and 3.6
+times apart depending only on which keys it pressed and how far it tabbed —
+hiding mechanisms are a finite set the browser defines, action sequences are an
+open set nobody does. What it means is a written, checked-in script of steps,
+authored by a person and identical every run, with the same read-only probe run
+on the state it reaches. That is what Lighthouse's user-flow mode and TPGi's
+scripted journeys do. **Never let the tool decide the interaction.** It is real
+work and it is parked, not refused.
 
 **`overflow: clip` is a false negative, on this version and the one before
 it.** Measured across the five values of `overflow` on a two-slide carousel,
