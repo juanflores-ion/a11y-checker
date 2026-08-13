@@ -208,6 +208,46 @@ export interface ScannedPage {
   unreachablePanels?: UnreachablePanel[];
   unreachableTotals?: UnreachableTotals;
   navLinks?: NavLinkReach;
+  /**
+   * Which variant of itself this URL served, where the target declared how to
+   * ask. Absent means no identity was declared, or the run predates the field.
+   *
+   * A URL is assumed to name a page and sometimes does not: Insureon's homepage
+   * is one item under a content test and returns one of three materially
+   * different documents. Comparing two figures taken from different documents
+   * is the same fault as comparing two device profiles, and it is guarded the
+   * same way — see `identityMismatch` in compare.ts.
+   *
+   * Provenance, not measurement. Nothing in PAGE_DEFECTS reads it, so it can
+   * never move a defect count.
+   */
+  identity?: PageIdentity;
+}
+
+export interface PageIdentity {
+  /** The question, stable across runs so two runs can be compared on it. */
+  key: string;
+  /** The answer, or null when the page was asked and could not tell. */
+  value: string | null;
+  /** Set when the reader threw. The scan still stands; the identity does not. */
+  error?: string;
+}
+
+/**
+ * Two pages are comparable on identity when they answered the same question the
+ * same way, or when neither was asked.
+ *
+ * `null` is deliberately NOT equal to `null` here. Two pages that both failed to
+ * identify themselves are not known to be the same page — they are two unknowns,
+ * and treating unknown as a match is how a comparison of variant A against
+ * variant C would render as a confident delta. Same rule as everywhere else in
+ * this codebase: absence of a measurement is not a value.
+ */
+export function sameIdentity(a?: PageIdentity, b?: PageIdentity): boolean {
+  if (!a && !b) return true;
+  if (!a || !b) return false;
+  if (a.key !== b.key) return false;
+  return a.value !== null && a.value === b.value;
 }
 
 export interface FailedPage {

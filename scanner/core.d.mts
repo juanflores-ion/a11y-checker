@@ -71,8 +71,18 @@ export function launchContext(browser: any, profileName?: string): Promise<any>;
 /** Resolves axe's engine source, or null when it can't be found here. */
 export function resolveAxeSource(): string | null;
 
+/**
+ * Optional per-target declaration of how to read which variant of a page was
+ * served. Defined in targets.mjs, because it is knowledge about a site; the
+ * engine runs it and records the answer without interpreting it.
+ */
+export interface ScanIdentity {
+  key: string;
+  read: () => string | null;
+}
+
 export function scanPage(
   context: any,
   url: string,
-  options?: { axeSource?: string }
+  options?: { axeSource?: string; identity?: ScanIdentity }
 ): Promise<PageResult & { axeVersion?: string | null; httpStatus?: number }>;

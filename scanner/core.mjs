@@ -373,7 +373,39 @@ async function confirmClickListeners(page, controls) {
  * httpStatus, axeVersion }` on success, or `{ url, error }` on failure — the shape a scanned run file expects, plus `axeVersion`, which
  * per-page callers are free to drop (the CLI keeps it once, in `meta`).
  */
-export async function scanPage(context, url, { axeSource: providedAxeSource } = {}) {
+/**
+ * Ask the page which variant of itself it is, if the caller declared how.
+ *
+ * The contract is in `targets.mjs`, and so is every fact about any site. This
+ * function knows only that it was handed a question and a way to ask it. It
+ * records the answer verbatim and never interprets it — the moment this file
+ * learns what a `Homepage-Hero-V3` is, the engine is coupled to one CMS.
+ *
+ * Three outcomes stay distinguishable, because they are three different facts:
+ *
+ *   undefined            no identity was declared for this target
+ *   { value: null }      asked, and the page could not answer
+ *   { value: "…" }       asked and answered
+ *   { value: null, error } the reader threw, and the run says so
+ *
+ * A reader that throws must never take the scan down with it: identity is
+ * provenance, not measurement, and a page whose variant is unknown is still a
+ * page worth measuring. Nothing in the defect set reads this field.
+ */
+async function readIdentity(page, identity) {
+  if (!identity || typeof identity.read !== 'function') return undefined;
+  try {
+    const value = await page.evaluate(identity.read);
+    return {
+      key: identity.key,
+      value: typeof value === 'string' && value.length > 0 ? value.slice(0, 120) : null,
+    };
+  } catch (err) {
+    return { key: identity.key, value: null, error: String(err?.message ?? err).slice(0, 200) };
+  }
+}
+
+export async function scanPage(context, url, { axeSource: providedAxeSource, identity } = {}) {
   const axeSource = providedAxeSource ?? resolveAxeSource();
   if (!axeSource) {
     return {
@@ -465,6 +497,9 @@ export async function scanPage(context, url, { axeSource: providedAxeSource } = 
     const extras = await page.evaluate(collectMeasurements);
     await confirmClickListeners(page, extras.ghostControls);
     const violations = shapeViolations(axeResults);
+    // Read last, and against the same settled page every probe just measured,
+    // so the recorded identity names the document those numbers came from.
+    const pageIdentity = await readIdentity(page, identity);
 
     return {
       url,
@@ -472,6 +507,7 @@ export async function scanPage(context, url, { axeSource: providedAxeSource } = 
       ...extras,
       httpStatus: status,
       axeVersion: axeResults.testEngine?.version ?? null,
+      ...(pageIdentity ? { identity: pageIdentity } : {}),
     };
   } catch (err) {
     // Recorded as an explicit error, never as a clean page. The viewer
