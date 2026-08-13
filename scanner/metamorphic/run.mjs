@@ -63,7 +63,7 @@ import {
   baselineProblems,
   disagreementMatches,
 } from './known-limitations.mjs';
-import { compareMetric, measure, metricLabel } from './metrics.mjs';
+import { METRIC_KEYS, compareMetric, measure, metricLabel } from './metrics.mjs';
 import { serveFixtures } from './serve.mjs';
 
 /* ------------------------------------------------------------------ */
@@ -74,7 +74,7 @@ const USAGE = `
 Metamorphic suite — the assertion is agreement, not a value.
 
   node scanner/metamorphic/run.mjs [--family ID]... [--profile NAME]
-                                   [--verbose] [--serve] [--list]
+                                   [--verbose] [--serve] [--list] [--check]
 
   --family   Run one family. Repeatable. Default: all of them.
   --profile  Device profile to measure at. Default: desktop, which is what
@@ -83,6 +83,12 @@ Metamorphic suite — the assertion is agreement, not a value.
   --serve    Build and serve the fixtures, print their URLs, and stay up so you
              can open one in a browser. Measures nothing.
   --list     List the families and exit.
+  --check    Validate the families and the baseline and exit, without a browser
+             and without measuring anything. Exit 2 if the suite is
+             misconfigured, 0 if it is sound. Seconds, not minutes: this is the
+             half that catches an exemption nothing pins or an acceptance with
+             no evidence in it, and it is worth running on every push even where
+             a browser is not worth installing.
 
 If Chromium will not launch (WSL and some Linux setups are missing libnspr4 and
 friends), point it at one that works rather than patching anything:
@@ -91,7 +97,14 @@ friends), point it at one that works rather than patching anything:
 `;
 
 function parseArgs(argv) {
-  const args = { families: [], profile: 'desktop', verbose: false, serve: false, list: false };
+  const args = {
+    families: [],
+    profile: 'desktop',
+    verbose: false,
+    serve: false,
+    list: false,
+    check: false,
+  };
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i];
     if (arg === '--family') args.families.push(argv[++i]);
@@ -99,6 +112,7 @@ function parseArgs(argv) {
     else if (arg === '--verbose' || arg === '-v') args.verbose = true;
     else if (arg === '--serve') args.serve = true;
     else if (arg === '--list') args.list = true;
+    else if (arg === '--check') args.check = true;
     else if (arg === '--help' || arg === '-h') args.help = true;
     else return { error: `Unknown argument “${arg}”` };
   }
@@ -253,7 +267,9 @@ async function main() {
     if (misconfigured.length > 0) {
       out('');
       out('Every family must name every metric in metrics.mjs exactly once, across');
-      out('preserves and mayDiffer. A metric nobody classified is a metric nobody checks.');
+      out('preserves and pinnedInstead. A metric nobody classified is a metric nobody');
+      out('checks — and a metric in pinnedInstead that no variant pins is the same hole');
+      out('wearing a justification.');
     }
     if (baselineFaults.length > 0) {
       out('  known-limitations.mjs');
@@ -264,6 +280,46 @@ async function main() {
       out('acceptance, it is an unreviewed mute.');
     }
     process.exitCode = 2;
+    return;
+  }
+
+  /**
+   * `--check` stops here, and the exit above is the reason it exists.
+   *
+   * Everything that can turn a red into a green in this suite has now been
+   * validated — every family classifies every metric, every exemption is pinned
+   * on every variant with values that differ, every accepted failure names an
+   * owner, real evidence and the measured value of each variant — and none of it
+   * needed a browser or a page. That matters because those checks are the guard
+   * against the suite itself, and the last hole in them was found by a reviewer
+   * rather than by CI: `mayDiffer` muted a real regression with the word
+   * "flaky" and printed AGREE, exit 0.
+   *
+   * A guard that only runs where Chromium installs cleanly is a guard with a
+   * platform dependency it does not need. This half runs in seconds, anywhere.
+   */
+  if (args.check) {
+    const exempted = FAMILIES.reduce((n, f) => n + f.pinnedInstead.length, 0);
+    const accepted = acceptancesFor(FAMILIES);
+    out('Suite configuration is sound — nothing was measured.');
+    out('');
+    /**
+     * The first line counts the families this invocation selected; the rest
+     * count the whole file. That is not an inconsistency, it is what was
+     * checked: `declarationProblems` runs on the selection, and
+     * `baselineProblems` deliberately runs on everything so that
+     * `--family icon-technique` still refuses a bad acceptance elsewhere.
+     */
+    out(`  ${families.length} selected famil(ies) classify all ${METRIC_KEYS.length} metrics`);
+    out(`  ${exempted} metric(s) exempt from comparison, each pinned on every variant`);
+    out(
+      `  ${accepted.disagreements.length + accepted.pinnedMisses.length} accepted ` +
+        `limitation(s), each with an owner, evidence and per-variant values`
+    );
+    out(`  ${NOT_ASSERTED.length} shape(s) recorded as not asserted`);
+    out('');
+    out('This says the suite cannot be silently muted. It says nothing about the');
+    out('scanner: run it without --check for that.');
     return;
   }
 
@@ -337,6 +393,21 @@ async function main() {
     out(
       `  baseline    ${accepted} accepted limitation(s), ` +
         `${NOT_ASSERTED.length} shape(s) not asserted`
+    );
+    /**
+     * Exemptions get a number at the top for the same reason the baseline does.
+     *
+     * `mayDiffer` — the field this replaced — was a mute that appeared nowhere
+     * but a footnote inside the family it muted, and a reviewer's spliced
+     * regression rode out on exactly that invisibility. A total on the header,
+     * across every family and not just the ones this invocation ran, means the
+     * count moving is visible in a CI log to somebody who read nothing else.
+     */
+    const exempted = FAMILIES.reduce((n, f) => n + f.pinnedInstead.length, 0);
+    const inFamilies = FAMILIES.filter((f) => f.pinnedInstead.length > 0).length;
+    out(
+      `  exemptions  ${exempted} metric(s) not compared, pinned per variant instead` +
+        (exempted > 0 ? `, in ${inFamilies} famil${inFamilies === 1 ? 'y' : 'ies'}` : '')
     );
   }
   out('');
@@ -484,11 +555,26 @@ async function main() {
     );
     out(
       `          ${family.variants.length} variants, ` +
-        `${family.preserves.length} preserved, ${family.mayDiffer.length} exempt` +
-        (pinnedCount > 0 ? `, ${pinnedCount} pinned` : '')
+        `${family.preserves.length} preserved, ${family.pinnedInstead.length} pinned instead` +
+        (pinnedCount > 0 ? `, ${pinnedCount} pins` : '')
     );
-    for (const entry of family.mayDiffer) {
-      out(`          exempt: ${entry.metric} — ${entry.because}`);
+    /**
+     * An exempt metric prints its pins, not just its excuse.
+     *
+     * The line used to read `exempt: ghostControls — flaky`, which is what a
+     * mute looks like from the outside and is exactly how the reviewer's
+     * spliced regression read on the way to exit 0. Printing the value the
+     * family expects for every variant means the reader can see that the metric
+     * is still asserted, and see what it is asserted to be, without opening
+     * families.mjs.
+     */
+    for (const entry of family.pinnedInstead) {
+      const pins = family.variants
+        .map((v) => `${v.id}=${show(v.expects?.[entry.metric])}`)
+        .join(', ');
+      out(`          not compared, pinned per variant: ${entry.metric}`);
+      out(`            ${pins}`);
+      for (const line of wrap(entry.because, '            ')) out(line);
     }
     out('');
 

@@ -11,21 +11,47 @@
  * The hard lesson from the session that produced this suite: a variant that used
  * `<a href="#">` as its trigger added a nav link, the nav-link count moved, and
  * the suite reported a defect that lived in the *test*. The response is not "be
- * careful". It is that `preserves` and `mayDiffer` between them must name every
- * metric in metrics.mjs — no more, no less — and run.mjs refuses to run a family
- * that leaves one unclassified or names one twice.
+ * careful". It is that `preserves` and `pinnedInstead` between them must name
+ * every metric in metrics.mjs — no more, no less — and run.mjs refuses to run a
+ * family that leaves one unclassified or names one twice.
  *
  * That makes the failure mode loud in the right direction. Forgetting a metric
  * is a configuration error the runner reports and exits non-zero on; it can
- * never quietly become "this family doesn't check that". Exempting one costs a
- * sentence saying why, in this file, where a reviewer will see it.
+ * never quietly become "this family doesn't check that".
+ *
+ * ── `pinnedInstead` is not a mute, and used to be one ────────────────────
+ *
+ * This field was called `mayDiffer` and it took a metric plus a sentence. The
+ * sentence was the entire check: `declarationProblems` asked only that `because`
+ * be a non-empty string. An adversarial reviewer spliced a real, reproducible
+ * disagreement into a family — ghostControls 6 against 0, the handler-identity
+ * finding — exempted it with `because: 'flaky'`, and the suite printed
+ * "AGREE, 1/1 families agree", exit 0, with the word "flaky" on one line that
+ * reads like a footnote. It was not even counted in the baseline total. That is
+ * the tenth instance of this project's only failure mode: something is found,
+ * something suppresses it, and NOTHING is published in its place.
+ *
+ * So prose no longer buys an exemption. `pinnedInstead` now means one thing that
+ * the runner can verify without reading English: every variant in this family
+ * pins this metric with `expects`, and the pins are not all the same value.
+ * Agreement is the wrong assertion here because the family says the number MUST
+ * move, and it says which way, per variant, in this file. The exemption is not a
+ * hole — it is a stronger claim than the one it replaces, and a regression
+ * spliced into a pinned metric fails on the pin.
+ *
+ * There is no longer any way to declare a metric unchecked. If a metric really
+ * does disagree for a reason nobody can fix, that is an entry in
+ * known-limitations.mjs: named owner, evidence naming the browser and axe
+ * version and the command, and the measured value of EVERY variant. It prints on
+ * every run, it is counted, and it fails the day it stops reproducing. A
+ * suppression is only legitimate when the thing it defers to is itself
+ * published.
  *
  * The fixtures in fixtures.mjs were built so that each transform is
  * metric-neutral by construction, and where a transform could not be (the closed
  * `<details>` mechanism carries its own trigger) the fixture comment says so and
- * a second family holds that axis still. If you find yourself adding to
- * `mayDiffer`, check first whether the fixture can be made neutral instead. An
- * exemption is a hole in the suite, and holes are how a check goes quiet.
+ * a second family holds that axis still. If you find yourself reaching for
+ * `pinnedInstead`, check first whether the fixture can be made neutral instead.
  *
  * ── The one place a value is stated, and what it costs ───────────────────
  *
@@ -57,7 +83,7 @@
 import { METRIC_KEYS } from './metrics.mjs';
 
 /** Shorthand: this family claims the transform touches nothing at all. */
-const preservesEverything = () => ({ preserves: [...METRIC_KEYS], mayDiffer: [] });
+const preservesEverything = () => ({ preserves: [...METRIC_KEYS], pinnedInstead: [] });
 
 /**
  * The analytics families need a page whose ghost candidates are countable and
@@ -508,16 +534,20 @@ export const FAMILIES = [
         (k) => !['unannouncedPanels', 'unannouncedFocusable', 'unannouncedLinks'].includes(k)
       ),
     ],
-    mayDiffer: [
+    pinnedInstead: [
       {
         metric: 'unannouncedPanels',
         because:
           'the last variant gives the menu a real aria-controls trigger, which is a ' +
-          'behavioural change and not a hole: every variant pins this value explicitly.',
+          'behavioural change and not a hole: every variant pins this value explicitly, ' +
+          '1 on the five where nothing announces the menu and 0 on the one where ' +
+          'something does.',
       },
       {
         metric: 'unannouncedFocusable',
-        because: 'same transform, same pinning — 6, 6, 6, 6, then 0 once the menu is announced.',
+        because:
+          'same transform, same pinning — 6, 6, 6, 6, 6, then 0 once the menu is ' +
+          'announced. Agreement would assert the opposite of what this family is for.',
       },
       {
         metric: 'unannouncedLinks',
@@ -673,7 +703,7 @@ export const FAMILIES = [
       'three suppressed variants agreed with each other perfectly, at zero. The pin is what ' +
       'says the page has a control on it that nobody can operate.\n\n' +
       '── This family holds all eighteen metrics, and briefly did not ─────\n\n' +
-      'Worth recording, because it is an argument for not reaching for mayDiffer. An ' +
+      'Worth recording, because it is an argument for not reaching for an exemption. An ' +
       'earlier revision of probes.mjs published the right ghostControls here and still ' +
       'moved the two counts above it: 1 candidate and 1 clickable-no-role on the bare card, ' +
       '2 and 3 on the other three, because a card that stopped absorbing its contents ' +
@@ -682,10 +712,12 @@ export const FAMILIES = [
       'container is exactly what it changes — and this family was briefly written that way, ' +
       'with both metrics exempt and a paragraph justifying it.\n\n' +
       'It was measured again a revision later and all eighteen agreed. The exemption was ' +
-      'buying nothing except a hole, which is what mayDiffer always costs: the justification ' +
-      'was plausible, it was written in good faith, and it was wrong about what the code ' +
-      'could do. Preserve everything until something that cannot be made to agree proves it ' +
-      'cannot, and then put it on the known-limitation list where a person has to look at it.',
+      'buying nothing except a hole, which is what an unpinned exemption always cost: the ' +
+      'justification was plausible, it was written in good faith, and it was wrong about ' +
+      'what the code could do. That shape is no longer expressible — `pinnedInstead` ' +
+      'requires a pin on every variant — but the lesson survives the mechanism. Preserve ' +
+      'everything until something that cannot be made to agree proves it cannot, and then ' +
+      'put it on the known-limitation list where a person has to look at it.',
     ...preservesEverything(),
     variants: [
       {
@@ -780,19 +812,37 @@ export const FAMILIES = [
       'A carousel is the commonest layout on the commercial web; a scanner that publishes ' +
       '"blocking" for every page carrying one has stopped being usable, and each of those ' +
       'pages then buries whatever real finding it also had.\n\n' +
-      'So the panel counts are exempt — record the slide if the team decides to — and the ' +
-      'published verdict is not, and is pinned at clear on every variant. Read the ' +
-      'exemption honestly: under today\'s model.ts the ' +
+      'The published verdict is pinned at clear on every variant, and the panel counts are ' +
+      'compared like everything else. They used to be exempt — hiddenPanels, ' +
+      'hiddenPanelFocusable, phantomFocusable and phantomPanelState, four metrics excused ' +
+      'with a sentence each on the grounds that the family "takes no position". Measured ' +
+      'on this tree — Chromium 149.0.7827.55, axe-core 4.13.0, desktop profile, ' +
+      '2026-08-13, node scanner/metamorphic/run.mjs --family clipped-container — all six ' +
+      'variants report 0 hidden panels, 0 controls inside them, 0 phantom focusable and ' +
+      'phantomPanelState none: the exemption was excusing an agreement. It is deleted ' +
+      'rather than kept ' +
+      'because an exemption nobody needs is the mute button this suite was found to have ' +
+      '— see the `pinnedInstead` section at the top of this file for the reproduction.\n\n' +
+      'Two of the four could never have differed anyway, and that is worth writing down ' +
+      'once so nobody re-adds them. verdictFromProbes is pinned clear on all six, and ' +
+      'under metrics.mjs it is clear exactly when phantomPanelState is none, which is in ' +
+      'turn only reachable with phantomFocusable at 0. So the pin already forced two of ' +
+      'the exempted metrics to agree; exempting them bought nothing and hid that fact.\n\n' +
+      'Read what remains honestly: under today\'s model.ts the ' +
       'verdict is a function of the phantom-panel state and nothing else, so the only way ' +
       'to satisfy this family today is for probes.mjs to stop calling pure overflow ' +
       'clipping off-screen. If the team instead keeps recording it and changes the verdict ' +
       'layer, metrics.mjs\'s restatement of pageVerdict() has to move in the same commit ' +
-      'or this family goes quiet while claiming to check the thing it was written for.\n\n' +
+      'or this family goes quiet while claiming to check the thing it was written for. And ' +
+      'if the team decides a clipped slide IS a hidden panel, this family goes red on ' +
+      'hiddenPanels — which is the point: that decision gets recorded in ' +
+      'known-limitations.mjs with the measured numbers, where it prints on every run, ' +
+      'rather than disappearing into a sentence here.\n\n' +
       '── Why overflow is an axis, and what this family is worth ──────────\n\n' +
       'The five values do not mean the same thing to a person: auto and scroll put the ' +
       'second slide one gesture away, hidden and clip do not, visible never hid it. So ' +
-      'this is not an invariance claim about the slide, and the panel metrics are exempt ' +
-      'precisely because it is not. It is an invariance claim about the PAGE: six named ' +
+      'this is not an invariance claim about the slide. It is an invariance claim about ' +
+      'the PAGE, which is the stronger of the two and the one that survived: six named ' +
       'links, every one in the accessibility tree and in the tab order, is not a blocking ' +
       'page whatever one container\'s overflow property says.\n\n' +
       'Be honest about what this catches. It passed before the split and it passes after, ' +
@@ -801,37 +851,7 @@ export const FAMILIES = [
       'outright is the obvious way to make the drawer mirrors agree, and it would republish ' +
       'every carousel on the web as blocking; this family is what fails when somebody ' +
       'reaches for that. The two are a pair and neither is sufficient alone.',
-    preserves: [
-      ...METRIC_KEYS.filter(
-        (k) =>
-          !['hiddenPanels', 'hiddenPanelFocusable', 'phantomFocusable', 'phantomPanelState'].includes(
-            k
-          )
-      ),
-    ],
-    mayDiffer: [
-      {
-        metric: 'hiddenPanels',
-        because:
-          'whether a clipped slide is a hidden panel is the open question; this family ' +
-          'takes no position on it and only forbids it deciding the page.',
-      },
-      {
-        metric: 'hiddenPanelFocusable',
-        because: 'the three links inside that slide, counted only if the slide counts.',
-      },
-      {
-        metric: 'phantomFocusable',
-        because: 'phantomMenu is the largest hidden panel, so it moves with the same decision.',
-      },
-      {
-        metric: 'phantomPanelState',
-        because:
-          'the dashboard may legitimately record the slide as an unannounced off-screen ' +
-          'panel; what it may not do is let that alone flip verdictFromProbes, which is ' +
-          'preserved.',
-      },
-    ],
+    ...preservesEverything(),
     variants: [
       {
         id: 'flow-container',
@@ -868,21 +888,48 @@ export const FAMILIES = [
 ];
 
 /**
- * Check a family classifies every metric exactly once. Returns a list of
- * problems, empty when the family is well-formed.
+ * Check a family classifies every metric exactly once, and that every metric it
+ * exempts from comparison is pinned instead. Returns a list of problems, empty
+ * when the family is well-formed.
  *
  * A family that does not is a configuration error, not a test failure, and
  * run.mjs treats it as one: it is reported separately and it stops the run.
  * Silently comparing whatever happened to be listed is how a suite becomes
  * decorative.
+ *
+ * This function is the suite's own guard against the suite, so its failures are
+ * worth more than its passes: the mute button found in review lived here, in a
+ * check that asked only whether a sentence was non-empty.
  */
 export function declarationProblems(family) {
   const problems = [];
   if (!Array.isArray(family.preserves)) problems.push('has no preserves list');
-  if (!Array.isArray(family.mayDiffer)) problems.push('has no mayDiffer list (use [] to exempt nothing)');
+  /**
+   * `mayDiffer` was the mute button — a metric plus any non-empty sentence, and
+   * the metric stopped being compared. A reviewer spliced the real
+   * handler-identity disagreement (ghostControls 6 against 0) into a family,
+   * wrote `because: 'flaky'`, and got AGREE / exit 0 with nothing published in
+   * its place. It is refused by name rather than ignored, because the shape is
+   * in this repo's history and in every stale branch: silently reading it as
+   * "declares nothing" would turn the old mute into an unclassified metric,
+   * which is a config error, but a confusing one.
+   */
+  if ('mayDiffer' in family) {
+    problems.push(
+      'declares “mayDiffer”, which no longer exists — it excused a metric from ' +
+        'comparison on the strength of a sentence. Use “pinnedInstead” (every variant ' +
+        'pins the metric, values differ) or record the disagreement in known-limitations.mjs'
+    );
+  }
+  if (!Array.isArray(family.pinnedInstead)) {
+    problems.push('has no pinnedInstead list (use [] to exempt nothing)');
+  }
+  if (!Array.isArray(family.variants) || family.variants.length < 2) {
+    problems.push('has fewer than two variants, so it compares nothing');
+  }
   if (problems.length > 0) return problems;
 
-  const exempt = family.mayDiffer;
+  const exempt = family.pinnedInstead;
   const named = [...family.preserves, ...exempt.map((e) => e.metric)];
 
   const seen = new Set();
@@ -894,9 +941,57 @@ export function declarationProblems(family) {
   for (const key of METRIC_KEYS) {
     if (!seen.has(key)) problems.push(`does not say whether it preserves “${key}”`);
   }
+
+  /**
+   * `pinnedInstead` is verified structurally, and that is the whole fix.
+   *
+   * The old check asked whether `because` was a non-empty string, which is a
+   * check on prose and therefore not a check. These three ask the family for
+   * something it cannot write without having decided the answer per variant:
+   * the metric is pinned on EVERY variant, and the pins are not all the same
+   * value. Both halves are load-bearing.
+   *
+   *   Pinned on every variant — an unpinned variant is a variant nothing checks,
+   *   which is the hole this field used to be. With all of them pinned, a
+   *   regression spliced into an exempt metric fails on the pin instead of
+   *   vanishing.
+   *
+   *   Values not all equal — if they were, `preserves` says it better and says
+   *   it without a special case. This is what stops the field being re-derived
+   *   as a mute: to exempt a metric you must write down a DIFFERENT expected
+   *   number for at least one variant, in this file, in the diff. That can still
+   *   be a lie, but it is a visible lie rather than a silent deletion.
+   *
+   * `because` is still required and still prose, but it is no longer what buys
+   * the exemption — it explains a decision the runner has already verified.
+   */
+  const pinsByMetric = new Map(); // metric -> [{ variant, serialized }]
+  for (const variant of family.variants) {
+    for (const [key, value] of Object.entries(variant.expects ?? {})) {
+      if (!pinsByMetric.has(key)) pinsByMetric.set(key, []);
+      pinsByMetric.get(key).push({ variant: variant.id, serialized: JSON.stringify(value) });
+    }
+  }
   for (const entry of exempt) {
-    if (!entry.because || entry.because.trim().length === 0) {
-      problems.push(`exempts “${entry.metric}” without saying why`);
+    const label = `exempts “${entry.metric}”`;
+    if (typeof entry.because !== 'string' || entry.because.trim().length < 40) {
+      problems.push(`${label} without saying why in more than a word`);
+    }
+    const pins = pinsByMetric.get(entry.metric) ?? [];
+    const pinnedVariants = new Set(pins.map((p) => p.variant));
+    const missing = family.variants.map((v) => v.id).filter((id) => !pinnedVariants.has(id));
+    if (missing.length > 0) {
+      problems.push(
+        `${label} but does not pin it on ${missing.length} variant(s) — ${missing.join(', ')}. ` +
+          'An exempt metric nothing pins is a metric nothing checks'
+      );
+      continue;
+    }
+    if (new Set(pins.map((p) => p.serialized)).size < 2) {
+      problems.push(
+        `${label} but pins the same value on every variant, so they agree — put it in ` +
+          'preserves, which asserts that without a special case'
+      );
     }
   }
 
@@ -913,13 +1008,41 @@ export function declarationProblems(family) {
    * also in `preserves` the agreement comparison fails no matter what the
    * scanner does — a family that can never be green is not a test, it is noise
    * that teaches people to ignore a red suite.
+   *
+   * The third rule is `null`, and it is here because closing the `mayDiffer`
+   * mute opened a smaller one in the same shape. run.mjs compares a pin by
+   * serialising both sides, so `expects: { ghostControls: null }` MATCHES a
+   * metric the scanner failed to measure and reports no miss — and a metric in
+   * `pinnedInstead` is not compared for agreement either, which is where
+   * `not-measured` is normally caught. Pinned null on an exempt metric is
+   * therefore a page that can go unmeasured and still read green: this
+   * project's entire failure history in two words. A null is the absence of a
+   * measurement and can never be the expected one.
+   *
+   * The fourth is duplicate variant ids. Fixtures are served at
+   * `/f/<family>/<variant>/`, so two variants sharing an id are one page
+   * measured twice — which agrees with itself, perfectly, forever.
    */
   const pinned = new Map(); // metric -> set of expected values, serialized
+  const seenVariants = new Set();
   for (const variant of family.variants ?? []) {
+    if (seenVariants.has(variant.id)) {
+      problems.push(
+        `has two variants called “${variant.id}” — they share one fixture URL, so the ` +
+          'family would be comparing one page with itself'
+      );
+    }
+    seenVariants.add(variant.id);
     for (const [key, value] of Object.entries(variant.expects ?? {})) {
       if (!METRIC_KEYS.includes(key)) {
         problems.push(`variant “${variant.id}” pins unknown metric “${key}”`);
         continue;
+      }
+      if (value === null || value === undefined) {
+        problems.push(
+          `variant “${variant.id}” pins “${key}” to not-measured, which every failed scan ` +
+            'matches — a measurement that did not happen is not an expected value'
+        );
       }
       if (!pinned.has(key)) pinned.set(key, new Set());
       pinned.get(key).add(JSON.stringify(value));

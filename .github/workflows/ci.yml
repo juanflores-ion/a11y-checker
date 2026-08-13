@@ -1,0 +1,174 @@
+# CI. Everything in this repository that can be checked by a machine.
+#
+# ── Why there was none until now ─────────────────────────────────────────
+#
+# There was no .github directory at all. `npx tsc --noEmit`, `npm test`,
+# `npm run build` and `npm run metamorphic` all existed and all passed, and
+# nothing ran any of them unless a person remembered to. That is the same shape
+# as every regression this project has shipped: a check that exists, is believed
+# in, and is not actually consulted. Two false cleans reached production that
+# way.
+#
+# ── What is blocking, and why all of it is ───────────────────────────────
+#
+# Every job here fails the build. There is deliberately no `continue-on-error`
+# anywhere in this file. An advisory job is worse than an absent one: it renders
+# as a check, it goes red, everybody learns the red is normal, and the first real
+# failure arrives inside a wall of noise people have been trained to scroll past.
+# That is the exact mechanism `known-limitations.mjs` was written to prevent
+# inside the metamorphic suite, and it applies to CI itself.
+#
+# If a job here turns out to be genuinely unreliable, the response is to diagnose
+# it and say so in this file — not to append `continue-on-error: true` and move
+# on, and not to delete the step. Whoever does either owes the next person a
+# comment explaining what they measured.
+#
+# ── What is NOT known ────────────────────────────────────────────────────
+#
+# The metamorphic suite has never been run on a GitHub runner. Everything below
+# is derived from a local run: 75 fixture pages, 16/16 families agreeing, one
+# accepted known limitation, 214 s wall clock, exit 0, on WSL2 with Chromium
+# 149.0.7827.55 and axe-core 4.13.0. It is not evidence about ubuntu-latest and
+# it is not presented as any. The job is split in two so that a browser problem
+# on the runner cannot be mistaken for a scanner regression, and so that the half
+# of the suite that needs no browser still runs when the other half is broken.
+
+name: CI
+
+on:
+  push:
+  pull_request:
+
+# A pull request from a branch in this repository triggers both `push` and
+# `pull_request`. Grouping by ref and cancelling in-progress runs stops the two
+# from racing and halves the queue.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  # ------------------------------------------------------------------
+  # Fast, blocking, no browser. Minutes at worst.
+  # ------------------------------------------------------------------
+  checks:
+    name: typecheck, tests, build, suite config
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      # Node 22 because that is what every measurement quoted in this repository
+      # was taken on. There is no `engines` field and no .nvmrc to inherit, so
+      # the version is stated here rather than left to the runner's default,
+      # which moves.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            scanner/package-lock.json
+
+      # `npm ci`, not `npm install`. axe-core is pinned to an exact version in
+      # both package.json files on purpose — the scanner's answers are a function
+      # of the axe version, and every number written down in scanner/metamorphic
+      # names the version it was measured with. A lockfile-respecting install is
+      # what makes those numbers mean anything.
+      - run: npm ci
+
+      # The scanner is a separate package with its own lockfile, and it is the
+      # one that depends on `playwright` (the root only has `playwright-core`).
+      # `--ignore-scripts` skips its postinstall `playwright install chromium`:
+      # this job never launches a browser, and a ~150 MB download it will not use
+      # is pure latency.
+      - run: npm ci --ignore-scripts
+        working-directory: scanner
+
+      # The metamorphic suite's own guard against the metamorphic suite, without
+      # a browser and without measuring a page: every family classifies every
+      # metric, every metric exempted from comparison is pinned on every variant
+      # with values that differ, and every accepted failure names an owner, real
+      # evidence and the value each variant measured.
+      #
+      # It is first because it is the cheapest and because of what it is for. A
+      # review found that the suite had a mute button: a `mayDiffer` entry took a
+      # metric and any non-empty sentence, and a real reproducible disagreement
+      # spliced into a family and marked `because: 'flaky'` printed "AGREE, 1/1
+      # families agree" and exited 0. Locally this step takes about a second.
+      - name: Metamorphic suite configuration
+        run: node scanner/metamorphic/run.mjs --check
+
+      - name: Typecheck
+        run: npx tsc --noEmit
+
+      - name: Unit tests
+        run: npm test
+
+      # Last of the four because it is the slowest, and because a type error or a
+      # failing test is more useful reported on its own than buried in build
+      # output. `next build` prerenders every page from data/runs at build time,
+      # so this also catches a run file the viewer cannot read.
+      - name: Build
+        run: npm run build
+
+  # ------------------------------------------------------------------
+  # Slow, blocking, needs a real browser.
+  # ------------------------------------------------------------------
+  metamorphic:
+    name: metamorphic suite (real Chromium)
+    runs-on: ubuntu-latest
+    # 214 s locally for 75 pages. 30 minutes is roughly eight times that, which
+    # is room for a slower runner without letting a hung browser burn an hour.
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            scanner/package-lock.json
+
+      - run: npm ci
+
+      # Same `--ignore-scripts` reasoning as above, for a different destination:
+      # the postinstall would install a browser without system libraries, and the
+      # next step installs both. Doing it once avoids downloading Chromium twice.
+      - run: npm ci --ignore-scripts
+        working-directory: scanner
+
+      # Run from scanner/ so the browser matches the playwright the suite
+      # actually imports — 1.62.1, per scanner/package-lock.json. `--with-deps`
+      # is the part that matters on a runner: Playwright's Chromium needs
+      # libnspr4, libnss3 and friends, and without them the suite exits 2 with
+      # "SUITE COULD NOT RUN — no browser", which is correct behaviour and a
+      # useless CI result.
+      - name: Install Chromium and its system libraries
+        run: npx playwright install --with-deps chromium
+        working-directory: scanner
+
+      # `tee` so the report survives into the artifact below; `pipefail` so the
+      # exit code that reaches the job is the suite's and not tee's. Without it
+      # this whole job would pass whatever the suite said, which is the failure
+      # mode the file is here to prevent.
+      - name: Metamorphic suite
+        shell: bash
+        run: |
+          set -o pipefail
+          npm run metamorphic 2>&1 | tee metamorphic-report.txt
+
+      # Kept on failure because the report is the finding. A disagreement prints
+      # every variant's value, and re-running locally to see them costs whoever
+      # picks this up the same three minutes again.
+      - name: Keep the report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: metamorphic-report
+          path: metamorphic-report.txt
+          retention-days: 14
