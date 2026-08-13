@@ -1416,28 +1416,32 @@ const LIMITS: Limit[] = [
     ),
   },
   {
-    title: 'A disclosure button standing next to an unrelated hover menu',
-    badge: 'Unresolved',
+    title: 'Anything that only exists after an interaction',
+    badge: 'Not measured',
     kind: 'open',
     body: (
       <>
         <p>
-          Two things sit inside the same container: an accordion with a proper button that says it
-          opens something, and — unrelated to it — a mega-menu that only appears when a pointer
-          hovers. Does that button count as announcing the mega-menu?
+          The scanner reads a page as the server delivers it. It never clicks, hovers, types or
+          scrolls — that is what makes two runs comparable, and it is what guarantees a scan can
+          never create a real enquiry in a live system. The cost is that anything built by an
+          interaction is outside every number here: a modal, a wizard step, a panel that is
+          constructed on click.
         </p>
         <p className="mt-2">
-          Both answers are defensible, and the tool&apos;s own tests demand both: one test family
-          requires yes for markup that is, element for element, what another requires no for. That
-          is not a bug in either test. It is the definition of &ldquo;this control opens that
-          region&rdquo; not being precise enough to decide the case.
+          This is not theoretical. Both brands&apos; &ldquo;Get Quotes&rdquo; modal renders nothing
+          into the page until the button is pressed — measured, zero dialog elements before the
+          click and one after. Three real defects were found inside that modal by hand, all three
+          were fixed, and <em>not one figure on this dashboard moved</em>, because no figure was
+          ever looking.
         </p>
         <p className="mt-2">
-          <strong className="font-medium text-critical">How it currently resolves:</strong> yes —
-          the button is accepted, and six links behind such a hover menu publish as{' '}
-          <strong className="font-medium text-ink tnum">0</strong> links an agent cannot find. It
-          under-reports, which is the wrong direction for a defect count. It is unresolved rather
-          than decided, and the same shape is present in the version currently in production.
+          What it would take is not a bigger scan. It is a written, checked-in script of steps —
+          click this, then measure — so the path is authored by a person and identical every run.
+          Letting the tool discover its own path is the thing to avoid: measured on one page, an
+          exploring version answered between 2.5 and 3.6 times apart depending only on which keys
+          it tried and how far it tabbed. The rule stays: never let the tool decide the
+          interaction.
         </p>
       </>
     ),
