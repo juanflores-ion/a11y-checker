@@ -186,6 +186,7 @@ export const AXES = {
   icon: Object.keys(ICONS),
   trigger: Object.keys(TRIGGERS),
   ownHandlers: [...OWN_HANDLERS],
+  innerWrapDepth: [0, 1, 3, 4],
   scenario: ['full-page', ...Object.keys(SCENARIOS)],
 };
 
@@ -196,6 +197,20 @@ export const DEFAULTS = {
   icon: 'aria-hidden-span',
   /** Levels of meaningless `<div>` wrapped around each marked subtree. */
   wrapDepth: 0,
+  /**
+   * How many elements sit between the announced hidden region and its links,
+   * every one of them inheriting the region's hiding.
+   *
+   * 1 is today's shape and the default, so every other family's markup is
+   * unchanged: `#megaWrap > #megaPanel > links`. 0 removes the intermediate
+   * entirely and puts the links in `#megaWrap` itself — the only value where
+   * the region has NO inheriting descendant, which is what makes it a control
+   * rather than another instance of the same case.
+   *
+   * Separate from `wrapDepth` on purpose: outside-wrapping and inside-wrapping
+   * make different claims, and only the second can inherit the hiding.
+   */
+  innerWrapDepth: 1,
   /** The CSS-in-JS hash of the day. Churns on every deploy; must mean nothing. */
   salt: 'k3f9x',
   ownHandlers: 'per-instance',
@@ -219,9 +234,11 @@ export const DEFAULTS = {
  * deploy; the README's own rule is "don't track individual elements", and this
  * is that rule made executable.
  *
- * The `shell*` stems are deliberately absent: the wrappers the inert-wrapper
- * family inserts carry no rules whatsoever, because a wrapper that styled
- * anything would be testing the style, not the wrapper.
+ * The `shell*` and `innerShell*` stems are deliberately absent: the wrappers
+ * the inert-wrapper and inherited-hiding families insert carry no rules
+ * whatsoever, because a wrapper that styled anything would be testing the
+ * style, not the wrapper. `innerShell*` matters most — the whole point of that
+ * family is that the wrapper declares nothing and inherits everything.
  */
 const CSS_RULES = [
   ['siteHeader', '', 'display:flex;align-items:center;gap:12px;padding:8px 16px'],
@@ -408,12 +425,38 @@ export function buildVariant(options = {}) {
   const trigger = TRIGGERS[o.trigger];
   const detailsShape = o.hiding === 'closed-details' || o.trigger === 'closed-details';
 
-  const megaInner = `<div id="megaPanel" class="${c('megaPanel')}">${links('mega', 6, 'Mega link')}</div>`;
+  /**
+   * Meaningless divs *inside* the hidden region, between it and its panel.
+   *
+   * This is the one transform the inert-wrapper family deliberately excludes,
+   * and it is the shape that shipped false clean #12. `visibility` is an
+   * inherited property, so a styleless wrapper inside a `visibility: hidden`
+   * region computes to hidden without declaring anything. The probe credited
+   * each of those wrappers as a region hiding itself; none carried the drawer's
+   * id, so they outvoted the drawer's real announcement and 68 findable links
+   * were published as unfindable. `3c83c03` fixed it by crediting the element
+   * that SETS visibility rather than every element that inherits it.
+   *
+   * The suite did not catch that. Verifying a customer's fix did — which is the
+   * suite failing at its only job, and why this axis exists.
+   *
+   * Every wrapper here carries no rules and no semantics, so no user, screen
+   * reader or agent can perceive the difference and no number may move.
+   */
+  const megaLinks = links('mega', 6, 'Mega link');
+  let megaInner = megaLinks;
+  if (o.innerWrapDepth >= 1) {
+    megaInner = `<div id="megaPanel" class="${c('megaPanel')}">${megaLinks}</div>`;
+    for (let i = o.innerWrapDepth - 1; i >= 1; i -= 1) {
+      megaInner = `<div class="${c(`innerShell${i}`)}">${megaInner}</div>`;
+    }
+  }
   const hideClass = !detailsShape && hide.klass ? ` ${c(hide.klass)}` : '';
   const hideAttrs = detailsShape ? '' : hide.attrs;
+  const flatPanel = o.innerWrapDepth === 0 ? ` ${c('megaPanel')}` : '';
   const megaWrap = shell(
     'panelShell',
-    `<div id="megaWrap" class="${c('megaWrap')}${hideClass}"${hideAttrs}>${megaInner}</div>`
+    `<div id="megaWrap" class="${c('megaWrap')}${flatPanel}${hideClass}"${hideAttrs}>${megaInner}</div>`
   );
 
   let megaDisclosure;
