@@ -208,6 +208,47 @@ export const FAMILIES = [
   },
 
   {
+    id: 'inherited-hiding',
+    title: 'Meaningless divs INSIDE a hidden region change nothing either',
+    why:
+      'inert-wrapper wraps from the OUTSIDE and says so, explicitly excluding the inside ' +
+      'case. That exclusion is where false clean #12 came through — the only measured ' +
+      'fault this suite has ever missed, caught by verifying a customer\'s fix rather ' +
+      'than by a test, which is the suite failing at its only job. visibility inherits, ' +
+      'so a styleless div inside a visibility:hidden region computes to hidden without ' +
+      'declaring anything; the wrappers inside ION\'s correctly-announced mobile drawer ' +
+      'were each credited as regions hiding themselves, none carried the drawer\'s id, ' +
+      'and the monotonicity rule then suppressed the drawer\'s real announcement. 68 ' +
+      'findable links published as unfindable. ' +
+      'WHAT BUILDING THIS FAMILY ESTABLISHED, because it is not what was assumed: that ' +
+      'defect is held down by TWO independent mechanisms, not one. Reverting 3c83c03 ' +
+      'alone does not reproduce it — disclosureFor walks ancestors, so a wrapper inside ' +
+      'an announced region is announced too. Removing that walk alone does not reproduce ' +
+      'it either — the 3c83c03 guard makes the wrappers unjudgeable. Measured by ' +
+      'ablation: with either mechanism present this family agrees; with BOTH removed it ' +
+      'fails on unannouncedPanels, unannouncedFocusable and unannouncedLinks, and ' +
+      'inert-wrapper stays green in that same state, which is the proof that this family ' +
+      'covers ground no other family covers. ' +
+      'The bare variants are load-bearing. They are the only shape where the announced ' +
+      'region has NO inheriting descendant at all; without them every variant carries the ' +
+      'defect equally and the family agrees while broken. That is not hypothetical — it ' +
+      'is what the first draft of this family did, and it passed.',
+    ...preservesEverything(),
+    variants: [
+      { id: 'bare-visibility', options: { trigger: 'remote-controls', hiding: 'visibility-hidden', innerWrapDepth: 0 } },
+      { id: 'inner-1-visibility', options: { trigger: 'remote-controls', hiding: 'visibility-hidden', innerWrapDepth: 1 } },
+      { id: 'inner-3-visibility', options: { trigger: 'remote-controls', hiding: 'visibility-hidden', innerWrapDepth: 3 } },
+      { id: 'inner-4-visibility', options: { trigger: 'remote-controls', hiding: 'visibility-hidden', innerWrapDepth: 4 } },
+      { id: 'bare-collapse', options: { trigger: 'remote-controls', hiding: 'visibility-collapse', innerWrapDepth: 0 } },
+      { id: 'inner-3-collapse', options: { trigger: 'remote-controls', hiding: 'visibility-collapse', innerWrapDepth: 3 } },
+      { id: 'bare-display-none', options: { trigger: 'remote-controls', hiding: 'display-none', innerWrapDepth: 0 } },
+      { id: 'inner-3-display-none', options: { trigger: 'remote-controls', hiding: 'display-none', innerWrapDepth: 3 } },
+      { id: 'bare-content-visibility', options: { trigger: 'remote-controls', hiding: 'content-visibility', innerWrapDepth: 0 } },
+      { id: 'inner-3-content-visibility', options: { trigger: 'remote-controls', hiding: 'content-visibility', innerWrapDepth: 3 } },
+    ],
+  },
+
+  {
     id: 'class-hash-churn',
     title: 'Regenerating CSS-in-JS class names changes nothing',
     why:
