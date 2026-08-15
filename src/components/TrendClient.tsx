@@ -58,13 +58,19 @@ export function TrendClient({ points, ruleIds }: { points: TrendPoint[]; ruleIds
   const labelled = data.filter((d) => d.label);
   const otherProfileRuns = points.filter((p) => p.viewport !== viewport).length;
 
-  // Reachable by direct URL even though the tab is hidden below two runs.
+  // Reachable by direct URL even though the tab is hidden below three runs.
+  // The threshold here is 2 rather than 3 on purpose: this guard is about what
+  // can be DRAWN, and two points can be. RUN_VIEWS decides what is worth
+  // drawing, and holds that two points are a delta the Summary tab already
+  // states better. Somebody who types the URL with two runs on file gets the
+  // chart rather than a message telling them their data does not exist.
   if (series.length < 2) {
     return (
       <div className="rounded-card border border-dashed border-rule bg-card p-8 text-center">
         <h2 className="font-display text-lg font-semibold">Nothing to plot yet</h2>
         <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-muted">
-          A trend needs at least two scans of the same device profile to draw a line between.{' '}
+          A trend needs at least two scans of the same device profile to draw a line between, and
+          three before it is worth reading as a direction.{' '}
           {series.length === 1
             ? `One run measured ${VIEWPORT_LABEL[viewport]} so far.`
             : `No run measured ${VIEWPORT_LABEL[viewport]}.`}{' '}

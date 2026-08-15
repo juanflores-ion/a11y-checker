@@ -31,15 +31,26 @@ export const PRIMARY = [
 /**
  * The cuts through a run. Shown only while inside Runs.
  *
- * "Over time" plots one figure across every scan, so with a single scan on
- * file it would draw a single dot — it only appears once there are two runs to
- * draw a line between.
+ * "Over time" needs THREE runs, not two, and the extra one is the point.
+ *
+ * Two scans are a before and an after — a step change with a cause somebody
+ * can name. That is a delta, and the Summary tab's own against-target table
+ * already states it, exactly and in both directions. Drawing the same two
+ * numbers as a line adds nothing and takes something away: a line between two
+ * points reads as a trajectory, invites the eye to extrapolate it, and there
+ * is nothing in two measurements that licenses that. The third point is the
+ * first one that can show a direction rather than a difference.
+ *
+ * Raised from 2 to 3 on 15 Aug 2026, when the run history was cut back to a
+ * single pre-deploy baseline and the next scan was going to be the post-deploy
+ * one. It stays raised: the reasoning is about what two points mean, not about
+ * how many runs happened to be on file that day.
  */
 export const RUN_VIEWS = [
   { href: '/runs', label: 'Summary', minRuns: 1 },
   { href: '/runs/rules', label: 'By check', minRuns: 1 },
   { href: '/runs/pages', label: 'By page', minRuns: 1 },
-  { href: '/runs/trend', label: 'Over time', minRuns: 2 },
+  { href: '/runs/trend', label: 'Over time', minRuns: 3 },
 ];
 
 function isActive(pathname: string, href: string): boolean {
