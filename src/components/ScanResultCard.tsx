@@ -70,8 +70,8 @@ export function ScanResultCard({
             <Eyebrow>Start here</Eyebrow>
             <ol className="mt-2.5 space-y-2">
               {topFixes.map((fix) => (
-                <li key={fix.key} className="flex items-baseline gap-2.5 text-sm">
-                  <ImpactDot impact={fix.impact} className="translate-y-[5px]" />
+                <li key={fix.key} className="flex items-center gap-2.5 text-sm">
+                  <ImpactDot impact={fix.impact} />
                   <span className="flex-1 text-ink">{fix.label}</span>
                   <span className="tnum font-medium text-muted">{fix.count}</span>
                 </li>
