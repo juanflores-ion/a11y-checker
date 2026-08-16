@@ -43,12 +43,12 @@ export function PagesMatrixClient({
         <TBody>
           {pageOrder.map((key) => (
             <tr key={key}>
-              <Td>
+              <th scope="row" className="h-9 border-b border-rule px-3 text-left align-middle font-normal">
                 {PAGE_LABEL[key] ?? key} <span className="ml-1.5 font-mono text-[11px] text-faint">{key}</span>
-              </Td>
+              </th>
               {BRANDS.map((brand) => (
                 <Td key={brand} align="right" className="font-mono text-xs tnum">
-                  <Cell cell={now[brand]?.[key] ?? { kind: 'absent' }} href={`/runs/pages/${brand}/${key}`} />
+                  <Cell cell={now[brand]?.[key] ?? { kind: 'absent' }} href={`/runs/pages/${brand}/${key}`} brand={brand} pageKey={key} />
                 </Td>
               ))}
             </tr>
@@ -65,17 +65,37 @@ export function PagesMatrixClient({
   );
 }
 
-function Cell({ cell, href }: { cell: MatrixCell; href: string }) {
+function Cell({
+  cell,
+  href,
+  brand,
+  pageKey,
+}: {
+  cell: MatrixCell;
+  href: string;
+  brand: Brand;
+  pageKey: string;
+}) {
   if (cell.kind === 'absent') return <span className="text-faint" title="Not part of this run">—</span>;
   if (cell.kind === 'failed') {
     return (
-      <Link href={href} className="text-faint hover:underline" title={cell.error}>
+      <Link
+        href={href}
+        className="text-faint hover:underline"
+        title={cell.error}
+        aria-label={`${BRAND_LABEL[brand]} ${PAGE_LABEL[pageKey] ?? pageKey}: failed to load — ${cell.error}`}
+      >
         <StatusDot tone="na" className="mr-2" />failed to load
       </Link>
     );
   }
   return (
-    <Link href={href} className="inline-flex items-center gap-2 hover:underline underline-offset-2" title={`${VERDICT_TEXT[cell.verdict]} — open page detail`}>
+    <Link
+      href={href}
+      className="inline-flex items-center gap-2 hover:underline underline-offset-2"
+      title={`${VERDICT_TEXT[cell.verdict]} — open page detail`}
+      aria-label={`${BRAND_LABEL[brand]} ${PAGE_LABEL[pageKey] ?? pageKey}: ${cell.nodes} failing elements, ${cell.rules} rule${cell.rules === 1 ? '' : 's'}, ${VERDICT_TEXT[cell.verdict]} — open page detail`}
+    >
       <StatusDot tone={VERDICT_DOT[cell.verdict]} />
       <span className={cell.verdict === 'blocking' ? 'font-medium text-critical' : 'text-ink'}>{cell.nodes}</span>
       <span className="text-[11px] text-faint">{cell.rules} rule{cell.rules === 1 ? '' : 's'}</span>
