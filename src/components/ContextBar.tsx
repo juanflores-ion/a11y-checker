@@ -65,7 +65,7 @@ export function ContextBar() {
               ))}
             </select>
           ) : (
-            <span className="font-mono text-xs text-ink">{runText(current)}</span>
+            <span className="truncate font-mono text-xs text-ink">{runText(current)}</span>
           )}
         </Field>
 
@@ -85,7 +85,7 @@ export function ContextBar() {
               ))}
             </select>
           ) : (
-            <span className="font-mono text-xs text-ink">
+            <span className="truncate font-mono text-xs text-ink">
               {VIEWPORT_LABEL[viewport]}
               {viewport === 'desktop' ? ' — what agents get' : ''}
             </span>
@@ -130,8 +130,8 @@ export function ContextBar() {
 /** A caption and its value. The selects carry their own aria-label, so this is a span, not a label — half the time the value is plain text. */
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <span className="flex items-center gap-1.5 whitespace-nowrap">
-      <span>{label}</span>
+    <span className="flex min-w-0 items-center gap-1.5">
+      <span className="shrink-0">{label}</span>
       {children}
     </span>
   );

@@ -9,7 +9,7 @@ import { Tag } from './Tag';
  */
 export function Table({ children, className = '' }: { children: React.ReactNode; className?: string }) {
   return (
-    <div className={`overflow-x-auto rounded-lg border border-rule bg-card shadow-card ${className}`}>
+    <div className={`relative overflow-x-auto rounded-lg border border-rule bg-card shadow-card ${className}`}>
       <table className="w-full border-collapse text-[13px] leading-snug">{children}</table>
     </div>
   );
