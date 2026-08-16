@@ -577,6 +577,20 @@ export interface ScorecardRow {
   stability: MetricStability;
 }
 
+/**
+ * How the scorecard reads on screen: dead ends first, structure second.
+ * A row whose key is in no group still renders, under "Other" — the failure
+ * mode to avoid is a defect quietly disappearing from the table because
+ * somebody added a row here and forgot to file it.
+ */
+export const SCORECARD_GROUPS: ReadonlyArray<{ title: string; keys: readonly string[] }> = [
+  {
+    title: 'Dead ends',
+    keys: ['button-name', 'link-name', 'emptyHref', 'label', 'ghost-controls', 'phantom'],
+  },
+  { title: 'Structure', keys: ['hasMain', 'unfindable-links', 'region'] },
+];
+
 export function scorecard(run: Run, brand: Brand): ScorecardRow[] {
   const totals = ruleTotals(run, brand);
   const nameless = namelessCounts(run, brand);
