@@ -11,6 +11,12 @@ export const BRAND_LABEL: Record<Brand, string> = {
   techinsurance: 'TechInsurance',
 };
 
+/** Three-letter site tags for dense tables and chips. */
+export const BRAND_SHORT: Record<Brand, string> = {
+  insureon: 'ION',
+  techinsurance: 'TIG',
+};
+
 /**
  * Line colours for the charts, which need literal values rather than Tailwind
  * classes. Kept here so the chart, its legend and anything else that needs to

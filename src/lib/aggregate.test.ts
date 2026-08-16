@@ -781,6 +781,46 @@ test('a probe that never ran reads as not measured, not as zero', () => {
   }
 });
 
+test('a catalogue metric carries the target it is scored against, not just a number', () => {
+  /**
+   * Colour on the Overview issues table comes from `cellTone`, and `cellTone`
+   * asks for a target. Without one every non-zero figure reads red, which is
+   * how `nav-links-in-tree` — links an agent *can* reach, and a number a
+   * correct site wants high — ended up printed as a defect.
+   */
+  const run = runOf({ home: scannedPage() }, { home: scannedPage() });
+
+  const defect = resolveMetric(run, 'insureon', {
+    kind: 'unfindable-links',
+    label: 'Links an agent cannot find',
+  });
+  assert.equal(defect.target, 0, 'a defect is scored against zero');
+  assert.equal(defect.higherIsBetter, false);
+
+  const descriptive = resolveMetric(run, 'insureon', {
+    kind: 'clickable-no-role',
+    label: 'Clickable elements with no role',
+  });
+  assert.equal(descriptive.target, null, 'a magnitude has no target and must not colour red');
+
+  const reachable = resolveMetric(run, 'insureon', {
+    kind: 'nav-links-in-tree',
+    label: 'Navigation links it can find',
+  });
+  assert.equal(reachable.higherIsBetter, true, 'more of the nav in the tree is better');
+
+  // Rules split on `exact`: a discrete defect scores against zero, a drifting
+  // one has no target that survives content churn.
+  assert.equal(
+    resolveMetric(run, 'insureon', { kind: 'rule', ruleId: 'button-name', label: 'Buttons with no name' }).target,
+    0
+  );
+  assert.equal(
+    resolveMetric(run, 'insureon', { kind: 'rule', ruleId: 'region', label: 'Nodes outside a landmark' }).target,
+    null
+  );
+});
+
 test('a brand where nothing scanned is absence, not a clean sweep', () => {
   /**
    * Failed pages are excluded from every calculation, so a brand where every

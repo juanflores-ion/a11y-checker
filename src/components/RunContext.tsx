@@ -15,6 +15,9 @@ export interface RunSummary {
   startedAt: string;
   finishedAt?: string;
   axeVersion?: string;
+  /** Instrument stamp for the context bar. Absent = the run did not record it. */
+  probeVersion?: string;
+  browserVersion?: string;
   display: string;
   short: string;
   /** Which device profiles this run measured. Pre-profile runs are mobile-only. */
@@ -161,10 +164,4 @@ export function useRuns(): RunSelection {
   const ctx = useContext(Ctx);
   if (!ctx) throw new Error('useRuns must be used inside <RunProvider>');
   return ctx;
-}
-
-/** Pick one slice out of a server-computed map keyed by `viewKey`. */
-export function pick<T>(byKey: Record<string, T>, key: string | null): T | null {
-  if (!key) return null;
-  return byKey[key] ?? null;
 }

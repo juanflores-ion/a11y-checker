@@ -2,9 +2,9 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import './globals.css';
 
-import { Nav, RunsNav } from '@/components/Nav';
+import { ContextBar } from '@/components/ContextBar';
+import { Nav } from '@/components/Nav';
 import { RunProvider, RunSummary } from '@/components/RunContext';
-import { RunPicker } from '@/components/RunPicker';
 import { formatRunShort, formatRunTime, loadRuns } from '@/lib/loadRuns';
 
 export const metadata: Metadata = {
@@ -21,6 +21,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     startedAt: r.meta.startedAt,
     finishedAt: r.meta.finishedAt,
     axeVersion: r.meta.axeVersion,
+    probeVersion: r.meta.probeVersion,
+    browserVersion: r.meta.browserVersion,
     display: formatRunTime(r),
     short: formatRunShort(r),
     viewports: r.viewports,
@@ -40,7 +42,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <RunProvider runs={summaries}>
           <div className="min-h-screen">
             <header className="sticky top-0 z-20 border-b border-rule bg-paper/85 backdrop-blur">
-              <div className="mx-auto flex min-h-14 max-w-6xl flex-wrap items-center gap-x-8 gap-y-3 px-5 py-2.5 sm:px-8">
+              <div className="mx-auto flex min-h-[52px] max-w-6xl flex-wrap items-center gap-x-7 gap-y-2 px-5 py-2 sm:px-8">
                 <Link href="/" className="flex shrink-0 items-center gap-2.5">
                   <Mark />
                   <span className="font-display text-[15px] font-bold tracking-tight text-ink">
@@ -48,14 +50,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                   </span>
                 </Link>
                 <Nav />
-                <div className="ml-auto">
-                  <RunPicker />
-                </div>
               </div>
-              <RunsNav />
+              <ContextBar />
             </header>
 
-            <main className="mx-auto max-w-6xl px-5 py-10 sm:px-8">
+            <main className="mx-auto max-w-6xl px-5 py-8 sm:px-8">
               {children}
             </main>
           </div>

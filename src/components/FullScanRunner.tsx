@@ -248,27 +248,17 @@ export function FullScanRunner({ targets }: { targets: ScanTarget[] }) {
   const pct = Math.round((progress.done / progress.total) * 100);
 
   return (
-    <section className="rounded-lg border border-rule bg-card p-5 shadow-card">
-      <div className="flex flex-wrap items-start justify-between gap-x-6 gap-y-2">
-        <div className="max-w-measure">
-          <h2 className="font-display text-base font-bold tracking-tight text-ink">
-            Record a full run — all {targets.length} tracked pages
-          </h2>
-          <p className="mt-1 text-sm leading-relaxed text-muted">
-            Scans every page both sites are tracked on, {BATCH_SIZE} at a time, and hands back a
-            run file. Drop it in <code className="font-mono text-xs">data/runs/</code> and commit
-            it to add it to the history. Takes a couple of minutes — keep this tab open.
-          </p>
-        </div>
-      </div>
+    <section className="rounded-lg border border-rule bg-card p-4 shadow-card">
+      <p className="text-sm text-ink">
+        Scans every tracked page on both sites, {BATCH_SIZE} at a time, and hands back a run file.{' '}
+        <span className="text-muted">
+          Drop it in <code className="font-mono text-xs">data/runs/</code> and commit it. Takes a
+          couple of minutes — keep this tab open.
+        </span>
+      </p>
 
       <fieldset className="mt-4">
-        <legend className="text-eyebrow font-medium text-muted">Device profiles</legend>
-        <p className="mt-1 max-w-measure text-xs leading-relaxed text-faint">
-          These sites serve different markup per device, so each profile is a separate
-          measurement rather than the same page at another width. Desktop is what agents are
-          served; mobile is what most people get. Scanning both doubles the time.
-        </p>
+        <legend className="text-xs font-medium text-muted">Device profiles</legend>
         <div className="mt-2 flex flex-wrap gap-4">
           {VIEWPORT_NAMES.map((v) => (
             <label key={v} className="flex items-center gap-2 text-sm text-ink">
@@ -349,8 +339,8 @@ export function FullScanRunner({ targets }: { targets: ScanTarget[] }) {
       ) : null}
 
       {status === 'done' && runFile ? (
-        <div className="mt-4 rounded-card border border-good/25 bg-good/[0.04] p-4">
-          <Eyebrow className="text-good">Run complete</Eyebrow>
+        <div className="mt-4 rounded-card border border-rule bg-paper/60 p-4">
+          <Eyebrow className="text-xs font-medium text-good">Run complete</Eyebrow>
           <p className="mt-1.5 text-sm leading-relaxed text-ink">
             {progress.total - progress.failures} of {progress.total} page scans measured, across{' '}
             {viewports.map((v) => VIEWPORT_LABEL[v]).join(' and ')}.

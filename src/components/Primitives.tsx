@@ -1,6 +1,5 @@
 import type { Delta } from '@/lib/aggregate';
-import { SEVERITY_LABEL, type Severity } from '@/lib/issues';
-import { Impact, IMPACT_BG, IMPACT_TEXT } from '@/lib/rules';
+import { Impact, IMPACT_BG } from '@/lib/rules';
 
 /**
  * Small section label.
@@ -78,57 +77,6 @@ export function ImpactDot({ impact, className = '' }: { impact: Impact; classNam
   );
 }
 
-export function ImpactLabel({ impact }: { impact: Impact }) {
-  return <span className={`text-xs font-medium ${IMPACT_TEXT[impact]}`}>{impact}</span>;
-}
-
-/** Inline trend, no charting library, no axes — shape only. */
-export function Sparkline({
-  values,
-  className = '',
-  width = 108,
-  height = 28,
-}: {
-  values: number[];
-  className?: string;
-  width?: number;
-  height?: number;
-}) {
-  if (values.length < 2) {
-    return <span className="text-xs text-faint">One run only</span>;
-  }
-  const max = Math.max(...values, 1);
-  const min = Math.min(...values, 0);
-  const span = max - min || 1;
-  const step = width / (values.length - 1);
-  const y = (v: number) => height - 3 - ((v - min) / span) * (height - 6);
-  const points = values.map((v, i) => `${(i * step).toFixed(1)},${y(v).toFixed(1)}`);
-  const last = values[values.length - 1];
-  const first = values[0];
-  const stroke = last < first ? '#067647' : last > first ? '#C81E1E' : '#8B95A3';
-
-  return (
-    <svg
-      className={className}
-      width={width}
-      height={height}
-      viewBox={`0 0 ${width} ${height}`}
-      role="img"
-      aria-label={`Trend across ${values.length} runs: ${values.join(', ')}`}
-    >
-      <polyline
-        points={points.join(' ')}
-        fill="none"
-        stroke={stroke}
-        strokeWidth="1.75"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <circle cx={(values.length - 1) * step} cy={y(last)} r="2.75" fill={stroke} />
-    </svg>
-  );
-}
-
 /**
  * Renders scanner-captured markup as *text*.
  *
@@ -142,59 +90,6 @@ export function CodeSample({ html }: { html: string }) {
     <code className="block overflow-x-auto whitespace-pre-wrap break-all rounded-card border border-rule bg-paper px-3 py-2 font-mono text-xs leading-relaxed text-ink">
       {html}
     </code>
-  );
-}
-
-/* ------------------------------------------------------------------ */
-/* Issue catalogue primitives                                          */
-/* ------------------------------------------------------------------ */
-
-const SEVERITY_STYLE: Record<Severity, { dot: string; text: string; ring: string }> = {
-  blocking: { dot: 'bg-critical', text: 'text-critical', ring: 'border-critical/30' },
-  serious: { dot: 'bg-serious', text: 'text-serious', ring: 'border-serious/30' },
-  moderate: { dot: 'bg-moderate', text: 'text-moderate', ring: 'border-rule' },
-};
-
-export function SeverityBadge({ severity }: { severity: Severity }) {
-  const s = SEVERITY_STYLE[severity];
-  return (
-    <span
-      className={`inline-flex shrink-0 items-center gap-1.5 rounded-pill border bg-card px-2 py-0.5 text-xs font-medium ${s.ring} ${s.text}`}
-    >
-      <span aria-hidden="true" className={`h-1.5 w-1.5 rounded-full ${s.dot}`} />
-      {SEVERITY_LABEL[severity]}
-    </span>
-  );
-}
-
-/**
- * The distinction the README insists on and the old UI never showed: some
- * findings no scanner can catch, so a green automated report is not done.
- */
-export function DetectionTag({ detection }: { detection: 'scanner' | 'manual' }) {
-  if (detection === 'scanner') {
-    return (
-      <span className="text-xs text-faint" title="Measured automatically on every scan">
-        Measured by the scanner
-      </span>
-    );
-  }
-  return (
-    <span
-      className="inline-flex items-center gap-1.5 rounded-pill border border-phantom/30 bg-phantom/[0.06] px-2 py-0.5 text-xs font-medium text-phantom"
-      title="No automated tool can detect this — it was found by reading the code and testing by hand"
-    >
-      <span aria-hidden="true">◆</span>
-      Automated tools can&apos;t see this
-    </span>
-  );
-}
-
-export function Footnote({ children }: { children: React.ReactNode }) {
-  return (
-    <p className="mt-3 border-l-2 border-rule pl-3 text-xs leading-relaxed text-muted">
-      {children}
-    </p>
   );
 }
 

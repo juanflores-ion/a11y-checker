@@ -3,54 +3,22 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
-import { useRuns } from './RunContext';
-
 /**
  * Named after what someone came here to do, not after what the data is.
  *
- * "Measurements" and "Rules" described the scanner's output. These describe
- * the four reasons an internal user opens this tool: find out what's wrong,
- * read an existing measurement, take a new one, or prove a fix landed.
+ * Overview: where the sites stand and what is wrong. Runs: every figure of a
+ * measurement, by check and by page. Scan: take a measurement now — a single
+ * URL, a before/after, or a full run. How it works is last on purpose: it is
+ * the answer to "why should I believe these numbers", asked after seeing them.
  *
- * Issues was a fifth until the scanner learned to measure what only prose
- * could describe. Once every figure it quoted was also in Runs, it stopped
- * being a destination and became a section of Overview.
- *
- * "How it works" is last and deliberately so: it is not a task, it is the
- * answer to "why should I believe these numbers" — which people ask after
- * seeing them, not before.
+ * Measure and Compare used to be two entries. They shared one form, one engine
+ * and one result shape; what differed was a mode, so they are one page now.
  */
 export const PRIMARY = [
   { href: '/', label: 'Overview', hint: 'Where the sites stand, and what’s wrong' },
-  { href: '/runs', label: 'Runs', hint: 'Measurements already taken' },
-  { href: '/measure', label: 'Measure', hint: 'Scan a live site now' },
-  { href: '/compare', label: 'Compare', hint: 'Before vs after — check a fix landed' },
+  { href: '/runs', label: 'Runs', hint: 'Every figure of a measurement, by check and by page' },
+  { href: '/scan', label: 'Scan', hint: 'Measure a URL now, check a fix, or record a full run' },
   { href: '/how-it-works', label: 'How it works', hint: 'What the scanner does, in plain English' },
-];
-
-/**
- * The cuts through a run. Shown only while inside Runs.
- *
- * "Over time" needs THREE runs, not two, and the extra one is the point.
- *
- * Two scans are a before and an after — a step change with a cause somebody
- * can name. That is a delta, and the Summary tab's own against-target table
- * already states it, exactly and in both directions. Drawing the same two
- * numbers as a line adds nothing and takes something away: a line between two
- * points reads as a trajectory, invites the eye to extrapolate it, and there
- * is nothing in two measurements that licenses that. The third point is the
- * first one that can show a direction rather than a difference.
- *
- * Raised from 2 to 3 on 15 Aug 2026, when the run history was cut back to a
- * single pre-deploy baseline and the next scan was going to be the post-deploy
- * one. It stays raised: the reasoning is about what two points mean, not about
- * how many runs happened to be on file that day.
- */
-export const RUN_VIEWS = [
-  { href: '/runs', label: 'Summary', minRuns: 1 },
-  { href: '/runs/rules', label: 'By check', minRuns: 1 },
-  { href: '/runs/pages', label: 'By page', minRuns: 1 },
-  { href: '/runs/trend', label: 'Over time', minRuns: 3 },
 ];
 
 function isActive(pathname: string, href: string): boolean {
@@ -81,50 +49,6 @@ export function Nav() {
           </Link>
         );
       })}
-    </nav>
-  );
-}
-
-/**
- * Sub-navigation for the Runs section. Renders nothing anywhere else, so the
- * two nav levels never compete for attention on the same screen.
- */
-export function RunsNav() {
-  const pathname = usePathname() ?? '/';
-  const { runs } = useRuns();
-  if (!pathname.startsWith('/runs')) return null;
-
-  const views = RUN_VIEWS.filter((v) => runs.length >= v.minRuns);
-
-  return (
-    // Its own tinted band with a top rule, so the two nav levels read as
-    // parent and child rather than as one squashed strip of links.
-    <nav aria-label="Run views" className="border-t border-rule bg-card/60">
-      <ul className="mx-auto flex max-w-6xl flex-wrap items-center gap-1 px-5 sm:px-8">
-        {views.map((view) => {
-          // Summary is the section index, so it must match exactly or every
-          // child route would light it up alongside the real active tab.
-          const active =
-            view.href === '/runs/'
-              ? pathname === '/runs' || pathname === '/runs/'
-              : pathname.startsWith(view.href.replace(/\/$/, ''));
-          return (
-            <li key={view.href}>
-              <Link
-                href={view.href}
-                aria-current={active ? 'page' : undefined}
-                className={`-mb-px inline-block border-b-2 px-2.5 py-3 text-sm transition-colors ${
-                  active
-                    ? 'border-accent font-medium text-ink'
-                    : 'border-transparent text-muted hover:text-ink'
-                }`}
-              >
-                {view.label}
-              </Link>
-            </li>
-          );
-        })}
-      </ul>
     </nav>
   );
 }
