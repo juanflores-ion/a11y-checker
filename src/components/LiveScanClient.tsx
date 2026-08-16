@@ -348,7 +348,7 @@ export function LiveScanClient({ mode }: { mode: Mode }) {
           )}
           <div className="flex items-center gap-3">
             {busy ? <span className="text-xs text-muted">Loading each page in a real browser — usually under a minute.</span> : null}
-            <button type="button" onClick={run} disabled={busy} className="inline-flex items-center gap-2 rounded-card bg-accent px-4 py-2 text-sm font-medium text-white shadow-card hover:bg-accent/90 disabled:cursor-not-allowed disabled:opacity-55">
+            <button type="button" onClick={run} disabled={busy} className="inline-flex items-center gap-2 rounded-card bg-accent px-4 py-2 text-sm font-medium text-paper shadow-card hover:bg-accent/90 disabled:cursor-not-allowed disabled:opacity-55">
               {busy ? (<><Spinner />Scanning…</>) : mode === 'scan' ? 'Run scan' : 'Run comparison'}
             </button>
           </div>

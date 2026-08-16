@@ -125,7 +125,9 @@ export function TrendClient({ points, ruleIds }: { points: TrendPoint[]; ruleIds
                 contentStyle={{
                   border: `1px solid ${CHART.grid}`,
                   borderRadius: 10,
-                  boxShadow: '0 12px 32px -8px rgba(13,17,23,0.18)',
+                  background: '#111827',
+                  color: '#E7ECF3',
+                  boxShadow: '0 16px 48px -12px rgba(0,0,0,0.8)',
                   fontFamily: CHART.mono,
                   fontSize: 12,
                 }}
@@ -138,7 +140,7 @@ export function TrendClient({ points, ruleIds }: { points: TrendPoint[]; ruleIds
                 verticalAlign="bottom"
                 height={28}
                 formatter={(value: string) => (
-                  <span style={{ fontSize: 12, color: '#0D1117' }}>
+                  <span style={{ fontSize: 12, color: '#E7ECF3' }}>
                     {BRAND_LABEL[value as keyof typeof BRAND_LABEL] ?? value}
                   </span>
                 )}

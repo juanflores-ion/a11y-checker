@@ -28,15 +28,15 @@ export const BRAND_SHORT: Record<Brand, string> = {
  * hue that still reads as neutral. Mirrored in tailwind.config.ts.
  */
 export const BRAND_COLOR: Record<Brand, string> = {
-  insureon: '#1F3FD8',
-  techinsurance: '#0F766E',
+  insureon: '#7C96FF',
+  techinsurance: '#2DD4BF',
 };
 
 /** Shared chart chrome, matching the `rule`, `muted` and `phantom` tokens. */
 export const CHART = {
-  grid: '#E6E9EE',
-  axis: '#5A6472',
-  marker: '#6D28D9',
+  grid: '#1E2735',
+  axis: '#98A2B3',
+  marker: '#A78BFA',
   mono: '"JetBrains Mono", ui-monospace, SFMono-Regular, monospace',
 } as const;
 

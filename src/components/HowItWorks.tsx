@@ -158,7 +158,7 @@ function Fork({ className = '' }: { className?: string }) {
       <path
         d="M50 0v11M25 11h50M25 11v13M75 11v13"
         fill="none"
-        stroke="#D5DAE2"
+        stroke="#2F3A4B"
         strokeWidth="1.5"
         vectorEffect="non-scaling-stroke"
       />
@@ -221,7 +221,7 @@ function TwoWays() {
             <div className="mt-2 h-2 w-full rounded-pill bg-ink/10" />
             <div className="mt-1.5 h-2 w-5/6 rounded-pill bg-ink/10" />
             <div className="mt-4 flex items-center gap-2">
-              <div className="rounded-card bg-accent px-3 py-1.5 text-[10px] font-medium text-white">
+              <div className="rounded-card bg-accent px-3 py-1.5 text-[10px] font-medium text-paper">
                 Get quotes
               </div>
               <div className="h-7 w-7 rounded-pill bg-ink/10" />
@@ -288,15 +288,15 @@ function TwoDevices({ figures }: { figures: HowItWorksFigures | null }) {
 
           <div aria-hidden="true" className="hidden justify-center sm:flex">
             <svg width="34" height="80" viewBox="0 0 34 80" fill="none">
-              <path d="M1 40h12M13 40V14h20M13 40v26h20" stroke="#D5DAE2" strokeWidth="1.5" />
-              <path d="M29 10l5 4-5 4M29 62l5 4-5 4" stroke="#8B95A3" strokeWidth="1.5" fill="none" />
+              <path d="M1 40h12M13 40V14h20M13 40v26h20" stroke="#2F3A4B" strokeWidth="1.5" />
+              <path d="M29 10l5 4-5 4M29 62l5 4-5 4" stroke="#5F6B7A" strokeWidth="1.5" fill="none" />
             </svg>
           </div>
 
           <div className="space-y-3">
             <div className="rounded-card border border-accent/30 bg-accent/[0.04] p-3">
               <div className="flex flex-wrap items-center gap-2">
-                <span className="rounded-pill bg-accent px-2 py-0.5 text-[11px] font-medium text-white">
+                <span className="rounded-pill bg-accent px-2 py-0.5 text-[11px] font-medium text-paper">
                   Desktop
                 </span>
                 <span className="text-sm font-medium text-ink">What agents get</span>
@@ -308,7 +308,7 @@ function TwoDevices({ figures }: { figures: HowItWorksFigures | null }) {
             </div>
             <div className="rounded-card border border-rule bg-paper p-3">
               <div className="flex flex-wrap items-center gap-2">
-                <span className="rounded-pill bg-ink/70 px-2 py-0.5 text-[11px] font-medium text-white">
+                <span className="rounded-pill bg-ink/70 px-2 py-0.5 text-[11px] font-medium text-paper">
                   Mobile
                 </span>
                 <span className="text-sm font-medium text-ink">What most people get</span>
