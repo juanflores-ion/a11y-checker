@@ -77,7 +77,7 @@ export function IssuesTable({
         <THead>
           <tr>
             <Th className="w-8">#</Th>
-            <Th className="w-24">Severity</Th>
+            <Th className="w-28">Severity</Th>
             <Th>Issue</Th>
             <Th className="w-28">Sites</Th>
             <Th align="right" className="w-40">
@@ -150,7 +150,7 @@ function IssueRows({
       <tr className={open ? 'bg-paper/40' : undefined}>
         <Td className="font-mono text-xs text-faint tnum">{index ?? '·'}</Td>
         <Td>
-          <span className={`inline-flex items-center gap-1.5 text-[11.5px] font-medium ${muted ? 'text-faint' : SEVERITY_TEXT[issue.severity]}`}>
+          <span className={`inline-flex items-center gap-1.5 whitespace-nowrap text-[11.5px] font-medium ${muted ? 'text-faint' : SEVERITY_TEXT[issue.severity]}`}>
             <StatusDot tone={muted ? 'na' : SEVERITY_DOT[issue.severity]} />
             {muted ? 'Owned elsewhere' : SEVERITY_LABEL[issue.severity]}
           </span>
@@ -160,7 +160,7 @@ function IssueRows({
             type="button"
             onClick={onToggle}
             aria-expanded={open}
-            aria-controls={panelId}
+            aria-controls={open ? panelId : undefined}
             className={`text-left hover:underline underline-offset-2 ${open ? 'font-medium text-ink' : ''}`}
           >
             {issue.title}
@@ -179,7 +179,7 @@ function IssueRows({
           </span>
         </Td>
         <Td align="right" className="whitespace-nowrap font-mono text-xs tnum">
-          <HeadlineFigure issue={issue} brands={brands} metricsByBrand={metricsByBrand} />
+          <HeadlineFigure issue={issue} brands={brands} metricsByBrand={metricsByBrand} muted={muted} />
         </Td>
         <Td align="right" className="text-faint">
           <button type="button" onClick={onToggle} aria-label={open ? 'Collapse' : 'Expand'} tabIndex={-1}>
@@ -190,7 +190,7 @@ function IssueRows({
       {open ? (
         <tr id={panelId}>
           <Td colSpan={6} className="h-auto bg-paper/40 py-4 pl-[3.25rem] pr-6">
-            <IssueDetail issue={issue} brands={brands} metricsByBrand={metricsByBrand} />
+            <IssueDetail issue={issue} brands={brands} metricsByBrand={metricsByBrand} muted={muted} />
           </Td>
         </tr>
       ) : null}
@@ -203,10 +203,12 @@ function HeadlineFigure({
   issue,
   brands,
   metricsByBrand,
+  muted = false,
 }: {
   issue: Issue;
   brands: Brand[];
   metricsByBrand: Record<Brand, Record<string, ResolvedMetric[]>>;
+  muted?: boolean;
 }) {
   if (issue.metrics.length === 0) return <span className="text-faint">—</span>;
   return (
@@ -216,7 +218,7 @@ function HeadlineFigure({
         return (
           <Fragment key={b}>
             {i > 0 ? <span className="text-faint"> · </span> : null}
-            <Figure m={m} />
+            <Figure m={m} muted={muted} />
           </Fragment>
         );
       })}
@@ -224,20 +226,26 @@ function HeadlineFigure({
   );
 }
 
-function Figure({ m }: { m: ResolvedMetric | undefined }) {
+function Figure({ m, muted = false }: { m: ResolvedMetric | undefined; muted?: boolean }) {
   if (!m || m.notMeasured) return <span className="text-faint" title={NOT_MEASURED_TITLE}>—</span>;
   if (m.misleadingZero) return <span className="text-faint" title={NOT_MEASURABLE_TITLE}>n/m</span>;
-  return <span className={m.value > 0 ? 'font-medium text-critical' : 'text-ink'}>{m.value.toLocaleString()}</span>;
+  return (
+    <span className={m.value > 0 ? (muted ? 'text-muted' : 'font-medium text-critical') : 'text-ink'}>
+      {m.value.toLocaleString()}
+    </span>
+  );
 }
 
 function IssueDetail({
   issue,
   brands,
   metricsByBrand,
+  muted = false,
 }: {
   issue: Issue;
   brands: Brand[];
   metricsByBrand: Record<Brand, Record<string, ResolvedMetric[]>>;
+  muted?: boolean;
 }) {
   return (
     <div className="grid max-w-5xl gap-x-8 gap-y-4 text-[12.5px] leading-relaxed sm:grid-cols-2">
@@ -252,7 +260,7 @@ function IssueDetail({
                   {brands.map((b) => (
                     <td key={b} className="pr-3 text-right font-mono tnum">
                       <span className="mr-1 text-faint">{BRAND_LABEL[b]}</span>
-                      <Figure m={metricsByBrand[b]?.[issue.id]?.[i]} />
+                      <Figure m={metricsByBrand[b]?.[issue.id]?.[i]} muted={muted} />
                     </td>
                   ))}
                 </tr>

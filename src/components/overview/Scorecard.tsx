@@ -68,11 +68,7 @@ export function Scorecard({
                     );
                   })}
                   <Td align="right" className="font-mono text-xs text-faint tnum">
-                    {row.target === null
-                      ? '–'
-                      : row.higherIsBetter
-                        ? `${row.target}/${row.target}`
-                        : row.target}
+                    {row.target === null ? '–' : row.higherIsBetter ? 'all' : row.target}
                   </Td>
                 </tr>
               ))}
