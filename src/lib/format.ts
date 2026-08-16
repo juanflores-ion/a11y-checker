@@ -1,3 +1,5 @@
+import type { Impact } from './rules';
+
 /**
  * The one place that decides how a figure is coloured. Every table cell on the
  * dashboard goes through `cellTone`, so "red means a missed target" holds
@@ -14,7 +16,7 @@
  * <div>s the rule cannot fire on, and green there is the false clean this
  * tool exists to refuse.
  */
-export type CellTone = 'ok' | 'bad' | 'neutral' | 'na' | 'nm';
+export type CellTone = 'ok' | 'bad' | 'serious' | 'neutral' | 'na' | 'nm';
 
 export function cellTone(input: {
   value: number;
@@ -28,6 +30,19 @@ export function cellTone(input: {
   if (input.target === null) return 'neutral';
   const met = input.higherIsBetter ? input.value >= input.target : input.value <= input.target;
   return met ? 'ok' : 'bad';
+}
+
+/**
+ * Colour by impact, not by count — one critical rule outranks sixty moderate
+ * nodes. Zero is a pass on that rule. Moderate and minor stay ink: they are
+ * real, but red has to keep meaning "an agent hits a dead end".
+ */
+export function impactTone(impact: Impact, value: number, misleadingZero: boolean): CellTone {
+  if (misleadingZero) return 'nm';
+  if (value === 0) return 'ok';
+  if (impact === 'critical') return 'bad';
+  if (impact === 'serious') return 'serious';
+  return 'neutral';
 }
 
 /** `7/10` for coverage-style rows, a plain count otherwise. */

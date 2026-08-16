@@ -12,6 +12,17 @@ const nextConfig = {
   // gets them. Every page that isn't that route is still fully prerendered —
   // `loadRuns()` runs at build time, never per request — so the deployment
   // still serves static HTML for everything except the scan itself.
+  /**
+   * Old routes, kept alive as redirects. Measure and Compare merged into Scan
+   * (one form, one engine, a mode switch); Runs → Summary folded into Overview
+   * once the context bar gave every page a run picker and a compare picker.
+   * Temporary (307) on purpose: nothing external should cache these.
+   */
+  async redirects() {
+    return [
+      { source: '/runs/rules', destination: '/runs', permanent: false },
+    ];
+  },
   images: { unoptimized: true },
   // Don't let the build reach out to Google Fonts. The stylesheet is a plain
   // <link>, fetched by the browser, so builds stay offline-safe.

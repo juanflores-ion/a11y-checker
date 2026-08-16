@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { cellTone, formatCount } from './format';
+import { cellTone, formatCount, impactTone } from './format';
 
 test('cellTone: not measured beats everything', () => {
   assert.equal(cellTone({ value: 0, target: 0, notMeasured: true }), 'na');
@@ -31,4 +31,16 @@ test('formatCount: ratios only when higher is better and there is a target', () 
   assert.equal(formatCount(7, 10, true), '7/10');
   assert.equal(formatCount(7, 0, false), '7');
   assert.equal(formatCount(1234, null), '1,234');
+});
+
+test('impactTone: zero is ok, critical is bad, serious is serious, moderate/minor stay neutral', () => {
+  assert.equal(impactTone('critical', 0, false), 'ok');
+  assert.equal(impactTone('critical', 3, false), 'bad');
+  assert.equal(impactTone('serious', 3, false), 'serious');
+  assert.equal(impactTone('moderate', 300, false), 'neutral');
+  assert.equal(impactTone('minor', 1, false), 'neutral');
+});
+
+test('impactTone: a misleading zero is n/m even though the value is 0', () => {
+  assert.equal(impactTone('serious', 0, true), 'nm');
 });

@@ -86,6 +86,7 @@ export function GroupRow({ children, colSpan }: { children: React.ReactNode; col
 const FIGURE: Record<CellTone, string> = {
   ok: 'text-ink',
   bad: 'font-medium text-critical',
+  serious: 'font-medium text-serious',
   neutral: 'text-ink',
   na: 'text-faint',
   nm: 'text-faint',

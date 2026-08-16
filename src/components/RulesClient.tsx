@@ -1,13 +1,17 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
+import { Fragment, useState } from 'react';
 
 import { makeDelta, PROBE_CHECKS } from '@/lib/aggregate';
-import { BRAND_LABEL, BRANDS, PAGE_LABEL, type Brand } from '@/lib/model';
-import { IMPACT_TEXT, ruleMeta } from '@/lib/rules';
-import { DeltaChip, ImpactDot } from './Primitives';
+import { impactTone } from '@/lib/format';
+import { BRAND_LABEL, BRAND_SHORT, BRANDS, PAGE_LABEL, type Brand } from '@/lib/model';
+import { ruleMeta, type Impact } from '@/lib/rules';
+import { DeltaChip } from './Primitives';
 import { useRuns } from './RunContext';
+import { StatusDot, type DotTone } from './ui/StatusDot';
+import { GroupRow, NumCell, Table, TBody, Td, Th, THead } from './ui/Table';
+import { Tag } from './ui/Tag';
 
 export interface RulesRunData {
   totals: Record<string, Record<string, number>>;
@@ -15,9 +19,22 @@ export interface RulesRunData {
   pageKeys: Record<string, string[]>;
   probeTotals: Record<string, Record<string, number>>;
   probePerPage: Record<string, Record<string, Record<string, number>>>;
+  impacts: Record<string, Record<Impact, number>>;
   hasProbes: boolean;
 }
 
+const IMPACT_DOT: Record<Impact, DotTone> = {
+  critical: 'bad',
+  serious: 'serious',
+  moderate: 'moderate',
+  minor: 'na',
+};
+
+/**
+ * One table, two groups: the standard rulebook and the checks only this scanner
+ * performs. Colour is by impact, not by count. Expand a row for the page types
+ * that carry it.
+ */
 export function RulesClient({
   byRun,
   ruleIds,
@@ -27,434 +44,202 @@ export function RulesClient({
   ruleIds: string[];
   pageOrder: string[];
 }) {
-  const { currentKey, compareKey, current, compare } = useRuns();
+  const { currentKey, compareKey, current } = useRuns();
   const [open, setOpen] = useState<string | null>(null);
 
   const now = byRun[currentKey];
-  const before = compareKey ? byRun[compareKey] : null;
+  const before = compareKey ? byRun[compareKey] ?? null : null;
   if (!now) return <p className="text-sm text-muted">No scan data for this run.</p>;
 
-  const renderGroup = (ids: string[]) =>
-    ids.map((id) => {
-      const expanded = open === id;
-      return (
-        <RuleRows
-          key={id}
-          id={id}
-          expanded={expanded}
-          onToggle={() => setOpen(expanded ? null : id)}
-          now={now}
-          before={before}
-          pageOrder={pageOrder}
-        />
-      );
-    });
+  const cols = 2 + BRANDS.length;
+  const firing = BRANDS.map(
+    (b) =>
+      `${BRAND_SHORT[b]} ${now.impacts[b].critical} critical · ${now.impacts[b].serious} serious · ${now.impacts[b].moderate} moderate`
+  ).join(' — ');
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h2 className="font-display text-xl font-semibold tracking-tight">Rule breakdown</h2>
-        <p className="mt-1 max-w-2xl text-sm leading-relaxed text-muted">
-          Total failing nodes per rule for {current?.display}
-          {compare ? `, against ${compare.display}` : ' — no comparison selected'}. Colour is by
-          impact, not by count: one critical rule outranks sixty moderate nodes. Select a rule to
-          see which page types carry it.
+    <section aria-labelledby="by-check">
+      <div className="mb-2 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+        <h2 id="by-check" className="text-sm font-semibold text-ink">
+          Failing elements per check
+        </h2>
+        <p className="text-xs text-faint">
+          Colour is by impact, not by count · expand a row for the page types that carry it · drifts = small movement between scans is normal
         </p>
       </div>
 
-      <div className="overflow-x-auto">
-        <table className="w-full border-collapse text-sm">
-          <thead>
-            <tr className="border-b border-ink/25">
-              <th scope="col" className="w-1/2 py-2 pr-4 text-left text-eyebrow font-medium text-muted">
-                Rule
-              </th>
-              {BRANDS.map((b) => (
-                <th
-                  key={b}
-                  scope="col"
-                  colSpan={2}
-                  className="py-2 pr-4 text-right text-eyebrow font-medium text-muted"
-                >
-                  {BRAND_LABEL[b]}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>{renderGroup(ruleIds)}</tbody>
-        </table>
-      </div>
-
-      <div>
-        <h3 className="font-display text-base font-bold tracking-tight text-ink">
-          Checks only this scanner performs
-        </h3>
-        <p className="mt-1 max-w-measure text-sm leading-relaxed text-muted">
-          A rule engine can only test elements that declare what they are. These measure the
-          properties directly, which is how a menu button built from a{' '}
-          <code className="font-mono text-xs">&lt;div&gt;</code> gets counted at all — it is
-          invisible to every check in the table above.
-        </p>
-
-        {!now.hasProbes ? (
-          <p className="mt-3 rounded-card border border-dashed border-rule bg-card p-4 text-sm text-muted">
-            This run predates these checks, so there is nothing to show. Their absence here is
-            not a zero — take a new scan from Measure.
-          </p>
-        ) : (
-          <div className="mt-3 overflow-x-auto">
-            <table className="w-full border-collapse text-sm">
-              <thead>
-                <tr className="border-b border-ink/25">
-                  <th scope="col" className="w-1/2 py-2 pr-4 text-left text-eyebrow font-medium text-muted">
-                    Check
-                  </th>
-                  {BRANDS.map((b) => (
-                    <th
-                      key={b}
-                      scope="col"
-                      colSpan={2}
-                      className="py-2 pr-4 text-right text-eyebrow font-medium text-muted"
-                    >
-                      {BRAND_LABEL[b]}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {PROBE_CHECKS.map((check) => {
-                  const expanded = open === check.id;
-                  return (
-                    <ProbeRows
-                      key={check.id}
-                      check={check}
-                      expanded={expanded}
-                      onToggle={() => setOpen(expanded ? null : check.id)}
-                      now={now}
-                      before={before?.hasProbes ? before : null}
-                      pageOrder={pageOrder}
-                    />
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
-
-      <p className="max-w-measure text-xs leading-relaxed text-muted">
-        <span className="font-mono">†</span> A zero the scanner can&apos;t be trusted on.
-        Insureon&apos;s equivalent controls are <code className="font-mono">&lt;div&gt;</code>s
-        rather than buttons or links, so these rules structurally cannot fire on them — the
-        controls are still nameless. Read those zeros as &ldquo;not measurable&rdquo;, never as
-        &ldquo;fixed&rdquo;.
-      </p>
-    </div>
-  );
-}
-
-function ProbeRows({
-  check,
-  expanded,
-  onToggle,
-  now,
-  before,
-  pageOrder,
-}: {
-  check: (typeof PROBE_CHECKS)[number];
-  expanded: boolean;
-  onToggle: () => void;
-  now: RulesRunData;
-  before: RulesRunData | null;
-  pageOrder: string[];
-}) {
-  return (
-    <>
-      <tr className="border-b border-rule">
-        <th scope="row" className="py-2.5 pr-4 text-left align-top font-normal">
-          <button
-            type="button"
-            onClick={onToggle}
-            aria-expanded={expanded}
-            className="group flex items-start gap-2 text-left"
-          >
-            <span className="mt-[7px] font-mono text-xs text-faint">{expanded ? '−' : '+'}</span>
-            <span>
-              <span className="flex items-center gap-2">
-                <ImpactDot impact={check.impact} />
-                <span className="text-ink group-hover:underline underline-offset-2">
-                  {check.label}
-                </span>
-              </span>
-              <span className="mt-0.5 flex flex-wrap items-center gap-2">
-                <span className={`text-eyebrow font-medium ${IMPACT_TEXT[check.impact]}`}>
-                  {check.impact}
-                </span>
-                <span className="text-eyebrow font-medium text-phantom">our probe</span>
-              </span>
-            </span>
-          </button>
-        </th>
-
-        {BRANDS.map((brand) => {
-          const value = now.probeTotals[brand]?.[check.id] ?? 0;
-          const prev = before ? before.probeTotals[brand]?.[check.id] ?? 0 : null;
-          return (
-            <RuleCells
-              key={brand}
-              value={value}
-              previous={prev}
-              exact
-              impactClass={value > 0 ? IMPACT_TEXT[check.impact] : 'text-good'}
-              misleading={false}
-            />
-          );
-        })}
-      </tr>
-
-      {expanded ? (
-        <tr className="border-b border-rule bg-paper/60">
-          <td colSpan={5} className="px-0 py-4">
-            <div className="px-1">
-              <p className="mb-3 max-w-measure text-xs leading-relaxed text-muted">{check.note}</p>
-              <table className="w-full border-collapse text-xs">
-                <caption className="pb-2 text-left text-eyebrow font-medium text-muted">
-                  Count by page type
-                </caption>
-                <thead>
-                  <tr className="border-b border-rule">
-                    <th scope="col" className="py-1.5 pr-3 text-left text-eyebrow font-medium text-faint">
-                      Brand
-                    </th>
-                    {pageOrder.map((key) => (
-                      <th
-                        key={key}
-                        scope="col"
-                        className="py-1.5 pr-3 text-right text-eyebrow font-medium text-faint"
-                      >
-                        {key}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {BRANDS.map((brand) => (
-                    <tr key={brand} className="border-b border-rule/60 last:border-0">
-                      <th scope="row" className="py-1.5 pr-3 text-left font-normal text-ink">
-                        {BRAND_LABEL[brand]}
-                      </th>
-                      {pageOrder.map((key) => {
-                        const n = now.probePerPage[brand]?.[check.id]?.[key];
-                        return (
-                          <td key={key} className="py-1.5 pr-3 text-right font-mono tnum">
-                            {n ? (
-                              <Link
-                                href={`/runs/pages/${brand as Brand}/${key}`}
-                                className="text-ink underline decoration-rule underline-offset-2 hover:decoration-accent"
-                                title={`${PAGE_LABEL[key] ?? key} — open page detail`}
-                              >
-                                {n}
-                              </Link>
-                            ) : (
-                              <span className="text-faint">·</span>
-                            )}
-                          </td>
-                        );
-                      })}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </td>
-        </tr>
-      ) : null}
-    </>
-  );
-}
-
-function RuleRows({
-  id,
-  expanded,
-  onToggle,
-  now,
-  before,
-  pageOrder,
-}: {
-  id: string;
-  expanded: boolean;
-  onToggle: () => void;
-  now: RulesRunData;
-  before: RulesRunData | null;
-  pageOrder: string[];
-}) {
-  const meta = ruleMeta(id);
-
-  return (
-    <>
-      <tr className="border-b border-rule">
-        <th scope="row" className="py-2.5 pr-4 text-left font-normal align-top">
-          <button
-            type="button"
-            onClick={onToggle}
-            aria-expanded={expanded}
-            className="group flex items-start gap-2 text-left"
-          >
-            <span className="mt-[7px] font-mono text-xs text-faint">{expanded ? '−' : '+'}</span>
-            <span>
-              <span className="flex items-center gap-2">
-                <ImpactDot impact={meta.impact} />
-                <span className="text-ink group-hover:underline underline-offset-2">
-                  {meta.label}
-                </span>
-              </span>
-              <span className="mt-0.5 flex items-center gap-2">
-                <code className="font-mono text-xs text-faint">{id}</code>
-                <span className={`text-eyebrow font-medium ${IMPACT_TEXT[meta.impact]}`}>
-                  {meta.impact}
-                </span>
-                {!meta.exact ? (
-                  <span className="text-eyebrow font-medium text-faint" title="Small run-to-run drift on this rule is content churn, not a regression">
-                    drifts
-                  </span>
-                ) : null}
-              </span>
-            </span>
-          </button>
-        </th>
-
-        {BRANDS.map((brand) => {
-          const value = now.totals[brand]?.[id] ?? 0;
-          const prev = before ? before.totals[brand]?.[id] ?? 0 : null;
-          const misleading = (meta.misleadingZeroOn ?? []).includes(brand) && value === 0;
-          return (
-            <RuleCells
-              key={brand}
-              value={value}
-              previous={prev}
-              exact={meta.exact}
-              impactClass={value > 0 ? IMPACT_TEXT[meta.impact] : 'text-good'}
-              misleading={misleading}
-            />
-          );
-        })}
-      </tr>
-
-      {expanded ? (
-        <tr className="border-b border-rule bg-paper/60">
-          <td colSpan={5} className="px-0 py-4">
-            <PerPageTable id={id} now={now} pageOrder={pageOrder} />
-          </td>
-        </tr>
-      ) : null}
-    </>
-  );
-}
-
-function RuleCells({
-  value,
-  previous,
-  exact,
-  impactClass,
-  misleading,
-}: {
-  value: number;
-  previous: number | null;
-  exact: boolean;
-  impactClass: string;
-  misleading: boolean;
-}) {
-  return (
-    <>
-      <td
-        className={`py-2.5 pr-1 text-right align-top font-mono font-semibold tnum ${
-          misleading ? 'text-muted' : impactClass
-        }`}
-        title={
-          misleading
-            ? "Zero here means the rule can't measure this control, not that it's fixed"
-            : undefined
-        }
-      >
-        {value.toLocaleString()}
-        {misleading ? <span className="text-faint"> †</span> : null}
-      </td>
-      <td className="py-2.5 pr-4 text-right align-top">
-        <DeltaChip delta={makeDelta(value, previous, exact)} />
-      </td>
-    </>
-  );
-}
-
-function PerPageTable({
-  id,
-  now,
-  pageOrder,
-}: {
-  id: string;
-  now: RulesRunData;
-  pageOrder: string[];
-}) {
-  return (
-    <div className="overflow-x-auto px-1">
-      <table className="w-full border-collapse text-xs">
-        <caption className="pb-2 text-left text-eyebrow font-medium text-muted">
-          Nodes by page type
-        </caption>
-        <thead>
-          <tr className="border-b border-rule">
-            <th scope="col" className="py-1.5 pr-3 text-left text-eyebrow font-medium text-faint">
-              Brand
-            </th>
-            {pageOrder.map((key) => (
-              <th
-                key={key}
-                scope="col"
-                className="py-1.5 pr-3 text-right text-eyebrow font-medium text-faint"
-              >
-                {key}
-              </th>
+      <Table>
+        <THead>
+          <tr>
+            <Th className="w-[52%]">Check</Th>
+            {BRANDS.map((b) => (
+              <Th key={b} align="right">
+                {BRAND_LABEL[b]}
+              </Th>
             ))}
+            <Th className="w-8">
+              <span className="sr-only">Detail</span>
+            </Th>
           </tr>
-        </thead>
-        <tbody>
-          {BRANDS.map((brand) => (
-            <tr key={brand} className="border-b border-rule/60 last:border-0">
-              <th scope="row" className="py-1.5 pr-3 text-left font-normal text-ink">
-                {BRAND_LABEL[brand]}
-              </th>
-              {pageOrder.map((key) => {
-                const scanned = now.pageKeys[brand]?.includes(key);
-                const n = now.perPage[brand]?.[id]?.[key];
-                return (
-                  <td key={key} className="py-1.5 pr-3 text-right font-mono tnum">
-                    {!scanned ? (
-                      <span className="text-faint" title="Page not present in this run">
-                        n/a
-                      </span>
-                    ) : n ? (
-                      <Link
-                        href={`/runs/pages/${brand as Brand}/${key}`}
-                        className="text-ink underline decoration-rule underline-offset-2 hover:decoration-accent"
-                        title={`${PAGE_LABEL[key] ?? key} — open page detail`}
-                      >
-                        {n}
-                      </Link>
-                    ) : (
-                      <span className="text-faint">·</span>
-                    )}
-                  </td>
-                );
-              })}
+        </THead>
+        <TBody>
+          <GroupRow colSpan={cols}>
+            Standard rulebook — axe-core {current?.axeVersion ?? 'version not recorded'} · rules firing: {firing}
+          </GroupRow>
+          {ruleIds.map((id) => {
+            const meta = ruleMeta(id);
+            return (
+              <Fragment key={id}>
+                <tr>
+                  <Td>
+                    <button type="button" onClick={() => setOpen(open === id ? null : id)} aria-expanded={open === id} className="text-left hover:underline underline-offset-2">
+                      <StatusDot tone={IMPACT_DOT[meta.impact]} className="mr-2" />
+                      {meta.label}
+                    </button>
+                    <span className="ml-2 font-mono text-[11px] text-faint">{id}</span>
+                    {!meta.exact ? <Tag className="ml-1.5" title="Small run-to-run drift on this rule is content churn, not a regression">drifts</Tag> : null}
+                  </Td>
+                  {BRANDS.map((brand) => {
+                    const value = now.totals[brand]?.[id] ?? 0;
+                    const prev = before ? before.totals[brand]?.[id] ?? 0 : null;
+                    const misleading = (meta.misleadingZeroOn ?? []).includes(brand) && value === 0;
+                    return (
+                      <NumCell key={brand} tone={impactTone(meta.impact, value, misleading)} text={value.toLocaleString()}>
+                        {before ? <DeltaChip delta={makeDelta(value, prev, meta.exact, id)} className="ml-2" /> : null}
+                      </NumCell>
+                    );
+                  })}
+                  <Chevron open={open === id} onClick={() => setOpen(open === id ? null : id)} />
+                </tr>
+                {open === id ? (
+                  <PerPageRow
+                    cols={cols}
+                    perPage={(brand) => now.perPage[brand]?.[id] ?? {}}
+                    scanned={(brand, key) => now.pageKeys[brand]?.includes(key) ?? false}
+                    pageOrder={pageOrder}
+                    note="A dot means the rule did not fire on that page. Counts aggregate by rule and page type only — class-name hashes change on every deploy, so individual elements aren't tracked between runs."
+                  />
+                ) : null}
+              </Fragment>
+            );
+          })}
+
+          <GroupRow colSpan={cols}>
+            Our checks — properties a rule engine can’t see, measured directly · probe {current?.probeVersion ?? 'version not recorded'}
+          </GroupRow>
+          {!now.hasProbes ? (
+            <tr>
+              <Td colSpan={cols} className="text-muted">
+                This run predates these checks. Their absence is not a zero — take a new scan.
+              </Td>
             </tr>
-          ))}
-        </tbody>
-      </table>
-      <p className="mt-2 px-1 text-xs text-faint">
-        A dot means the rule did not fire on that page. Node counts are aggregated by rule and page
-        type only — class-name hashes change on every deploy, so individual elements can&apos;t be
-        tracked between runs.
-      </p>
-    </div>
+          ) : (
+            PROBE_CHECKS.map((check) => (
+              <Fragment key={check.id}>
+                <tr>
+                  <Td>
+                    <button type="button" onClick={() => setOpen(open === check.id ? null : check.id)} aria-expanded={open === check.id} className="text-left hover:underline underline-offset-2">
+                      <StatusDot tone={IMPACT_DOT[check.impact]} className="mr-2" />
+                      {check.label}
+                    </button>
+                    <Tag tone="phantom" className="ml-2">our probe</Tag>
+                    {check.id === 'clickable-no-role' ? <Tag className="ml-1.5" title={check.note}>not a target</Tag> : null}
+                  </Td>
+                  {BRANDS.map((brand) => {
+                    const value = now.probeTotals[brand]?.[check.id] ?? 0;
+                    const prev = before?.hasProbes ? before.probeTotals[brand]?.[check.id] ?? 0 : null;
+                    return (
+                      <NumCell key={brand} tone={impactTone(check.impact, value, false)} text={value.toLocaleString()}>
+                        {before?.hasProbes ? <DeltaChip delta={makeDelta(value, prev, true, check.id)} className="ml-2" /> : null}
+                      </NumCell>
+                    );
+                  })}
+                  <Chevron open={open === check.id} onClick={() => setOpen(open === check.id ? null : check.id)} />
+                </tr>
+                {open === check.id ? (
+                  <PerPageRow
+                    cols={cols}
+                    perPage={(brand) => now.probePerPage[brand]?.[check.id] ?? {}}
+                    scanned={(brand, key) => now.pageKeys[brand]?.includes(key) ?? false}
+                    pageOrder={pageOrder}
+                    note={check.note}
+                  />
+                ) : null}
+              </Fragment>
+            ))
+          )}
+        </TBody>
+      </Table>
+    </section>
+  );
+}
+
+function Chevron({ open, onClick }: { open: boolean; onClick: () => void }) {
+  return (
+    <Td align="right" className="text-faint">
+      <button type="button" onClick={onClick} aria-label={open ? 'Collapse' : 'Expand'} tabIndex={-1}>
+        <span aria-hidden="true" className={`inline-block transition-transform ${open ? 'rotate-90' : ''}`}>›</span>
+      </button>
+    </Td>
+  );
+}
+
+/** The per-page breakdown under an expanded row: brands down, page types across, cells link to the page detail. */
+function PerPageRow({
+  cols,
+  perPage,
+  scanned,
+  pageOrder,
+  note,
+}: {
+  cols: number;
+  perPage: (brand: Brand) => Record<string, number>;
+  scanned: (brand: Brand, key: string) => boolean;
+  pageOrder: string[];
+  note: string;
+}) {
+  return (
+    <tr>
+      <Td colSpan={cols} className="h-auto bg-paper/40 py-3 pl-9 pr-4">
+        <div className="overflow-x-auto rounded-card border border-rule bg-card">
+          <table className="w-full border-collapse text-[11.5px]">
+            <thead>
+              <tr>
+                <th scope="col" className="border-b border-rule px-2.5 py-1.5 text-left font-medium text-faint" />
+                {pageOrder.map((key) => (
+                  <th key={key} scope="col" className="border-b border-rule px-2.5 py-1.5 text-right font-medium text-faint" title={PAGE_LABEL[key] ?? key}>
+                    {key}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {BRANDS.map((brand) => (
+                <tr key={brand}>
+                  <th scope="row" className="px-2.5 py-1.5 text-left font-normal text-ink">{BRAND_LABEL[brand]}</th>
+                  {pageOrder.map((key) => {
+                    const n = perPage(brand)[key];
+                    return (
+                      <td key={key} className="px-2.5 py-1.5 text-right font-mono tnum">
+                        {!scanned(brand, key) ? (
+                          <span className="text-faint" title="Page not present in this run">n/a</span>
+                        ) : n ? (
+                          <Link href={`/runs/pages/${brand}/${key}`} className="text-ink underline decoration-rule underline-offset-2 hover:decoration-accent" title={`${PAGE_LABEL[key] ?? key} — open page detail`}>
+                            {n}
+                          </Link>
+                        ) : (
+                          <span className="text-faint">·</span>
+                        )}
+                      </td>
+                    );
+                  })}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <p className="mt-1.5 text-[11.5px] text-faint">{note}</p>
+      </Td>
+    </tr>
   );
 }

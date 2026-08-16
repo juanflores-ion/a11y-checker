@@ -1,59 +1,45 @@
-import { OverviewClient, type BrandSnapshot } from '@/components/OverviewClient';
+import { RulesClient, type RulesRunData } from '@/components/RulesClient';
+import { RunsHeader } from '@/components/RunsHeader';
 import {
-  inScopeNodes,
-  mainCoverage,
-  namelessCounts,
-  passRatio,
+  allRuleIds,
+  hasProbeData,
+  perPageProbeTotals,
+  perPageRuleTotals,
+  probeTotals,
   rulesFailingByImpact,
   ruleTotals,
-  scorecard,
-  totalNodes,
-  worstPhantom,
-  failedPages,
 } from '@/lib/aggregate';
-import { navReach } from '@/lib/aggregate';
-import { BRANDS, loadRuns, runAtViewport, viewKey } from '@/lib/loadRuns';
+import { BRANDS, loadRuns, pageKeysUnion, runAtViewport, viewKey } from '@/lib/loadRuns';
 
-export default function OverviewPage() {
+/**
+ * Runs → By check. Keyed by run and viewport — the same run holds two
+ * different sets of numbers, because the sites serve different markup per
+ * device.
+ */
+export default function RunsPage() {
   const runs = loadRuns();
 
-  /**
-   * Keyed by run *and* viewport. These sites serve different markup per device,
-   * so one run holds two independent sets of numbers — not one set viewed two
-   * ways — and the client has to be able to ask for a specific one.
-   */
-  const snapshots: Record<string, Record<string, BrandSnapshot>> = {};
+  const byRun: Record<string, RulesRunData> = {};
   for (const run of runs) {
     for (const viewport of run.viewports) {
       const view = runAtViewport(run, viewport);
       if (!view) continue;
-      const key = viewKey(run.id, viewport);
-      snapshots[key] = {};
-      for (const brand of BRANDS) {
-        const { phantom, pagesWithMenu } = worstPhantom(view, brand);
-        snapshots[key][brand] = {
-          totalNodes: totalNodes(view, brand),
-          inScopeNodes: inScopeNodes(view, brand),
-          impacts: rulesFailingByImpact(view, brand),
-          ruleTotals: ruleTotals(view, brand),
-          phantom,
-          pagesWithMenu,
-          scorecard: scorecard(view, brand),
-          passRatio: passRatio(view, brand),
-          mainCoverage: mainCoverage(view, brand),
-          nameless: namelessCounts(view, brand),
-          navReach: navReach(view, brand),
-          failed: failedPages(view, brand).map(([key, page]) => ({
-            key,
-            url: page.url,
-            error: page.error,
-          })),
-        };
-      }
+      byRun[viewKey(run.id, viewport)] = {
+        totals: Object.fromEntries(BRANDS.map((b) => [b, ruleTotals(view, b)])),
+        perPage: Object.fromEntries(BRANDS.map((b) => [b, perPageRuleTotals(view, b)])),
+        pageKeys: Object.fromEntries(BRANDS.map((b) => [b, Object.keys(view[b] ?? {})])),
+        probeTotals: Object.fromEntries(BRANDS.map((b) => [b, probeTotals(view, b)])),
+        probePerPage: Object.fromEntries(BRANDS.map((b) => [b, perPageProbeTotals(view, b)])),
+        impacts: Object.fromEntries(BRANDS.map((b) => [b, rulesFailingByImpact(view, b)])),
+        hasProbes: BRANDS.some((b) => hasProbeData(view, b)),
+      };
     }
   }
 
-  const runOrder = runs.map((r) => r.id);
-
-  return <OverviewClient snapshots={snapshots} runOrder={runOrder} />;
+  return (
+    <>
+      <RunsHeader />
+      <RulesClient byRun={byRun} ruleIds={allRuleIds(runs, [...BRANDS])} pageOrder={pageKeysUnion(runs)} />
+    </>
+  );
 }
