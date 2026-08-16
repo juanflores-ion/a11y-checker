@@ -8,14 +8,13 @@ every control needs a role and an accessible name. A button with no name is a
 dead end, and the journey stops there. The same barriers hit anyone using a
 screen reader or navigating by keyboard.
 
-## Five sections
+## Four sections
 
 | Route | Who it's for | What it does |
 |---|---|---|
-| `/` — **Overview** | Product · SEO · QA | Where both sites stand, then every known problem in plain English: what breaks, what it costs, the technical detail, and what would fix it. |
-| `/runs/` — **Runs** | QA · Engineering | Scans already taken: Summary, By check, By page, and Over time once there are two runs. The run picker lives here and nowhere else. |
-| `/measure/` — **Measure** | QA · Engineering | Scan any URL on demand — production, staging, a preview build. |
-| `/compare/` — **Compare** | QA | Current vs fixed, scanned in one session and diffed check by check. The "did my fix land" workflow. |
+| `/` — **Overview** | Product · SEO · QA | Where both sites stand against target, then every known problem in plain English: what breaks, what it costs, the technical detail, and what would fix it. The context bar picks the run and device profile. |
+| `/runs/` — **Runs** | QA · Engineering | Every figure of a measurement: By check (rules and probes, with per-page breakdown), By page (a matrix, then the detail with sample markup), and Over time once there are three runs. |
+| `/scan/` — **Scan** | QA · Engineering | Measure a URL now, diff a fix before and after, or record a full run — three modes of one page. Old `/measure` and `/compare` URLs redirect here. |
 | `/how-it-works/` — **How it works** | Anyone | What the scanner does, in plain English: what an agent sees, how a page is scanned, what counts as a defect, what every figure is stamped with, and what the tool cannot tell you. |
 
 Issues had a route of its own until the scanner learned to measure what only
@@ -33,14 +32,14 @@ check, it stopped being a destination and became a section of Overview.
 
 The viewer and the scanner share no code and no dependencies. A full scheduled
 scan takes 3–5 minutes, so it could never live behind a request — that is why
-`scan.mjs` stays a CLI, and why **Measure → Run full scan** drives the browser
+`scan.mjs` stays a CLI, and why **Scan → Full run** drives the browser
 through the target list three URLs at a time instead of asking for all twenty
 at once.
 
 A *single-page* scan is fast enough to serve on demand, and there are two ways
 to get one: `/api/scan` on the host, and `scanner/server.mjs` on your own
-machine. Both exist on purpose. The hosted route makes Measure and Compare work
-for anyone who opens the dashboard; the local server exists because that route
+machine. Both exist on purpose. The hosted route makes Scan work for anyone who
+opens the dashboard; the local server exists because that route
 is deliberately capped at three URLs and an allowlist, which is right for a
 public endpoint and wrong for scanning a staging box you own.
 
@@ -64,8 +63,8 @@ npm start           # serves that build, scan server alongside, same one-command
 `npm run build` is a Node build, not a folder of files: every page is
 prerendered at build time, but `/api/scan` is a real route and needs a host that
 can run it. Static export was dropped deliberately — the reasoning is at the top
-of `next.config.js`, and the short version is that it cost Measure and Compare
-their entire audience, since a static build has no server and a scan could only
+of `next.config.js`, and the short version is that it cost Scan its entire
+audience, since a static build has no server and a scan could only
 run on a machine where someone had cloned the repo.
 
 ### Why it's two processes and not one
@@ -75,12 +74,12 @@ local server exists because that route is capped at three URLs per request and
 restricted to an allowlist of our own domains. Both caps are correct for an
 endpoint that fetches a URL it is handed on a public host, and both are in the
 way when you are scanning a staging box from your own machine. Point the Scanner
-control on Measure or Compare at `localhost:4790` and neither applies.
+control on Scan at `localhost:4790` and neither applies.
 
 What it does *not* need to be is a separate thing you remember to start.
 `scripts/dev.mjs` runs both, prefixes their output, and shuts both down
 together; if the scanner's dependencies are missing the viewer still starts and
-Measure/Compare explain what to install. `npm run dev:viewer` and
+Scan explains what to install. `npm run dev:viewer` and
 `npm run scan-server` still run them individually when you want that.
 
 All the logic is in `src/lib/`. Components are deliberately dumb.
@@ -90,7 +89,7 @@ All the logic is in `src/lib/`. Components are deliberately dumb.
 - `aggregate.ts` — totals, per-page rollups, deltas, the target scorecard, and `resolveMetric`.
 - `rules.ts` — rule id → label, impact, in-scope flag.
 - `issues.ts` — **the issue catalogue.** Prose, severity, and what would fix each one.
-- `compare.ts` — current/fixed diffing for the Compare page.
+- `compare.ts` — current/fixed diffing for Scan's Before / after mode.
 - `sites.ts` — the tracked sites: production origin, host, staging origin when there is one.
 - `fixtures/` — run files the tests assert against. Never read by the app.
 
@@ -118,8 +117,8 @@ shipped" field, no progress bar and no open-blocker count. That existed briefly
 and was removed: it had to be hand-maintained, went stale immediately, and a
 green bar telling Product something was fixed when it wasn't is worse than
 showing nothing. Whether a fix landed is answered by *measuring* — scan staging
-from **Measure**, or diff it against production from **Compare**. Never by an
-assertion stored in a file.
+from **Scan**, or diff it against production with **Scan → Before / after**.
+Never by an assertion stored in a file.
 
 So the catalogue describes what production has today. `inScope: false` marks
 the two findings (contrast, colour-only links) that are brand-palette decisions
@@ -140,7 +139,7 @@ every page and spins up a function only for `/api/scan`.
 
 ### Live scans work for everyone
 
-`/api/scan` runs the scan on the host, so Measure and Compare work for whoever
+`/api/scan` runs the scan on the host, so Scan works for whoever
 opens the dashboard. No install, nothing to start. It calls the same
 `scanPage()` the CLI calls, so the numbers are directly comparable — verified
 by scanning the same page both ways and diffing: identical rules, identical
@@ -165,14 +164,14 @@ Two limits, both deliberate:
   to scan anything at all. Matching is on dot boundaries, so `insureon.com`
   allows `staging.insureon.com` and never `insureon.com.evil.test`.
 
-Point the Scanner control on Measure or Compare at a local address to bypass
+Point the Scanner control on Scan at a local address to bypass
 both limits.
 
 ### Recording a full run without installing anything
 
 A 20-page scan takes ~100 seconds and has to write a file, so it cannot run as
 one request against a host that allows far less and has a read-only filesystem.
-Both objections dissolve if the browser drives it: **Measure → Run full scan**
+Both objections dissolve if the browser drives it: **Scan → Full run**
 walks the tracked pages three at a time, each request comfortably inside the
 limit, assembles the run file client-side and hands it back as a download.
 
@@ -442,7 +441,7 @@ counts stop being comparable and every historical trend line is void.
 
 For a URL that isn't one of the fixed 20 — a staging domain, a redesign
 preview, a one-off page a stakeholder is asking about — use the live scan
-server and the dashboard's **Measure** tab instead of the CLI.
+server and the dashboard's **Scan** page instead of the CLI.
 
 `npm run dev` already starts it. To run it on its own:
 
@@ -450,17 +449,18 @@ server and the dashboard's **Measure** tab instead of the CLI.
 npm run scan-server             # http://127.0.0.1:4790
 ```
 
-Then open the viewer and go to **Measure**. Paste in up to 10 URLs, one per line, and run it. The page shows
+Then open the viewer and go to **Scan**. Paste in up to 10 URLs, one per line, and run it. The page shows
 whether it can reach the server, and gives you the exact command above if not.
 
-**Compare** is the one QA wants once fixes reach staging: current on the left,
-fixed on the right, both scanned in the same session and diffed check by check.
+**Scan → Before / after** is the one QA wants once fixes reach staging: current
+on the left, fixed on the right, both scanned in the same session and diffed
+check by check.
 
 This calls the identical `scanPage()` the scheduled scan uses, so if you point
 it at one of the ten tracked URLs, the numbers should land in the same place
 that day's scheduled run would have put them. What it does *not* do is feed
 into history: nothing from a live scan is written to `data/runs/`, so
-Runs, Overview and Issues never see it. Download the JSON from the
+Runs and Overview never see it. Download the JSON from the
 results if you want a record — folding it into the tracked history is a
 manual step, on purpose, because an arbitrary URL doesn't have an obvious
 `pageKey` in the fixed home/policy/major/… taxonomy the rest of this dashboard
@@ -490,10 +490,11 @@ second point, and it rendered on screen captioned "Measured on production".
 maths are constructed inside `aggregate.test.ts` instead — test data belongs in
 the test, not in the directory the UI reads.
 
-**The trend view needs two runs.** With a single scan on file, "Over time" is
-hidden from the sub-nav and the run picker doesn't render at all: there is
-nothing to switch between and nothing to compare against. Both appear once a
-second scan lands.
+**The trend view needs three runs.** Two scans are a before and an after, and
+the scorecard already states that with delta chips; a line through two points
+reads as a trajectory it cannot support. With fewer than three scans on file,
+"Over time" stays visible in Runs but disabled. It enables once a third scan
+lands.
 
 **Insureon's zeros on `button-name` and `link-name` are misleading.** Its menu
 back control is a `<div>`, not a `<button>`, so the axe rule structurally
