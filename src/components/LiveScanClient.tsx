@@ -1,13 +1,16 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { Fragment, useEffect, useRef, useState } from 'react';
 
+import { countedGhostControls } from '@/lib/aggregate';
 import { diffPages, pairUrls, type PageDiff } from '@/lib/compare';
 import {
   DEFAULT_VIEWPORT,
+  VERDICT_LABEL,
   VIEWPORT_LABEL,
   VIEWPORT_NAMES,
   isFailedPage,
+  verdictForPage,
   type PageResult,
   type ViewportName,
 } from '@/lib/model';
@@ -15,6 +18,8 @@ import { SITES, productionUrls } from '@/lib/sites';
 import { CompareCard } from './CompareCard';
 import { Eyebrow } from './Primitives';
 import { ScanResultCard } from './ScanResultCard';
+import { StatusDot } from './ui/StatusDot';
+import { NumCell, Table, TBody, Td, Th, THead } from './ui/Table';
 
 /**
  * Empty string means "this site's own /api/scan" — the hosted scanner, which
@@ -42,27 +47,6 @@ type Health = 'unknown' | 'checking' | 'online' | 'offline';
 type Mode = 'scan' | 'compare';
 
 const SCAN_EXAMPLES = productionUrls();
-
-/** What the scan actually measures — used as the empty state, because an
- * empty screen should explain the value, not sit blank. */
-const CHECKS = [
-  {
-    title: 'Controls an agent can name',
-    body: 'Buttons and links with no accessible name are dead ends — an agent can see them but can’t say what they do.',
-  },
-  {
-    title: 'Keyboard reachability',
-    body: 'Anything focusable but unclickable, or clickable but unreachable, breaks both keyboard users and automation.',
-  },
-  {
-    title: 'Page structure',
-    body: 'Landmarks and heading order are how an agent finds the main content instead of re-reading the nav on every page.',
-  },
-  {
-    title: 'Hidden but exposed',
-    body: 'Closed menus that stay in the accessibility tree flood the tab order with controls that go nowhere.',
-  },
-];
 
 function trimSlash(url: string) {
   return url.replace(/\/+$/, '');
@@ -286,47 +270,50 @@ export function LiveScanClient({ mode }: { mode: Mode }) {
   }
 
   const run = mode === 'scan' ? runScan : runCompare;
-  const hasOutput = (results && results.length > 0) || (diffs && diffs.length > 0);
 
   return (
-    <div className="space-y-10">
-      <section className="max-w-measure">
-        <h1 className="font-display text-[2rem] font-bold leading-[1.06] tracking-tight text-ink sm:text-hero">
-          {mode === 'scan'
-            ? 'Measure a site right now.'
-            : 'Check the fix actually landed.'}
-        </h1>
-        <p className="mt-4 text-base leading-relaxed text-muted">
+    <div className="space-y-6">
+      <section className="rounded-lg border border-rule bg-card shadow-card">
+        <div className="grid gap-4 p-4 sm:grid-cols-[1fr_16rem]">
           {mode === 'scan' ? (
-            <>
-              Point the scanner at any URL — production, staging, a preview build — and get the
-              same numbers the scheduled runs produce. Nothing is saved to the run history, so
-              this is safe to use as much as you like.
-            </>
+            <div>
+              <label htmlFor="scan-urls" className="mb-1 block text-xs text-muted">
+                <span className="font-medium text-ink">URLs</span> · one per line, up to {endpoints(serverUrl).maxUrls}
+              </label>
+              <textarea
+                id="scan-urls"
+                rows={3}
+                value={urlsText}
+                onChange={(e) => setUrlsText(e.target.value)}
+                placeholder={`https://www.example.com/\nhttps://staging.example.com/pricing`}
+                className="w-full resize-y rounded-card border border-rule bg-paper px-3 py-2 font-mono text-xs leading-relaxed text-ink"
+              />
+            </div>
           ) : (
-            <>
-              Put the current site on one side and the fixed one on the other. Both are scanned
-              in the same session with identical settings, then diffed check by check, so you
-              can see exactly what resolved, what didn&apos;t move, and whether anything new
-              appeared.
-            </>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div>
+                <label htmlFor="compare-before" className="mb-1 block text-xs text-muted">
+                  <span className="font-medium text-ink">Before</span> · live production
+                </label>
+                <textarea id="compare-before" rows={3} value={beforeText} onChange={(e) => setBeforeText(e.target.value)} placeholder="https://www.example.com/" className="w-full resize-y rounded-card border border-rule bg-paper px-3 py-2 font-mono text-xs leading-relaxed text-ink" />
+              </div>
+              <div>
+                <label htmlFor="compare-after" className="mb-1 block text-xs text-muted">
+                  <span className="font-medium text-ink">After</span> · staging or a preview build
+                </label>
+                <textarea id="compare-after" rows={3} value={afterText} onChange={(e) => setAfterText(e.target.value)} placeholder="https://staging.example.com/" className="w-full resize-y rounded-card border border-rule bg-paper px-3 py-2 font-mono text-xs leading-relaxed text-ink" />
+              </div>
+            </div>
           )}
-        </p>
-      </section>
 
-      <section className="overflow-hidden rounded-lg border border-rule bg-card shadow-raised">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-rule px-5 py-3">
-          <p className="text-eyebrow font-medium text-muted">
-            {mode === 'scan' ? 'URLs to measure' : 'Two versions of the same pages'}
-          </p>
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-            <label className="flex items-center gap-2">
-              <span className="text-eyebrow font-medium text-muted">Device</span>
+          <div className="space-y-2.5">
+            <label className="block text-xs text-muted">
+              Device
               <select
                 value={viewport}
                 onChange={(e) => setViewport(e.target.value as ViewportName)}
                 disabled={busy}
-                className="rounded-card border border-rule bg-card px-2 py-1.5 font-mono text-sm text-ink hover:border-accent disabled:opacity-60"
+                className="mt-1 w-full appearance-none rounded-[7px] border border-rule bg-card py-1.5 pl-2 pr-6 font-mono text-xs text-ink hover:border-accent disabled:opacity-60"
               >
                 {VIEWPORT_NAMES.map((v) => (
                   <option key={v} value={v}>
@@ -336,129 +323,41 @@ export function LiveScanClient({ mode }: { mode: Mode }) {
                 ))}
               </select>
             </label>
-            <ServerStatus
-              serverUrl={serverUrl}
-              health={health}
-              onServerUrlChange={saveServerUrl}
-              onRecheck={() => checkHealth(serverUrl)}
-            />
+            <div className="text-xs text-muted">
+              Scanner
+              <div className="mt-1">
+                <ServerStatus serverUrl={serverUrl} health={health} onServerUrlChange={saveServerUrl} onRecheck={() => checkHealth(serverUrl)} />
+              </div>
+            </div>
           </div>
         </div>
 
-        <div className="p-5">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-rule px-4 py-3">
           {mode === 'scan' ? (
-            <div className="space-y-3">
-              <label htmlFor="scan-urls" className="sr-only">
-                URLs to scan
-              </label>
-              <textarea
-                id="scan-urls"
-                rows={3}
-                value={urlsText}
-                onChange={(e) => setUrlsText(e.target.value)}
-                placeholder={`https://www.example.com/\nhttps://staging.example.com/pricing`}
-                className="w-full resize-none rounded-card border border-rule bg-paper px-3.5 py-3 font-mono text-sm leading-relaxed text-ink transition-shadow"
-              />
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <ExampleChips
-                  examples={SCAN_EXAMPLES}
-                  onPick={(url) => setUrlsText((t) => (t.trim() ? `${t.trim()}\n${url}` : url))}
-                />
-                <span className="text-xs text-faint">
-                  One URL per line, up to {endpoints(serverUrl).maxUrls}
-                </span>
-              </div>
-            </div>
+            <ExampleChips examples={SCAN_EXAMPLES} onPick={(url) => setUrlsText((t) => (t.trim() ? `${t.trim()}\n${url}` : url))} />
           ) : (
-            <div className="space-y-3">
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div>
-                  <label htmlFor="compare-before" className="mb-1.5 block text-eyebrow font-medium text-muted">
-                    Current <span className="text-faint">· live production</span>
-                  </label>
-                  <textarea
-                    id="compare-before"
-                    rows={3}
-                    value={beforeText}
-                    onChange={(e) => setBeforeText(e.target.value)}
-                    placeholder="https://www.example.com/"
-                    className="w-full resize-none rounded-card border border-rule bg-paper px-3.5 py-3 font-mono text-sm leading-relaxed text-ink transition-shadow"
-                  />
-                </div>
-                <div>
-                  <label htmlFor="compare-after" className="mb-1.5 block text-eyebrow font-medium text-muted">
-                    Fixed <span className="text-faint">· staging or a preview build</span>
-                  </label>
-                  <textarea
-                    id="compare-after"
-                    rows={3}
-                    value={afterText}
-                    onChange={(e) => setAfterText(e.target.value)}
-                    placeholder="https://staging.example.com/"
-                    className="w-full resize-none rounded-card border border-rule bg-paper px-3.5 py-3 font-mono text-sm leading-relaxed text-ink transition-shadow"
-                  />
-                </div>
-              </div>
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div className="flex flex-wrap items-center gap-1.5">
-                  <span className="text-xs text-faint">Fill Current with</span>
-                  {Object.entries(SITES).map(([brand, site]) => (
-                    <button
-                      key={brand}
-                      type="button"
-                      onClick={() =>
-                        setBeforeText((t) => (t.trim() ? `${t.trim()}\n${site.url}` : site.url))
-                      }
-                      className="rounded-pill border border-rule bg-paper px-2.5 py-1 font-mono text-xs text-muted transition-colors hover:border-accent/40 hover:text-accent"
-                    >
-                      {site.host}
-                    </button>
-                  ))}
-                </div>
-                <span className="text-xs text-faint">
-                  Paired line by line, up to {MAX_COMPARE_PAIRS} pairs
-                </span>
-              </div>
+            <div className="flex flex-wrap items-center gap-1.5 text-xs text-faint">
+              <span>Fill Before with</span>
+              {Object.entries(SITES).map(([brand, site]) => (
+                <button key={brand} type="button" onClick={() => setBeforeText((t) => (t.trim() ? `${t.trim()}\n${site.url}` : site.url))} className="rounded-[6px] border border-rule bg-paper px-2 py-0.5 font-mono text-[11px] text-muted hover:border-accent/40 hover:text-accent">
+                  {site.host}
+                </button>
+              ))}
+              <span className="ml-2">Paired line by line, up to {MAX_COMPARE_PAIRS} pairs</span>
             </div>
           )}
-
-          <div className="mt-5 flex flex-wrap items-center gap-4">
-            <button
-              type="button"
-              onClick={run}
-              disabled={busy}
-              className="inline-flex items-center gap-2 rounded-card bg-accent px-5 py-2.5 text-sm font-medium text-white shadow-card transition-all hover:bg-accent/90 disabled:cursor-not-allowed disabled:opacity-55"
-            >
-              {busy ? (
-                <>
-                  <Spinner />
-                  Scanning…
-                </>
-              ) : mode === 'scan' ? (
-                'Run scan'
-              ) : (
-                'Run comparison'
-              )}
+          <div className="flex items-center gap-3">
+            {busy ? <span className="text-xs text-muted">Loading each page in a real browser — usually under a minute.</span> : null}
+            <button type="button" onClick={run} disabled={busy} className="inline-flex items-center gap-2 rounded-card bg-accent px-4 py-2 text-sm font-medium text-white shadow-card hover:bg-accent/90 disabled:cursor-not-allowed disabled:opacity-55">
+              {busy ? (<><Spinner />Scanning…</>) : mode === 'scan' ? 'Run scan' : 'Run comparison'}
             </button>
-            {busy ? (
-              <span className="text-sm text-muted">
-                Loading each page in a real browser. Usually under a minute.
-              </span>
-            ) : null}
           </div>
-
-          {error ? (
-            <p
-              role="alert"
-              className="mt-4 rounded-card border border-critical/25 bg-critical/[0.04] px-3.5 py-2.5 text-sm text-critical"
-            >
-              {error}
-            </p>
-          ) : null}
         </div>
-      </section>
 
-      {!hasOutput && !busy ? <WhatWeCheck /> : null}
+        {error ? (
+          <p role="alert" className="border-t border-critical/25 bg-critical/[0.04] px-4 py-2 text-sm text-critical">{error}</p>
+        ) : null}
+      </section>
 
       {mode === 'scan' && results && results.length > 0 ? (
         <ScanResults
@@ -469,14 +368,14 @@ export function LiveScanClient({ mode }: { mode: Mode }) {
 
       {mode === 'compare' && diffs && diffs.length > 0 ? (
         <div className="space-y-6">
-          <div className="flex items-center justify-between">
-            <h2 className="font-display text-xl font-bold tracking-tight">
+          <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+            <h2 className="text-sm font-semibold text-ink">
               {diffs.length} pair{diffs.length === 1 ? '' : 's'} compared
             </h2>
             <button
               type="button"
               onClick={() => downloadJson({ scannedAt, diffs }, 'compare')}
-              className="text-sm font-medium text-accent hover:underline"
+              className="text-xs font-medium text-accent hover:underline"
             >
               Download JSON
             </button>
@@ -501,24 +400,6 @@ function Spinner() {
   );
 }
 
-function WhatWeCheck() {
-  return (
-    <section>
-      <h2 className="text-eyebrow font-medium text-muted">What each scan looks at</h2>
-      <div className="mt-3 grid gap-px overflow-hidden rounded-lg border border-rule bg-rule sm:grid-cols-2">
-        {CHECKS.map((check) => (
-          <div key={check.title} className="bg-card p-5">
-            <h3 className="font-display text-base font-bold tracking-tight text-ink">
-              {check.title}
-            </h3>
-            <p className="mt-1.5 text-sm leading-relaxed text-muted">{check.body}</p>
-          </div>
-        ))}
-      </div>
-    </section>
-  );
-}
-
 function ExampleChips({
   examples,
   onPick,
@@ -534,7 +415,7 @@ function ExampleChips({
           key={url}
           type="button"
           onClick={() => onPick(url)}
-          className="rounded-pill border border-rule bg-paper px-2.5 py-1 font-mono text-xs text-muted transition-colors hover:border-accent/40 hover:text-accent"
+          className="rounded-[6px] border border-rule bg-paper px-2 py-0.5 font-mono text-[11px] text-muted hover:border-accent/40 hover:text-accent"
         >
           {url.replace(/^https?:\/\//, '').replace(/\/$/, '')}
         </button>
@@ -572,9 +453,10 @@ function ServerStatus({
 
   return (
     <details className="group relative">
-      <summary className="flex cursor-pointer list-none items-center gap-2 rounded-pill border border-rule bg-paper px-2.5 py-1 text-xs text-muted hover:text-ink [&::-webkit-details-marker]:hidden">
+      <summary className="inline-flex cursor-pointer items-center gap-1.5 text-xs text-muted hover:text-ink [&::-webkit-details-marker]:hidden">
         <span aria-hidden="true" className={`h-1.5 w-1.5 rounded-full ${dotClass}`} />
         {labelText}
+        <span className="text-faint">· change</span>
       </summary>
       <div className="absolute right-0 top-full z-30 mt-2 w-96 space-y-3 rounded-lg border border-rule bg-card p-4 shadow-pop">
         <div>
@@ -626,103 +508,81 @@ function ServerStatus({
 
 /* ------------------------------------------------------------------ */
 
-function ScanResults({
-  results,
-  onDownload,
-}: {
-  results: LiveScanResult[];
-  onDownload: () => void;
-}) {
+function ScanResults({ results, onDownload }: { results: LiveScanResult[]; onDownload: () => void }) {
+  const [open, setOpen] = useState<string | null>(null);
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="font-display text-xl font-bold tracking-tight">
-          {results.length} page{results.length === 1 ? '' : 's'} scanned
+    <section aria-labelledby="scan-results">
+      <div className="mb-2 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+        <h2 id="scan-results" className="text-sm font-semibold text-ink">
+          Results <span className="font-normal text-faint">· {results.length} page{results.length === 1 ? '' : 's'} · same checks as the scheduled runs · expand a row for the sample markup</span>
         </h2>
-        <button
-          type="button"
-          onClick={onDownload}
-          className="text-sm font-medium text-accent hover:underline"
-        >
-          Download JSON
-        </button>
+        <button type="button" onClick={onDownload} className="text-xs font-medium text-accent hover:underline">Download JSON</button>
       </div>
-
-      {results.length > 1 ? <ComparisonTable results={results} /> : null}
-
-      <div className="space-y-8">
-        {results.map((r, i) => (
-          <div key={`${r.url}-${i}`}>
-            {isFailedPage(r) ? (
-              <div className="rounded-lg border border-critical/25 bg-critical/[0.04] p-5">
-                <p className="text-eyebrow font-semibold text-critical">Couldn’t load this page</p>
-                <p className="mt-1 font-mono text-xs text-muted">{r.url}</p>
-                <p className="mt-2 text-sm text-ink">{r.error}</p>
-              </div>
-            ) : (
-              <ScanResultCard page={r} />
-            )}
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function ComparisonTable({ results }: { results: LiveScanResult[] }) {
-  const rows = results.map((r) => {
-    if (isFailedPage(r)) {
-      return { url: r.url, failed: true as const, nodes: 0, phantom: 0 };
-    }
-    const nodes = (r.violations ?? []).reduce((sum, v) => sum + v.n, 0);
-    return { url: r.url, failed: false as const, nodes, phantom: r.phantomMenu?.focusable ?? 0 };
-  });
-  const maxNodes = Math.max(...rows.map((r) => r.nodes), 1);
-
-  return (
-    <div className="overflow-hidden rounded-lg border border-rule bg-card shadow-card">
-      <table className="w-full border-collapse text-sm">
-        <caption className="sr-only">Failing nodes and phantom controls per scanned page</caption>
-        <thead>
-          <tr className="border-b border-rule bg-paper/60">
-            <th scope="col" className="px-5 py-2.5 text-left text-eyebrow font-medium text-muted">
-              Page
-            </th>
-            <th scope="col" className="px-5 py-2.5 text-right text-eyebrow font-medium text-muted">
-              Failing nodes
-            </th>
-            <th scope="col" className="px-5 py-2.5 text-right text-eyebrow font-medium text-muted">
-              Phantom controls
-            </th>
+      <Table>
+        <THead>
+          <tr>
+            <Th>Page</Th>
+            <Th align="right">Failing</Th>
+            <Th align="right">Rules</Th>
+            <Th align="right">Main</Th>
+            <Th align="right">Unnamed</Th>
+            <Th align="right">Ghost</Th>
+            <Th align="right">Unfindable links</Th>
+            <Th className="w-28">Verdict</Th>
+            <Th className="w-8"><span className="sr-only">Detail</span></Th>
           </tr>
-        </thead>
-        <tbody>
-          {rows.map((r) => (
-            <tr key={r.url} className="border-b border-rule last:border-0">
-              <th scope="row" className="max-w-xs truncate px-5 py-3 text-left font-mono text-xs font-normal text-ink">
-                {r.url}
-              </th>
-              <td className="px-5 py-3 text-right">
-                {r.failed ? (
-                  <span className="text-xs text-critical">Couldn’t load</span>
-                ) : (
-                  <span className="inline-flex items-center justify-end gap-2.5">
-                    <span
-                      aria-hidden="true"
-                      className="h-1.5 rounded-pill bg-serious/70"
-                      style={{ width: `${Math.max(6, (r.nodes / maxNodes) * 72)}px` }}
-                    />
-                    <span className="w-8 text-right font-medium tnum">{r.nodes}</span>
-                  </span>
-                )}
-              </td>
-              <td className="px-5 py-3 text-right tnum">
-                {r.failed ? <span className="text-faint">—</span> : r.phantom}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+        </THead>
+        <TBody>
+          {results.map((r, i) => {
+            const key = `${r.url}-${i}`;
+            if (isFailedPage(r)) {
+              return (
+                <tr key={key}>
+                  <Td className="font-mono text-xs">{r.url}</Td>
+                  <Td colSpan={8} className="text-critical">Couldn’t load — {r.error}</Td>
+                </tr>
+              );
+            }
+            const nodes = (r.violations ?? []).reduce((s, v) => s + v.n, 0);
+            const unnamed = (r.namelessButtons?.length ?? 0) + (r.namelessLinks?.length ?? 0);
+            const ghosts = r.ghostControls ? countedGhostControls(r).length : null;
+            const unfindable = r.unreachableTotals?.unannouncedLinks ?? null;
+            const verdict = verdictForPage(r);
+            const isOpen = open === key;
+            return (
+              <Fragment key={key}>
+                <tr>
+                  <Td className="font-mono text-xs">{r.url}</Td>
+                  <NumCell tone="neutral" text={nodes.toLocaleString()} />
+                  <NumCell tone="neutral" text={String((r.violations ?? []).length)} />
+                  <NumCell tone={r.hasMain ? 'ok' : 'bad'} text={r.hasMain ? 'present' : 'missing'} />
+                  <NumCell tone={unnamed > 0 ? 'bad' : 'ok'} text={String(unnamed)} />
+                  <NumCell tone={ghosts === null ? 'na' : ghosts > 0 ? 'bad' : 'ok'} text={String(ghosts ?? 0)} />
+                  <NumCell tone={unfindable === null ? 'na' : unfindable > 0 ? 'bad' : 'ok'} text={String(unfindable ?? 0)} />
+                  <Td>
+                    <span className={`inline-flex items-center gap-1.5 text-xs font-medium ${verdict === 'blocking' ? 'text-critical' : verdict === 'needs-work' ? 'text-serious' : 'text-good'}`}>
+                      <StatusDot tone={verdict === 'blocking' ? 'bad' : verdict === 'needs-work' ? 'serious' : 'ok'} />
+                      {VERDICT_LABEL[verdict]}
+                    </span>
+                  </Td>
+                  <Td align="right" className="text-faint">
+                    <button type="button" onClick={() => setOpen(isOpen ? null : key)} aria-expanded={isOpen} aria-label={isOpen ? 'Collapse' : 'Expand'}>
+                      <span aria-hidden="true" className={`inline-block transition-transform ${isOpen ? 'rotate-90' : ''}`}>›</span>
+                    </button>
+                  </Td>
+                </tr>
+                {isOpen ? (
+                  <tr>
+                    <Td colSpan={9} className="h-auto bg-paper/40 px-4 py-4">
+                      <ScanResultCard page={r} compact />
+                    </Td>
+                  </tr>
+                ) : null}
+              </Fragment>
+            );
+          })}
+        </TBody>
+      </Table>
+    </section>
   );
 }

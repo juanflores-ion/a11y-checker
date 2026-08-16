@@ -1,8 +1,10 @@
+import { makeDelta } from '@/lib/aggregate';
 import { isFailedPage, VIEWPORT_LABEL } from '@/lib/model';
 import type { NotComparable, PageDiff, RuleDiffStatus } from '@/lib/compare';
 import { ruleMeta } from '@/lib/rules';
-import { Eyebrow, ImpactDot, Notice } from './Primitives';
+import { DeltaChip, Eyebrow, ImpactDot, Notice } from './Primitives';
 import { ScanResultCard } from './ScanResultCard';
+import { NumCell, Table, TBody, Td, Th, THead } from './ui/Table';
 
 const STATUS_LABEL: Record<RuleDiffStatus, string> = {
   resolved: 'Resolved',
@@ -66,7 +68,7 @@ export function CompareCard({ diff }: { diff: PageDiff }) {
   const showFigures = !diff.viewportMismatch && !diff.identityMismatch;
 
   return (
-    <div className="space-y-5 rounded-card border border-rule bg-card p-5 shadow-card">
+    <div className="space-y-4 rounded-lg border border-rule bg-card p-4 shadow-card">
       <div className="grid gap-3 sm:grid-cols-2">
         <UrlLabel label="Before" url={diff.beforeUrl} viewport={diff.viewports.before} />
         <UrlLabel label="After" url={diff.afterUrl} viewport={diff.viewports.after} />
@@ -190,44 +192,40 @@ export function CompareCard({ diff }: { diff: PageDiff }) {
       ) : diff.rules.length === 0 ? (
         <p className="text-sm text-good">No axe findings on either side.</p>
       ) : (
-        <table className="w-full border-collapse text-sm">
-          <thead>
-            <tr className="border-b border-rule text-left">
-              <th scope="col" className="py-1.5 pr-3 text-eyebrow font-medium text-faint">
-                Rule
-              </th>
-              <th scope="col" className="py-1.5 pr-3 text-right text-eyebrow font-medium text-faint">
-                Before
-              </th>
-              <th scope="col" className="py-1.5 pr-3 text-right text-eyebrow font-medium text-faint">
-                After
-              </th>
-              <th scope="col" className="py-1.5 text-right text-eyebrow font-medium text-faint">
-                Status
-              </th>
+        <Table>
+          <THead>
+            <tr>
+              <Th>Check</Th>
+              <Th align="right">Before</Th>
+              <Th align="right">After</Th>
+              <Th align="right">Change</Th>
+              <Th align="right">Status</Th>
             </tr>
-          </thead>
-          <tbody>
+          </THead>
+          <TBody>
             {diff.rules.map((r) => {
               const meta = ruleMeta(r.id);
               return (
-                <tr key={r.id} className="border-b border-rule/60 last:border-0">
-                  <td className="py-1.5 pr-3">
+                <tr key={r.id}>
+                  <Td>
                     <span className="flex items-center gap-2">
                       <ImpactDot impact={meta.impact} />
                       {meta.label}
                     </span>
-                  </td>
-                  <td className="py-1.5 pr-3 text-right font-mono tnum text-muted">{r.before}</td>
-                  <td className="py-1.5 pr-3 text-right font-mono tnum text-ink">{r.after}</td>
-                  <td className={`py-1.5 text-right text-xs font-medium ${STATUS_TONE[r.status]}`}>
+                  </Td>
+                  <NumCell tone="neutral" text={String(r.before)} />
+                  <NumCell tone="neutral" text={String(r.after)} />
+                  <Td align="right">
+                    <DeltaChip delta={makeDelta(r.after, r.before, ruleMeta(r.id).exact, r.id)} />
+                  </Td>
+                  <Td align="right" className={`text-xs font-medium ${STATUS_TONE[r.status]}`}>
                     {STATUS_LABEL[r.status]}
-                  </td>
+                  </Td>
                 </tr>
               );
             })}
-          </tbody>
-        </table>
+          </TBody>
+        </Table>
       )}
 
       <details className="group">
@@ -238,7 +236,7 @@ export function CompareCard({ diff }: { diff: PageDiff }) {
           <div>
             <Eyebrow className="mb-2">Before</Eyebrow>
             {diff.before && !isFailedPage(diff.before) ? (
-              <ScanResultCard page={diff.before} />
+              <ScanResultCard page={diff.before} compact />
             ) : (
               <p className="text-sm text-faint">Not measured.</p>
             )}
@@ -246,7 +244,7 @@ export function CompareCard({ diff }: { diff: PageDiff }) {
           <div>
             <Eyebrow className="mb-2">After</Eyebrow>
             {diff.after && !isFailedPage(diff.after) ? (
-              <ScanResultCard page={diff.after} />
+              <ScanResultCard page={diff.after} compact />
             ) : (
               <p className="text-sm text-faint">Not measured.</p>
             )}
