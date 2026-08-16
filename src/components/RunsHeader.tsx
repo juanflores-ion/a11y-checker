@@ -16,7 +16,7 @@ import { Tabs } from './ui/Tabs';
  */
 export const TREND_MIN_RUNS = 3;
 
-export function RunsHeader() {
+export function RunsHeader({ aside }: { aside?: React.ReactNode } = {}) {
   const pathname = usePathname() ?? '/runs';
   const { runs } = useRuns();
   const trendReady = runs.length >= TREND_MIN_RUNS;
@@ -26,7 +26,9 @@ export function RunsHeader() {
       title="Runs"
       description="Every figure the scanner produced for the selected run, by check and by page."
       aside={
-        <Tabs
+        <div className="flex flex-wrap items-end gap-x-6 gap-y-2">
+          {aside ? <div className="pb-2">{aside}</div> : null}
+          <Tabs
           ariaLabel="Run views"
           items={[
             { href: '/runs', label: 'By check', active: pathname === '/runs' || pathname === '/runs/' },
@@ -36,10 +38,11 @@ export function RunsHeader() {
               label: 'Over time',
               active: pathname.startsWith('/runs/trend'),
               disabled: !trendReady,
-              title: trendReady ? undefined : `Needs ${TREND_MIN_RUNS} runs — ${runs.length} on file`,
+              title: trendReady ? undefined : `needs ${TREND_MIN_RUNS} runs, ${runs.length} on file`,
             },
           ]}
-        />
+          />
+        </div>
       }
     />
   );

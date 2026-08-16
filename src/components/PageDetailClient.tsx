@@ -32,27 +32,29 @@ export function PageDetailClient({
 
   return (
     <>
-      <RunsHeader />
-      <div className="mb-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-muted">
-        <label className="flex items-center gap-1.5">
-          Site
-          <select className={selectClass} value={brand} onChange={(e) => router.push(`/runs/pages/${e.target.value}/${pageKey}`)}>
-            {BRANDS.map((b) => (
-              <option key={b} value={b}>{BRAND_LABEL[b]}</option>
-            ))}
-          </select>
-        </label>
-        <label className="flex items-center gap-1.5">
-          Page
-          <select className={selectClass} value={pageKey} onChange={(e) => router.push(`/runs/pages/${brand}/${e.target.value}`)}>
-            {allPageKeys.map((key) => (
-              <option key={key} value={key}>{PAGE_LABEL[key] ?? key}</option>
-            ))}
-          </select>
-        </label>
-        <span className="text-faint">·</span>
-        <span className="font-medium text-ink">{BRAND_LABEL[brand]} — {PAGE_LABEL[pageKey] ?? pageKey}</span>
-      </div>
+      <RunsHeader
+        aside={
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-muted">
+            <label className="flex items-center gap-1.5">
+              Site
+              <select className={selectClass} value={brand} onChange={(e) => router.push(`/runs/pages/${e.target.value}/${pageKey}`)}>
+                {BRANDS.map((b) => (
+                  <option key={b} value={b}>{BRAND_LABEL[b]}</option>
+                ))}
+              </select>
+            </label>
+            <label className="flex items-center gap-1.5">
+              Page
+              <select className={selectClass} value={pageKey} onChange={(e) => router.push(`/runs/pages/${brand}/${e.target.value}`)}>
+                {allPageKeys.map((key) => (
+                  <option key={key} value={key}>{PAGE_LABEL[key] ?? key}</option>
+                ))}
+              </select>
+            </label>
+          </div>
+        }
+      />
+      <p className="mb-3 text-sm font-medium text-ink">{BRAND_LABEL[brand]} — {PAGE_LABEL[pageKey] ?? pageKey}</p>
 
       {!entry || !entry.present || !entry.result ? (
         <p className="text-sm text-muted">This page type wasn’t part of the selected run. Pick a different run in the bar above.</p>

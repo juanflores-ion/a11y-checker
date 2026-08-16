@@ -59,7 +59,8 @@ export function IssuesTable({
         <h2 id="issues" className="text-sm font-semibold text-ink">
           What’s wrong, and what would fix it{' '}
           <span className="font-normal text-faint">
-            · {visible.length} issue{visible.length === 1 ? '' : 's'}, hardest-blocking first
+            · {visible.length} issue{visible.length === 1 ? '' : 's'}
+            {parked.length ? ` · ${parked.length} owned elsewhere` : ''}, hardest-blocking first
           </span>
         </h2>
         <SegmentedControl<SiteFilter>
