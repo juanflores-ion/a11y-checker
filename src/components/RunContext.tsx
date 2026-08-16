@@ -15,6 +15,9 @@ export interface RunSummary {
   startedAt: string;
   finishedAt?: string;
   axeVersion?: string;
+  /** Instrument stamp for the context bar. Absent = the run did not record it. */
+  probeVersion?: string;
+  browserVersion?: string;
   display: string;
   short: string;
   /** Which device profiles this run measured. Pre-profile runs are mobile-only. */
