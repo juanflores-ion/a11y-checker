@@ -107,10 +107,11 @@ The scanner answers "how many nodes failed check X". Nobody outside engineering
 can act on that. `issues.ts` is the layer that turns measurements into
 something a Product or SEO reader can act on.
 
-**It never contains a number.** Every figure on the Issues page is resolved
-from the current run through `resolveMetric`, so the catalogue can't drift out
-of step with the measurements. What it does contain is judgement: severity,
-plain-English framing, what would fix it, and the risk of making that change.
+**It never contains a number.** Every figure the issue catalogue cites — the
+issues table on Overview — is resolved from the current run through
+`resolveMetric`, so the catalogue can't drift out of step with the
+measurements. What it does contain is judgement: severity, plain-English
+framing, what would fix it, and the risk of making that change.
 
 **It deliberately tracks no progress state.** There is no "fixed / in progress /
 shipped" field, no progress bar and no open-blocker count. That existed briefly
