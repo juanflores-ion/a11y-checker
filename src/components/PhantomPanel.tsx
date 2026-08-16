@@ -33,12 +33,9 @@ export function PhantomPanel({
 }) {
   if (!phantom) {
     return (
-      <div className={`rounded-card border border-dashed border-rule bg-card p-4 ${className}`}>
-        <Eyebrow>Phantom menu</Eyebrow>
-        <p className="mt-1 text-sm text-muted">
-          No mega-menu element found on this page. Nothing to measure.
-        </p>
-      </div>
+      <p className={`text-xs text-faint ${className}`}>
+        Closed mobile menu: no mega-menu element on this page — nothing to measure.
+      </p>
     );
   }
 

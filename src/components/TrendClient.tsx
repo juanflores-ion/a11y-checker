@@ -60,43 +60,24 @@ export function TrendClient({ points, ruleIds }: { points: TrendPoint[]; ruleIds
 
   // Reachable by direct URL even though the tab is hidden below three runs.
   // The threshold here is 2 rather than 3 on purpose: this guard is about what
-  // can be DRAWN, and two points can be. RUN_VIEWS decides what is worth
-  // drawing, and holds that two points are a delta the Summary tab already
-  // states better. Somebody who types the URL with two runs on file gets the
-  // chart rather than a message telling them their data does not exist.
+  // can be DRAWN, and two points can be. The Over time tab in RunsHeader
+  // decides what is worth drawing, and holds that two points are a delta the
+  // Summary tab already states better. Somebody who types the URL with two
+  // runs on file gets the chart rather than a message telling them their data
+  // does not exist.
   if (series.length < 2) {
     return (
-      <div className="rounded-card border border-dashed border-rule bg-card p-8 text-center">
-        <h2 className="font-display text-lg font-semibold">Nothing to plot yet</h2>
-        <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-muted">
-          A trend needs at least two scans of the same device profile to draw a line between, and
-          three before it is worth reading as a direction.{' '}
-          {series.length === 1
-            ? `One run measured ${VIEWPORT_LABEL[viewport]} so far.`
-            : `No run measured ${VIEWPORT_LABEL[viewport]}.`}{' '}
-          {otherProfileRuns > 0
-            ? 'Other runs measured a different profile, and joining the two would draw a change nobody made.'
-            : 'Take another and rebuild, and this fills in.'}
-        </p>
-        <code className="mt-3 inline-block rounded-card border border-rule bg-paper px-3 py-2 font-mono text-xs">
-          node scanner/scan.mjs --out data/runs
-        </code>
-      </div>
+      <p className="text-sm text-muted">
+        Nothing to plot yet — a trend needs three scans of the same device profile.{' '}
+        {series.length === 1 ? `One run measured ${VIEWPORT_LABEL[viewport]} so far.` : `No run measured ${VIEWPORT_LABEL[viewport]}.`}{' '}
+        {otherProfileRuns > 0 ? 'Other runs measured a different profile, and joining the two would draw a change nobody made.' : 'Take another from Scan → Full run and rebuild.'}
+      </p>
     );
   }
 
   return (
     <div className="space-y-5">
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h2 className="font-display text-xl font-semibold tracking-tight">Trend</h2>
-          <p className="mt-1 max-w-xl text-sm leading-relaxed text-muted">
-            Every run, oldest to newest. Down is better on every metric here. Runs carrying a
-            label are marked on the axis, so it&apos;s clear which drop belongs to which phase
-            of work.
-          </p>
-        </div>
-
+      <div className="flex flex-wrap items-end justify-end gap-4">
         <label className="flex items-center gap-2">
           <span className="text-eyebrow font-medium text-muted">Metric</span>
           <select

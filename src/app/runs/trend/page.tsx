@@ -1,3 +1,4 @@
+import { RunsHeader } from '@/components/RunsHeader';
 import { TrendClient, type TrendPoint } from '@/components/TrendClient';
 import {
   allRuleIds,
@@ -51,5 +52,10 @@ export default function TrendPage() {
     }
   }
 
-  return <TrendClient points={points} ruleIds={ruleIds} />;
+  return (
+    <>
+      <RunsHeader />
+      <TrendClient points={points} ruleIds={ruleIds} />
+    </>
+  );
 }
