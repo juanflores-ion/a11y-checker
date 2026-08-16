@@ -815,6 +815,17 @@ export interface ResolvedMetric {
   label: string;
   value: number;
   /**
+   * What this figure is scored against, or null when it has none.
+   *
+   * Colour on this dashboard means "a target was missed", never "the number is
+   * not zero" — see `cellTone`. A descriptive magnitude like the number of
+   * navigation links in the tree has no target, and printing it red says a
+   * correct page is broken.
+   */
+  target: number | null;
+  /** Only `nav-links-in-tree` — more of the nav reachable is better. */
+  higherIsBetter: boolean;
+  /**
    * True when a zero here is a measurement artefact rather than health —
    * Insureon reads 0 on button-name and link-name because the controls are
    * <div>s the rule structurally cannot fire on.
@@ -1091,6 +1102,44 @@ export function hasProbeData(run: Run, brand: Brand): boolean {
   return scannedPages(run, brand).some(([, p]) => p.ghostControls !== undefined);
 }
 
+/**
+ * What each catalogue metric is scored against — the one place that decides it.
+ *
+ * A defect is scored against zero. A *magnitude* is not a defect and has no
+ * target: how much of the nav sits outside the tree, or how many clickable
+ * elements carry no role, are readings you interpret next to the verdict
+ * metrics, and a correct site has non-zero ones. Colouring those red — which
+ * is what "non-zero is bad" does — reports health as breakage, and it is the
+ * inverse of the false clean this tool exists to refuse.
+ *
+ * `rule` is absent on purpose: its target depends on the rule, not the kind.
+ * `resolveMetric` reads `ruleMeta().exact` for it — a discrete-defect rule
+ * scores against zero, while a drifting one (`region`, `color-contrast`,
+ * `link-in-text-block`) has no target that survives content churn.
+ */
+const METRIC_SCORING: Record<
+  Exclude<MetricRef['kind'], 'rule'>,
+  { target: number | null; higherIsBetter: boolean }
+> = {
+  phantom: { target: 0, higherIsBetter: false },
+  'phantom-links': { target: 0, higherIsBetter: false },
+  'nameless-buttons': { target: 0, higherIsBetter: false },
+  'nameless-links': { target: 0, higherIsBetter: false },
+  'empty-href': { target: 0, higherIsBetter: false },
+  'pages-missing-main': { target: 0, higherIsBetter: false },
+  'ghost-controls': { target: 0, higherIsBetter: false },
+  'ghost-controls-matching': { target: 0, higherIsBetter: false },
+  'hidden-panels': { target: 0, higherIsBetter: false },
+  'hidden-panel-controls': { target: 0, higherIsBetter: false },
+  'secondary-hidden-panel-controls': { target: 0, higherIsBetter: false },
+  'unfindable-links': { target: 0, higherIsBetter: false },
+  'unannounced-panels': { target: 0, higherIsBetter: false },
+  'clickable-no-role': { target: null, higherIsBetter: false },
+  'nav-links-hidden': { target: null, higherIsBetter: false },
+  'nav-links-total': { target: null, higherIsBetter: false },
+  'nav-links-in-tree': { target: null, higherIsBetter: true },
+};
+
 export function resolveMetric(run: Run, brand: Brand, ref: MetricRef): ResolvedMetric {
   const nameless = namelessCounts(run, brand);
 
@@ -1106,9 +1155,16 @@ export function resolveMetric(run: Run, brand: Brand, ref: MetricRef): ResolvedM
   const reach = hasReachData(run, brand);
   const anyPage = scannedPages(run, brand).length > 0;
 
+  const scoring =
+    ref.kind === 'rule'
+      ? { target: ruleMeta(ref.ruleId).exact ? 0 : null, higherIsBetter: false }
+      : METRIC_SCORING[ref.kind];
+
   const out = (value: number, measured: boolean, misleadingZero = false): ResolvedMetric => ({
     label: ref.label,
     value,
+    target: scoring.target,
+    higherIsBetter: scoring.higherIsBetter,
     misleadingZero,
     notMeasured: !anyPage || !measured,
   });

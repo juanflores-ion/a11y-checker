@@ -4,14 +4,14 @@ import Link from 'next/link';
 import { Fragment, useMemo, useState } from 'react';
 
 import type { ResolvedMetric } from '@/lib/aggregate';
-import { NOT_MEASURABLE_TITLE, NOT_MEASURED_TITLE } from '@/lib/format';
+import { cellTone, NOT_MEASURABLE_TITLE, NOT_MEASURED_TITLE } from '@/lib/format';
 import { ISSUES, SEVERITY_LABEL, sortIssues, type Issue, type Severity } from '@/lib/issues';
 import { BRAND_LABEL, BRANDS, type Brand } from '@/lib/model';
 import { CodeSample } from '../Primitives';
 import { SegmentedControl } from '../ui/SegmentedControl';
 import { SiteChip } from '../ui/SiteChip';
 import { StatusDot, type DotTone } from '../ui/StatusDot';
-import { Table, TBody, Td, Th, THead, GroupRow } from '../ui/Table';
+import { FIGURE_CLASS, Table, TBody, Td, Th, THead, GroupRow, ToggleCell } from '../ui/Table';
 import { Tag } from '../ui/Tag';
 
 type SiteFilter = Brand | 'both';
@@ -73,7 +73,7 @@ export function IssuesTable({
         />
       </div>
 
-      <Table>
+      <Table label="Issues" className="[&>table]:min-w-[46rem]">
         <THead>
           <tr>
             <Th className="w-8">#</Th>
@@ -181,11 +181,7 @@ function IssueRows({
         <Td align="right" className="whitespace-nowrap font-mono text-xs tnum">
           <HeadlineFigure issue={issue} brands={brands} metricsByBrand={metricsByBrand} muted={muted} />
         </Td>
-        <Td align="right" className="text-faint">
-          <button type="button" onClick={onToggle} aria-label={open ? 'Collapse' : 'Expand'} tabIndex={-1}>
-            <span aria-hidden="true" className={`inline-block transition-transform ${open ? 'rotate-90' : ''}`}>›</span>
-          </button>
-        </Td>
+        <ToggleCell open={open} onToggle={onToggle} controls={panelId} />
       </tr>
       {open ? (
         <tr id={panelId}>
@@ -198,7 +194,7 @@ function IssueRows({
   );
 }
 
-/** First metric per shown brand, joined with ·. Colour by "is it non-zero"; n/m and — as the number rules say. */
+/** First metric per shown brand, joined with ·. Colour by target; n/m and — as the number rules say. */
 function HeadlineFigure({
   issue,
   brands,
@@ -226,13 +222,28 @@ function HeadlineFigure({
   );
 }
 
+/**
+ * One figure, coloured the way every other figure on the dashboard is: by
+ * whether it missed its target, not by whether it is non-zero.
+ *
+ * `nav-links-in-tree` counts the links an agent *can* reach and
+ * `clickable-no-role` is a magnitude nobody has set a target for; both were
+ * printed red, which reads as a defect on the half of the catalogue that is
+ * describing the site rather than accusing it.
+ */
 function Figure({ m, muted = false }: { m: ResolvedMetric | undefined; muted?: boolean }) {
-  if (!m || m.notMeasured) return <span className="text-faint" title={NOT_MEASURED_TITLE}>—</span>;
-  if (m.misleadingZero) return <span className="text-faint" title={NOT_MEASURABLE_TITLE}>n/m</span>;
+  if (!m) return <span className="text-faint" title={NOT_MEASURED_TITLE}>—</span>;
+  const tone = cellTone({
+    value: m.value,
+    target: m.target,
+    higherIsBetter: m.higherIsBetter,
+    notMeasured: m.notMeasured,
+    misleadingZero: m.misleadingZero,
+  });
+  if (tone === 'na') return <span className="text-faint" title={NOT_MEASURED_TITLE}>—</span>;
+  if (tone === 'nm') return <span className="text-faint" title={NOT_MEASURABLE_TITLE}>n/m</span>;
   return (
-    <span className={m.value > 0 ? (muted ? 'text-muted' : 'font-medium text-critical') : 'text-ink'}>
-      {m.value.toLocaleString()}
-    </span>
+    <span className={muted ? 'text-muted' : FIGURE_CLASS[tone]}>{m.value.toLocaleString()}</span>
   );
 }
 

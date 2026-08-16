@@ -114,7 +114,7 @@ export function ContextBar() {
         ) : null}
 
         {compareMissingViewport ? (
-          <span className="text-critical">
+          <span role="status" className="text-critical">
             No deltas — that run never measured {VIEWPORT_LABEL[viewport].toLowerCase()}
           </span>
         ) : null}

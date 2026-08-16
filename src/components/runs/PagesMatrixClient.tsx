@@ -31,7 +31,7 @@ export function PagesMatrixClient({
         </h2>
         <p className="text-xs text-faint">Failing elements · rules firing · dot = the page’s verdict. Click a cell for the detail with sample markup.</p>
       </div>
-      <Table>
+      <Table label="Failing elements by page type">
         <THead>
           <tr>
             <Th className="w-[34%]">Page type</Th>

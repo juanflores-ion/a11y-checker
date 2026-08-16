@@ -7,6 +7,7 @@ import type { Impact } from './rules';
  *
  *   ok       target met                      ink figure, green dot
  *   bad      target missed                   red figure, red dot
+ *   serious  serious-impact count > 0        orange figure, no dot
  *   neutral  no target                       ink figure, no dot
  *   na       the check never ran             faint "—", title "not measured"
  *   nm       zero the check cannot produce   faint "0" + n/m tag

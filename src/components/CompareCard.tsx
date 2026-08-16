@@ -192,7 +192,7 @@ export function CompareCard({ diff }: { diff: PageDiff }) {
       ) : diff.rules.length === 0 ? (
         <p className="text-sm text-good">No axe findings on either side.</p>
       ) : (
-        <Table>
+        <Table label="Rule-by-rule comparison">
           <THead>
             <tr>
               <Th>Check</Th>

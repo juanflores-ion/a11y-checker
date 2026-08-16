@@ -62,9 +62,9 @@ export function TrendClient({ points, ruleIds }: { points: TrendPoint[]; ruleIds
   // The threshold here is 2 rather than 3 on purpose: this guard is about what
   // can be DRAWN, and two points can be. The Over time tab in RunsHeader
   // decides what is worth drawing, and holds that two points are a delta the
-  // Summary tab already states better. Somebody who types the URL with two
-  // runs on file gets the chart rather than a message telling them their data
-  // does not exist.
+  // scorecard on Overview already states with delta chips. Somebody who types
+  // the URL with two runs on file gets the chart rather than a message telling
+  // them their data does not exist.
   if (series.length < 2) {
     return (
       <p className="text-sm text-muted">

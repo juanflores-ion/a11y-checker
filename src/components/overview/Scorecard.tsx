@@ -38,7 +38,7 @@ export function Scorecard({
         </p>
       </div>
 
-      <Table>
+      <Table label="Against target">
         <THead>
           <tr>
             <Th className="w-[44%]">Metric</Th>

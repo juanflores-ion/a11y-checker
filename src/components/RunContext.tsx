@@ -165,9 +165,3 @@ export function useRuns(): RunSelection {
   if (!ctx) throw new Error('useRuns must be used inside <RunProvider>');
   return ctx;
 }
-
-/** Pick one slice out of a server-computed map keyed by `viewKey`. */
-export function pick<T>(byKey: Record<string, T>, key: string | null): T | null {
-  if (!key) return null;
-  return byKey[key] ?? null;
-}

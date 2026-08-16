@@ -19,7 +19,7 @@ import { CompareCard } from './CompareCard';
 import { Eyebrow } from './Primitives';
 import { ScanResultCard } from './ScanResultCard';
 import { StatusDot } from './ui/StatusDot';
-import { NumCell, Table, TBody, Td, Th, THead } from './ui/Table';
+import { NumCell, Table, TBody, Td, Th, THead, ToggleCell } from './ui/Table';
 
 /**
  * Empty string means "this site's own /api/scan" — the hosted scanner, which
@@ -359,11 +359,15 @@ export function LiveScanClient({ mode }: { mode: Mode }) {
         ) : null}
       </section>
 
-      {mode === 'scan' && results && results.length > 0 ? (
-        <ScanResults
-          results={results}
-          onDownload={() => downloadJson({ scannedAt, results }, 'scan')}
-        />
+      {mode === 'scan' && results ? (
+        results.length > 0 ? (
+          <ScanResults
+            results={results}
+            onDownload={() => downloadJson({ scannedAt, results }, 'scan')}
+          />
+        ) : (
+          <p className="text-sm text-muted">Nothing came back — the scanner returned no pages.</p>
+        )
       ) : null}
 
       {mode === 'compare' && diffs && diffs.length > 0 ? (
@@ -511,14 +515,14 @@ function ServerStatus({
 function ScanResults({ results, onDownload }: { results: LiveScanResult[]; onDownload: () => void }) {
   const [open, setOpen] = useState<string | null>(null);
   return (
-    <section aria-labelledby="scan-results">
+    <section aria-labelledby="scan-results" aria-live="polite">
       <div className="mb-2 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
         <h2 id="scan-results" className="text-sm font-semibold text-ink">
           Results <span className="font-normal text-faint">· {results.length} page{results.length === 1 ? '' : 's'} · same checks as the scheduled runs · expand a row for the sample markup</span>
         </h2>
         <button type="button" onClick={onDownload} className="text-xs font-medium text-accent hover:underline">Download JSON</button>
       </div>
-      <Table>
+      <Table label="Scan results">
         <THead>
           <tr>
             <Th>Page</Th>
@@ -549,13 +553,18 @@ function ScanResults({ results, onDownload }: { results: LiveScanResult[]; onDow
             const unfindable = r.unreachableTotals?.unannouncedLinks ?? null;
             const verdict = verdictForPage(r);
             const isOpen = open === key;
+            const detailId = `scan-detail-${i}`;
             return (
               <Fragment key={key}>
                 <tr>
                   <Td className="font-mono text-xs">{r.url}</Td>
                   <NumCell tone="neutral" text={nodes.toLocaleString()} />
                   <NumCell tone="neutral" text={String((r.violations ?? []).length)} />
-                  <NumCell tone={r.hasMain ? 'ok' : 'bad'} text={r.hasMain ? 'present' : 'missing'} />
+                  <Td align="right">
+                    <span className={r.hasMain ? 'text-ink' : 'font-medium text-critical'}>
+                      {r.hasMain ? 'present' : 'missing'}
+                    </span>
+                  </Td>
                   <NumCell tone={unnamed > 0 ? 'bad' : 'ok'} text={String(unnamed)} />
                   <NumCell tone={ghosts === null ? 'na' : ghosts > 0 ? 'bad' : 'ok'} text={String(ghosts ?? 0)} />
                   <NumCell tone={unfindable === null ? 'na' : unfindable > 0 ? 'bad' : 'ok'} text={String(unfindable ?? 0)} />
@@ -565,14 +574,14 @@ function ScanResults({ results, onDownload }: { results: LiveScanResult[]; onDow
                       {VERDICT_LABEL[verdict]}
                     </span>
                   </Td>
-                  <Td align="right" className="text-faint">
-                    <button type="button" onClick={() => setOpen(isOpen ? null : key)} aria-expanded={isOpen} aria-label={isOpen ? 'Collapse' : 'Expand'}>
-                      <span aria-hidden="true" className={`inline-block transition-transform ${isOpen ? 'rotate-90' : ''}`}>›</span>
-                    </button>
-                  </Td>
+                  <ToggleCell
+                    open={isOpen}
+                    onToggle={() => setOpen(isOpen ? null : key)}
+                    controls={detailId}
+                  />
                 </tr>
                 {isOpen ? (
-                  <tr>
+                  <tr id={detailId}>
                     <Td colSpan={9} className="h-auto bg-paper/40 px-4 py-4">
                       <ScanResultCard page={r} compact />
                     </Td>

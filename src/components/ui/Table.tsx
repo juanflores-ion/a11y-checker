@@ -7,9 +7,29 @@ import { Tag } from './Tag';
  * border around the whole thing. Numbers are always mono, tabular and
  * right-aligned; colour comes only from `NumCell`'s tone.
  */
-export function Table({ children, className = '' }: { children: React.ReactNode; className?: string }) {
+export function Table({
+  children,
+  className = '',
+  label,
+}: {
+  children: React.ReactNode;
+  className?: string;
+  /**
+   * Names the scroll container, and makes it focusable so it can be scrolled.
+   *
+   * A `overflow-x-auto` div is reachable with the mouse wheel and with a
+   * finger, and with nothing else: a keyboard user cannot put focus on it, so
+   * the columns past the fold are simply unreadable. `tabIndex={0}` fixes
+   * that, and a focusable region with no accessible name is its own defect —
+   * hence the name, not an optional nicety.
+   */
+  label?: string;
+}) {
   return (
-    <div className={`relative overflow-x-auto rounded-lg border border-rule bg-card shadow-card ${className}`}>
+    <div
+      {...(label ? { tabIndex: 0, role: 'region', 'aria-label': label } : {})}
+      className={`relative overflow-x-auto rounded-lg border border-rule bg-card shadow-card ${className}`}
+    >
       <table className="w-full border-collapse text-[13px] leading-snug">{children}</table>
     </div>
   );
@@ -20,7 +40,11 @@ export function THead({ children }: { children: React.ReactNode }) {
 }
 
 export function TBody({ children }: { children: React.ReactNode }) {
-  return <tbody className="[&>tr:last-child>td]:border-b-0">{children}</tbody>;
+  return (
+    <tbody className="[&>tr:last-child>td]:border-b-0 [&>tr:last-child>th]:border-b-0">
+      {children}
+    </tbody>
+  );
 }
 
 export function Th({
@@ -83,7 +107,8 @@ export function GroupRow({ children, colSpan }: { children: React.ReactNode; col
   );
 }
 
-const FIGURE: Record<CellTone, string> = {
+/** Tone → figure classes. Exported so a cell that isn't a `NumCell` still colours the same way. */
+export const FIGURE_CLASS: Record<CellTone, string> = {
   ok: 'text-ink',
   bad: 'font-medium text-critical',
   serious: 'font-medium text-serious',
@@ -120,10 +145,39 @@ export function NumCell({
     >
       {tone === 'ok' ? <StatusDot tone="ok" className="mr-2" /> : null}
       {tone === 'bad' ? <StatusDot tone="bad" className="mr-2" /> : null}
-      <span className={FIGURE[tone]}>{tone === 'na' ? '—' : text}</span>
+      <span className={FIGURE_CLASS[tone]}>{tone === 'na' ? '—' : text}</span>
       {tone === 'nm' ? <Tag className="ml-1.5">n/m</Tag> : null}
       {tag}
       {children}
+    </td>
+  );
+}
+
+/** The chevron cell that opens a detail row. One contract everywhere: focusable, named, aria-expanded, aria-controls to the panel it reveals. */
+export function ToggleCell({
+  open,
+  onToggle,
+  controls,
+  label,
+}: {
+  open: boolean;
+  onToggle: () => void;
+  controls: string;
+  label?: string;
+}) {
+  return (
+    <td className="h-9 border-b border-rule px-3 text-right align-middle text-faint">
+      <button
+        type="button"
+        onClick={onToggle}
+        aria-expanded={open}
+        aria-controls={open ? controls : undefined}
+        aria-label={label ?? (open ? 'Collapse' : 'Expand')}
+      >
+        <span aria-hidden="true" className={`inline-block transition-transform ${open ? 'rotate-90' : ''}`}>
+          ›
+        </span>
+      </button>
     </td>
   );
 }

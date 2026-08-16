@@ -10,16 +10,16 @@ import { ruleMeta, type Impact } from '@/lib/rules';
 import { DeltaChip } from './Primitives';
 import { useRuns } from './RunContext';
 import { StatusDot, type DotTone } from './ui/StatusDot';
-import { GroupRow, NumCell, Table, TBody, Td, Th, THead } from './ui/Table';
+import { GroupRow, NumCell, Table, TBody, Td, Th, THead, ToggleCell } from './ui/Table';
 import { Tag } from './ui/Tag';
 
 export interface RulesRunData {
-  totals: Record<string, Record<string, number>>;
-  perPage: Record<string, Record<string, Record<string, number>>>;
-  pageKeys: Record<string, string[]>;
-  probeTotals: Record<string, Record<string, number>>;
-  probePerPage: Record<string, Record<string, Record<string, number>>>;
-  impacts: Record<string, Record<Impact, number>>;
+  totals: Record<Brand, Record<string, number>>;
+  perPage: Record<Brand, Record<string, Record<string, number>>>;
+  pageKeys: Record<Brand, string[]>;
+  probeTotals: Record<Brand, Record<string, number>>;
+  probePerPage: Record<Brand, Record<string, Record<string, number>>>;
+  impacts: Record<Brand, Record<Impact, number>>;
   hasProbes: boolean;
 }
 
@@ -54,7 +54,7 @@ export function RulesClient({
   const cols = 2 + BRANDS.length;
   const firing = BRANDS.map(
     (b) =>
-      `${BRAND_SHORT[b]} ${now.impacts[b].critical} critical · ${now.impacts[b].serious} serious · ${now.impacts[b].moderate} moderate`
+      `${BRAND_SHORT[b]} ${now.impacts[b]?.critical ?? 0} critical · ${now.impacts[b]?.serious ?? 0} serious · ${now.impacts[b]?.moderate ?? 0} moderate`
   ).join(' — ');
 
   return (
@@ -68,7 +68,7 @@ export function RulesClient({
         </p>
       </div>
 
-      <Table>
+      <Table label="Failing elements per check">
         <THead>
           <tr>
             <Th className="w-[52%]">Check</Th>
@@ -109,10 +109,15 @@ export function RulesClient({
                       </NumCell>
                     );
                   })}
-                  <Chevron open={open === id} onClick={() => setOpen(open === id ? null : id)} />
+                  <ToggleCell
+                    open={open === id}
+                    onToggle={() => setOpen(open === id ? null : id)}
+                    controls={`rule-panel-${id}`}
+                  />
                 </tr>
                 {open === id ? (
                   <PerPageRow
+                    id={`rule-panel-${id}`}
                     cols={cols}
                     perPage={(brand) => now.perPage[brand]?.[id] ?? {}}
                     scanned={(brand, key) => now.pageKeys[brand]?.includes(key) ?? false}
@@ -154,10 +159,15 @@ export function RulesClient({
                       </NumCell>
                     );
                   })}
-                  <Chevron open={open === check.id} onClick={() => setOpen(open === check.id ? null : check.id)} />
+                  <ToggleCell
+                    open={open === check.id}
+                    onToggle={() => setOpen(open === check.id ? null : check.id)}
+                    controls={`probe-panel-${check.id}`}
+                  />
                 </tr>
                 {open === check.id ? (
                   <PerPageRow
+                    id={`probe-panel-${check.id}`}
                     cols={cols}
                     perPage={(brand) => now.probePerPage[brand]?.[check.id] ?? {}}
                     scanned={(brand, key) => now.pageKeys[brand]?.includes(key) ?? false}
@@ -174,24 +184,17 @@ export function RulesClient({
   );
 }
 
-function Chevron({ open, onClick }: { open: boolean; onClick: () => void }) {
-  return (
-    <Td align="right" className="text-faint">
-      <button type="button" onClick={onClick} aria-label={open ? 'Collapse' : 'Expand'} tabIndex={-1}>
-        <span aria-hidden="true" className={`inline-block transition-transform ${open ? 'rotate-90' : ''}`}>›</span>
-      </button>
-    </Td>
-  );
-}
-
 /** The per-page breakdown under an expanded row: brands down, page types across, cells link to the page detail. */
 function PerPageRow({
+  id,
   cols,
   perPage,
   scanned,
   pageOrder,
   note,
 }: {
+  /** What the row's toggle points `aria-controls` at. */
+  id: string;
   cols: number;
   perPage: (brand: Brand) => Record<string, number>;
   scanned: (brand: Brand, key: string) => boolean;
@@ -199,7 +202,7 @@ function PerPageRow({
   note: string;
 }) {
   return (
-    <tr>
+    <tr id={id}>
       <Td colSpan={cols} className="h-auto bg-paper/40 py-3 pl-9 pr-4">
         <div className="overflow-x-auto rounded-card border border-rule bg-card">
           <table className="w-full border-collapse text-[11.5px]">
