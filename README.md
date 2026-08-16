@@ -16,7 +16,7 @@ screen reader or navigating by keyboard.
 | `/runs/` — **Runs** | QA · Engineering | Scans already taken: Summary, By check, By page, and Over time once there are two runs. The run picker lives here and nowhere else. |
 | `/measure/` — **Measure** | QA · Engineering | Scan any URL on demand — production, staging, a preview build. |
 | `/compare/` — **Compare** | QA | Current vs fixed, scanned in one session and diffed check by check. The "did my fix land" workflow. |
-| `/how-it-works/` — **How it works** | Anyone | What the scanner does, in plain English: the five questions, the four words used precisely, what every figure is stamped with, and what the tool cannot determine at all. |
+| `/how-it-works/` — **How it works** | Anyone | What the scanner does, in plain English: what an agent sees, how a page is scanned, what counts as a defect, what every figure is stamped with, and what the tool cannot tell you. |
 
 Issues had a route of its own until the scanner learned to measure what only
 prose could describe. Once every figure it quoted also appeared under Runs → By

@@ -1,11 +1,12 @@
 import { HowItWorks, type HowItWorksFigures } from '@/components/HowItWorks';
-import { navReach, scannedPages } from '@/lib/aggregate';
+import { navReach } from '@/lib/aggregate';
 import { latestRun, loadRuns, runAtViewport } from '@/lib/loadRuns';
+import { VIEWPORT_LABEL } from '@/lib/model';
 
 export const metadata = {
   title: 'How it works — Agent Readiness',
   description:
-    'How the scanner measures a page, why it measures two devices, and what it deliberately does not do.',
+    'What an agent sees, how a page is scanned, what counts as a defect, and what the tool cannot tell you.',
 };
 
 /**
@@ -36,8 +37,12 @@ export default function HowItWorksPage() {
       figures = {
         navTotal: homeNav?.total ?? 0,
         navInTree: homeNav?.inTree ?? 0,
-        pages: scannedPages(view, 'insureon').length + scannedPages(view, 'techinsurance').length,
-        profiles: latest.viewports.length,
+        profiles: latest.viewports.map((v) => VIEWPORT_LABEL[v]),
+        // Read straight off the run. Anything the run did not record stays
+        // undefined and renders as "not recorded".
+        axeVersion: latest.meta.axeVersion,
+        probeVersion: latest.meta.probeVersion,
+        browserVersion: latest.meta.browserVersion,
       };
     }
   }
