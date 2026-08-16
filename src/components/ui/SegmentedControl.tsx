@@ -24,7 +24,7 @@ export function SegmentedControl<T extends string>({
           aria-pressed={value === o.value}
           onClick={() => onChange(o.value)}
           className={`rounded-[7px] px-2.5 py-1 text-xs transition-colors ${
-            value === o.value ? 'bg-ink font-medium text-white' : 'text-muted hover:text-ink'
+            value === o.value ? 'bg-accent font-medium text-paper' : 'text-muted hover:text-ink'
           }`}
         >
           {o.label}

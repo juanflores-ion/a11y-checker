@@ -296,7 +296,7 @@ export function FullScanRunner({ targets }: { targets: ScanTarget[] }) {
           type="button"
           onClick={run}
           disabled={status === 'running'}
-          className="rounded-card bg-accent px-5 py-2.5 text-sm font-medium text-white shadow-card transition-all hover:bg-accent/90 disabled:cursor-not-allowed disabled:opacity-55"
+          className="rounded-card bg-accent px-5 py-2.5 text-sm font-medium text-paper shadow-card transition-all hover:bg-accent/90 disabled:cursor-not-allowed disabled:opacity-55"
         >
           {status === 'running' ? `Scanning… ${pct}%` : 'Run full scan'}
         </button>

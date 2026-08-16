@@ -71,9 +71,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 function Mark() {
   return (
     <svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true" className="shrink-0">
-      <rect x="1" y="4" width="4" height="12" rx="1.5" fill="#1F3FD8" />
-      <rect x="6.5" y="4" width="4" height="12" rx="1.5" fill="#1F3FD8" opacity="0.55" />
-      <rect x="12" y="4" width="4" height="12" rx="1.5" fill="#6D28D9" opacity="0.25" />
+      <rect x="1" y="4" width="4" height="12" rx="1.5" fill="#7C96FF" />
+      <rect x="6.5" y="4" width="4" height="12" rx="1.5" fill="#7C96FF" opacity="0.55" />
+      <rect x="12" y="4" width="4" height="12" rx="1.5" fill="#A78BFA" opacity="0.35" />
     </svg>
   );
 }
