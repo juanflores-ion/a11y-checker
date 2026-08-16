@@ -4,7 +4,7 @@ export interface TabItem {
   href: string;
   label: string;
   active: boolean;
-  /** Rendered, not linked — with `title` saying why. Never hidden: a tab that vanishes reads as a bug. */
+  /** Rendered as a focusable, aria-disabled button with the reason visible beside the label. Never hidden: a tab that vanishes reads as a bug. */
   disabled?: boolean;
   title?: string;
 }
@@ -15,14 +15,16 @@ export function Tabs({ items, ariaLabel }: { items: TabItem[]; ariaLabel: string
     <nav aria-label={ariaLabel} className="-mb-px flex gap-0.5">
       {items.map((t) =>
         t.disabled ? (
-          <span
+          <button
             key={t.href}
+            type="button"
             aria-disabled="true"
             title={t.title}
             className="cursor-not-allowed border-b-2 border-transparent px-3 py-2 text-sm text-faint"
           >
             {t.label}
-          </span>
+            {t.title ? <span className="ml-1.5 text-[11px]">· {t.title}</span> : null}
+          </button>
         ) : (
           <Link
             key={t.href}

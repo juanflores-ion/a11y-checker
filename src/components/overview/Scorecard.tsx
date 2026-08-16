@@ -7,6 +7,7 @@ import { makeDelta, SCORECARD_GROUPS, type ScorecardRow } from '@/lib/aggregate'
 import { cellTone, formatCount } from '@/lib/format';
 import { BRAND_LABEL, BRANDS, type Brand } from '@/lib/model';
 import { DeltaChip } from '../Primitives';
+import { StatusDot } from '../ui/StatusDot';
 import { GroupRow, NumCell, Table, TBody, Td, Th, THead } from '../ui/Table';
 import type { OverviewBrandSnapshot } from './types';
 
@@ -100,7 +101,8 @@ export function Scorecard({
           <span className="text-faint">(volume — moves between scans)</span>
         </span>
         {failed > 0 ? (
-          <span className="text-critical">
+          <span className="text-muted">
+            <StatusDot tone="bad" className="mr-1.5" />
             {failed} page{failed === 1 ? '' : 's'} failed to load —{' '}
             <Link href="/runs/pages" className="underline underline-offset-2">
               By page
