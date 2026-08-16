@@ -32,14 +32,6 @@ export const BRAND_COLOR: Record<Brand, string> = {
   techinsurance: '#2DD4BF',
 };
 
-/** Shared chart chrome, matching the `rule`, `muted` and `phantom` tokens. */
-export const CHART = {
-  grid: '#1E2735',
-  axis: '#98A2B3',
-  marker: '#A78BFA',
-  mono: '"JetBrains Mono", ui-monospace, SFMono-Regular, monospace',
-} as const;
-
 /** Canonical order. A run may legitimately contain fewer than all ten. */
 export const PAGE_KEYS = [
   'home',
