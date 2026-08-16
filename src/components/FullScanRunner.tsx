@@ -281,7 +281,7 @@ export function FullScanRunner({ targets }: { targets: ScanTarget[] }) {
       <div className="mt-4 flex flex-wrap items-end gap-3">
         <label className="min-w-[14rem] flex-1">
           <span className="text-eyebrow font-medium text-muted">
-            Label <span className="text-faint">· optional, shown on the trend chart</span>
+            Label <span className="text-faint">· optional, names this run in the run picker</span>
           </span>
           <input
             type="text"

@@ -13,7 +13,7 @@ screen reader or navigating by keyboard.
 | Route | Who it's for | What it does |
 |---|---|---|
 | `/` — **Overview** | Product · SEO · QA | Where both sites stand against target, then every known problem in plain English: what breaks, what it costs, the technical detail, and what would fix it. The context bar picks the run and device profile. |
-| `/runs/` — **Runs** | QA · Engineering | Every figure of a measurement: By check (rules and probes, with per-page breakdown), By page (a matrix, then the detail with sample markup), and Over time once there are three runs. |
+| `/runs/` — **Runs** | QA · Engineering | Every figure of a measurement: By check (rules and probes, with per-page breakdown), and By page (a matrix, then the detail with sample markup). |
 | `/scan/` — **Scan** | QA · Engineering | Measure a URL now, diff a fix before and after, or record a full run — three modes of one page. Old `/measure` and `/compare` URLs redirect here. |
 | `/how-it-works/` — **How it works** | Anyone | What the scanner does, in plain English: what an agent sees, how a page is scanned, what counts as a defect, what every figure is stamped with, and what the tool cannot tell you. |
 
@@ -419,11 +419,10 @@ drawer — that is the `phantomMenu` figure of 68/69. On desktop they are
 announces them. One number cannot say both, so a run records both, and every
 figure in the dashboard is reported against a named profile.
 
-Two runs are only comparable at the same profile. The trend chart plots one
-profile at a time and drops runs that never measured it, rather than joining a
-mobile reading to a desktop one and drawing a cliff nobody caused. Runs recorded
-before profiles existed are normalised as mobile-only, because that is what they
-were.
+Two runs are only comparable at the same profile. The compare picker offers
+one profile at a time and never joins a mobile reading to a desktop one, which
+would draw a cliff nobody caused. Runs recorded before profiles existed are
+normalised as mobile-only, because that is what they were.
 
 ### A page the server refused is not a page with no problems
 
@@ -436,7 +435,7 @@ failed pages, check `targets.mjs` first — a URL has usually moved.
 
 **The scanner never interacts with the page.** No clicking, no hovering, no
 scrolling. This mirrors what Lighthouse does. The moment it opens the menu, the
-counts stop being comparable and every historical trend line is void.
+counts stop being comparable and every earlier run is void as a baseline.
 
 ## Live scan
 
@@ -485,17 +484,18 @@ comparison against it compared different pages. It now lives in
 figures and nothing renders it.
 
 **`data/runs/` holds real scans only.** No hand-built, projected or
-placeholder run files, ever. One existed briefly to give the trend chart a
-second point, and it rendered on screen captioned "Measured on production".
+placeholder run files, ever. One existed briefly to give a since-removed trend
+chart a second point, and it rendered on screen captioned "Measured on
+production".
 `npm test` now fails on any future-dated run. Fixtures needed to test the delta
 maths are constructed inside `aggregate.test.ts` instead — test data belongs in
 the test, not in the directory the UI reads.
 
-**The trend view needs three runs.** Two scans are a before and an after, and
-the scorecard already states that with delta chips; a line through two points
-reads as a trajectory it cannot support. With fewer than three scans on file,
-"Over time" stays visible in Runs but disabled. It enables once a third scan
-lands.
+**There is no trend view.** Two scans are a before and an after, and the
+scorecard already states that with delta chips; a line through a handful of
+points reads as a trajectory it cannot support. This tool measures a baseline
+and verifies fixes against it. If a standing regression watch is ever wanted,
+that is a separate report, not a tab here.
 
 **Insureon's zeros on `button-name` and `link-name` are misleading.** Its menu
 back control is a `<div>`, not a `<button>`, so the axe rule structurally
