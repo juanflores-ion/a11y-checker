@@ -21,6 +21,8 @@ const nextConfig = {
   async redirects() {
     return [
       { source: '/runs/rules', destination: '/runs', permanent: false },
+      { source: '/measure', destination: '/scan', permanent: false },
+      { source: '/compare', destination: '/scan?mode=compare', permanent: false },
     ];
   },
   images: { unoptimized: true },
