@@ -303,29 +303,45 @@ function IssueDetail({
   muted?: boolean;
 }) {
   return (
-    <div className="grid max-w-6xl items-start gap-x-8 gap-y-4 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)]">
-      <div>
-        <p className="mb-3 text-[14px] leading-snug text-ink">{issue.plain}</p>
-        <IssuePicture picture={issue.picture} />
+    <div>
+      <div className="grid max-w-6xl items-start gap-x-8 gap-y-4 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)]">
+        <div>
+          <p className="mb-3 text-[14px] leading-snug text-ink">{issue.plain}</p>
+          <IssuePicture picture={issue.picture} />
+        </div>
+        <div className="text-[12.5px] leading-relaxed">
+          <p className="text-[13px] text-ink">
+            <span className="font-medium">Fix:</span> {issue.fix.summary}{' '}
+            <Tag className="ml-1 align-[1px]">{RISK_LABEL[issue.fix.riskLevel]}</Tag>
+          </p>
+          <Figures issue={issue} brands={brands} metricsByBrand={metricsByBrand} muted={muted} />
+        </div>
       </div>
-      <div className="text-[12.5px] leading-relaxed">
-        <p className="text-[13px] text-ink">
-          <span className="font-medium">Fix:</span> {issue.fix.summary}{' '}
-          <Tag className="ml-1 align-[1px]">{RISK_LABEL[issue.fix.riskLevel]}</Tag>
-        </p>
-        <Figures issue={issue} brands={brands} metricsByBrand={metricsByBrand} muted={muted} />
-        <details className="group mt-3">
-          <summary className="cursor-pointer list-none text-[12px] text-muted hover:text-ink [&::-webkit-details-marker]:hidden">
-            <span aria-hidden="true" className="mr-1 inline-block transition-transform group-open:rotate-90">›</span>
-            Details
-          </summary>
-          <div className="mt-3 space-y-3 border-l border-rule pl-3">
+      {/* Below both columns, so an open Details gets the whole row rather than
+          the right-hand half: two columns of its own on wide screens, prose on
+          the left and the technical material and samples on the right. */}
+      <details className="group mt-4 text-[12.5px] leading-relaxed">
+        <summary className="inline-flex cursor-pointer list-none items-center text-[12px] text-muted hover:text-ink [&::-webkit-details-marker]:hidden">
+          <span aria-hidden="true" className="mr-1 inline-block transition-transform group-open:rotate-90">›</span>
+          Details
+        </summary>
+        <div className="mt-3 grid gap-x-10 gap-y-3 border-l border-rule pl-4 lg:grid-cols-2">
+          <div className="space-y-3">
             <Block title="Why it matters">
               <p className="text-ink">{issue.whyItMatters}</p>
             </Block>
             <Block title="What breaks, exactly">
               <p className="text-muted">{issue.whatBreaks}</p>
             </Block>
+            <Block title="Verify">
+              <p className="text-muted">
+                {issue.verify}{' '}
+                <Link href="/scan?mode=compare" className="text-accent underline underline-offset-2">Scan → Before / after</Link>{' '}
+                shows whether it moved.
+              </p>
+            </Block>
+          </div>
+          <div className="space-y-3">
             <Block title="Technical">
               <p className="text-muted">{issue.technical}</p>
               <p className="mt-1 text-muted">{issue.fix.technical}</p>
@@ -337,13 +353,6 @@ function IssueDetail({
                   ))}
                 </ul>
               ) : null}
-            </Block>
-            <Block title="Verify">
-              <p className="text-muted">
-                {issue.verify}{' '}
-                <Link href="/scan?mode=compare" className="text-accent underline underline-offset-2">Scan → Before / after</Link>{' '}
-                shows whether it moved.
-              </p>
             </Block>
             {issue.samples?.length ? (
               <Block title="Sample markup, captured by the scanner">
@@ -358,8 +367,8 @@ function IssueDetail({
               </Block>
             ) : null}
           </div>
-        </details>
-      </div>
+        </div>
+      </details>
     </div>
   );
 }
