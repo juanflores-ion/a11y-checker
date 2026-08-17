@@ -46,16 +46,19 @@ export function IssuesTable({
 }) {
   const [site, setSite] = useState<SiteFilter>('both');
   /**
-   * Every row starts open, and the state tracks what has been *closed*.
+   * The blocking issues start open; everything below them starts folded.
    *
-   * The row's whole point is the picture and the plain sentence inside it; a
-   * table of 16 collapsed titles asks the reader to guess that anything is
-   * there. Closing is the deliberate act — for the reader who has read one and
-   * wants it out of the way — so nothing is hidden on arrival.
+   * The row's whole point is the picture and the plain sentence inside it, so
+   * arriving on sixteen collapsed titles asks the reader to guess that
+   * anything is there — but sixteen open cards is a page nobody can scan.
+   * Blocking is the line: those are the ones a first-time reader must not
+   * miss, and the open cards double as a demonstration that every row opens.
+   * The state tracks the rows the reader has toggled away from that default.
    */
-  const [closed, setClosed] = useState<ReadonlySet<string>>(() => new Set());
+  const [toggled, setToggled] = useState<ReadonlySet<string>>(() => new Set());
+  const isOpen = (issue: Issue) => (issue.severity === 'blocking') !== toggled.has(issue.id);
   const toggle = (id: string) =>
-    setClosed((prev) => {
+    setToggled((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
       else next.add(id);
@@ -77,7 +80,7 @@ export function IssuesTable({
           <span className="font-normal text-faint">
             · {visible.length} issue{visible.length === 1 ? '' : 's'}
             {parked.length ? ` · ${parked.length} owned elsewhere` : ''}, hardest-blocking first ·
-            click a row to fold it away
+            blocking ones open, click any row to open or fold it
           </span>
         </h2>
         <SegmentedControl<SiteFilter>
@@ -112,7 +115,7 @@ export function IssuesTable({
               issue={issue}
               brandsShown={brandsShown}
               metricsByBrand={metricsByBrand}
-              open={!closed.has(issue.id)}
+              open={isOpen(issue)}
               onToggle={() => toggle(issue.id)}
             />
           ))}
@@ -129,7 +132,7 @@ export function IssuesTable({
                   issue={issue}
                   brandsShown={brandsShown}
                   metricsByBrand={metricsByBrand}
-                  open={!closed.has(issue.id)}
+                  open={isOpen(issue)}
                   onToggle={() => toggle(issue.id)}
                   muted
                 />
