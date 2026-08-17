@@ -67,6 +67,14 @@ const BOX = 'inline-flex items-center gap-1.5 rounded-[6px] border px-2.5 py-1 t
 const GHOST = `${BOX} border-dashed border-faint text-faint`;
 const REAL = `${BOX} border-rule bg-card text-ink`;
 
+function Chevron() {
+  return (
+    <svg width="9" height="6" viewBox="0 0 9 6" aria-hidden="true" className="inline-block align-middle">
+      <path d="M1 1l3.5 3.5L8 1" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 function Burger() {
   return (
     <svg width="14" height="12" viewBox="0 0 14 12" aria-hidden="true">
@@ -100,7 +108,7 @@ function Control({ control, fixed, label }: { control: 'burger' | 'close' | 'bac
       return (
         <span className={`${fixed ? 'border-rule bg-card' : 'border-dashed border-faint'} flex items-center justify-between rounded-[6px] border px-2.5 py-1.5 text-[11px] ${fixed ? 'text-ink' : 'text-faint'}`}>
           <span className={fixed ? '' : 'italic'}>{label}</span>
-          <span aria-hidden="true" className="text-faint">⌄</span>
+          <span className="text-faint"><Chevron /></span>
         </span>
       );
     case 'link':
@@ -123,9 +131,12 @@ function Control({ control, fixed, label }: { control: 'burger' | 'close' | 'bac
 function Menu({ variant, fixed }: { variant: 'hover' | 'unfindable'; fixed: boolean }) {
   return (
     <div>
-      <div className="flex gap-2.5 rounded-[5px] border border-rule bg-card px-2 py-1 text-[10.5px] text-ink">
+      <div className="flex gap-2.5 whitespace-nowrap rounded-[5px] border border-rule bg-card px-2 py-1 text-[10.5px] text-ink">
         <span>Small business</span>
-        <span className="border-b border-accent text-accent">Products{fixed ? ' ⌄' : ''}</span>
+        <span className="inline-flex items-center gap-1 border-b border-accent text-accent">
+          Products
+          {fixed ? <Chevron /> : null}
+        </span>
         <span>Industries</span>
       </div>
       <div
@@ -216,7 +227,7 @@ function Text({ variant, fixed }: { variant: 'contrast' | 'link-colour'; fixed: 
     return (
       <div>
         <div className="rounded-[5px] bg-white px-2.5 py-2 text-[12px]" style={{ color: fixed ? '#767391' : '#84829c' }}>
-          BEST FOR · Toll-free: (800) 668-7020
+          Toll-free: (800) 668-7020
         </div>
         <div className={`mt-1.5 font-mono text-[10.5px] ${fixed ? 'text-good' : 'text-critical'}`}>
           {fixed ? '4.5 : 1 — passes' : '3.7 : 1 — needs 4.5 : 1'}
