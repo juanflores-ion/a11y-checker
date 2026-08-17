@@ -39,3 +39,25 @@ export const SITES: Record<Brand, SiteConfig> = {
 export function productionUrls(): string[] {
   return Object.values(SITES).map((s) => s.url);
 }
+
+/**
+ * The staging twin of a production URL: same path, staging origin.
+ *
+ * This is what lets Scan → Before / after work from a list of page types
+ * rather than twenty typed URLs — the tracked targets give the production
+ * side, and each one's After side is the same path on the site's staging
+ * origin. Returns null when the brand has no staging origin, or when the URL
+ * given is not a URL. Assumes staging mirrors production's paths, which is
+ * what a preview of the same site is; a staging host that served a different
+ * path layout would need its own target list, not a rewrite here.
+ */
+export function stagingTwin(brand: Brand, productionUrl: string): string | null {
+  const staging = SITES[brand]?.staging;
+  if (!staging) return null;
+  try {
+    const prod = new URL(productionUrl);
+    return new URL(prod.pathname + prod.search, staging).toString();
+  } catch {
+    return null;
+  }
+}

@@ -460,9 +460,17 @@ scanner is a setting on the page (**Scanner · change**):
   on your own machine, or a tunnel URL when a colleague is running it for you.
   Up to ten URLs at a time.
 
-**Scan → Before / after** is the one QA wants once fixes reach staging: current
-on the left, fixed on the right, both scanned in the same session and diffed
-check by check.
+**Scan → Before / after** is the one QA wants once fixes reach staging, and it
+is where the page opens. Nobody types URLs for it: pick a site, tick the page
+types you want (all ten are ticked to begin with), and each one becomes a pair
+— the tracked production URL on the Before side, the same path on that site's
+staging origin on the After side, derived from `staging` in `src/lib/sites.ts`.
+Both sides are scanned in the same session, at one device profile, and diffed
+check by check. Ten pages is twenty URLs, which no scanner takes at once, so
+the page splits the work into batches the chosen scanner accepts and counts
+them off as they land. Anything off the list — a preview build, one page
+mid-fix — goes under **Other URLs**, paired line by line and added to whatever
+is ticked, up to twelve pairs in a run.
 
 Both scanners call the identical `scanPage()` the scheduled scan uses, so a
 live scan of one of the ten tracked URLs should land on the same numbers that
