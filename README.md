@@ -123,9 +123,11 @@ showing nothing. Whether a fix landed is answered by *measuring* — scan stagin
 from **Scan**, or diff it against production with **Scan → Before / after**.
 Never by an assertion stored in a file.
 
-So the catalogue describes what production has today. `inScope: false` marks
-the two findings (contrast, colour-only links) that are brand-palette decisions
-owned elsewhere; they render in a separate section rather than being hidden.
+So the catalogue describes what production has today. `inScope: false` marks a
+finding that is a brand-palette decision owned elsewhere; such findings render
+in a separate section rather than being hidden. None today — contrast and
+colour-only links carried that flag until design decided the fix in Aug 2026,
+and now sit in the main list like everything else.
 
 **`detection: 'manual'` is load-bearing.** It marks findings no scanner can
 catch — the hamburger `<div>`, the hover-only desktop menu — and the UI badges
