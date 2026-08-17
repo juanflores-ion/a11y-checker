@@ -293,14 +293,14 @@ export const ISSUES: Issue[] = [
     title: 'The desktop menu only opens on hover',
     severity: 'blocking',
     brands: ['insureon'],
-    detection: 'manual',
+    detection: 'scanner',
     whatBreaks:
       'On a desktop screen the main navigation opens when the mouse moves over it, and by no other means. There is nothing to click and nothing to focus, so an agent or a keyboard user cannot open it at all.',
     whyItMatters:
       'Fifty-six category links — the whole product taxonomy an assistant would use to find the right policy — are simply unreachable without a mouse. An agent has no mouse.',
     technical:
-      'The mega-menu is driven by CSS :hover / mouseenter with no click or focus handler and no keyboard-operable trigger. No automated rule covers "opens only on hover", so this does not appear in any scan report.',
-    metrics: [],
+      'The mega-menu is driven by CSS :hover / mouseenter with no click or focus handler and no keyboard-operable trigger. No axe rule covers "opens only on hover"; the scanner\'s own check counts the menu panels that nothing in the tree announces — the mark a hover-only menu leaves, since a real trigger would carry aria-expanded / aria-controls.',
+    metrics: [{ kind: 'unannounced-panels', label: 'Menu panels nothing announces' }],
     sources: ['Navigation/DesktopMenu/index.js:66'],
     fix: {
       summary:
@@ -311,7 +311,7 @@ export const ISSUES: Issue[] = [
       riskLevel: 'medium',
     },
     verify:
-      'By hand, on desktop: Tab to the top-level nav item and press Enter. The submenu should open and its links should be reachable.',
+      'Re-scan on desktop: menu panels nothing announces should read 0 (production Insureon: 52). Then by hand, because the scanner never presses keys: Tab to a top-level nav item and press Enter — the submenu should open and its links be reachable.',
     inScope: true,
   },
 
@@ -556,31 +556,6 @@ export const ISSUES: Issue[] = [
       riskLevel: 'very-low',
     },
     verify: 'Re-scan and check "Hidden but focusable elements" reads 0.',
-    inScope: true,
-  },
-
-  {
-    id: 'shared-components',
-    title: 'The shared building blocks reintroduce these problems',
-    severity: 'moderate',
-    brands: ['insureon', 'techinsurance'],
-    detection: 'manual',
-    whatBreaks:
-      'The components that generate links, images and expandable panels across both sites are where most of these defects originate, so fixing individual pages does not hold.',
-    whyItMatters:
-      'Ninety-four of the 169 findings sit in shared components. Fix them once and a large share of the list clears at the source — skip them and the same defects come back with the next feature.',
-    technical:
-      'Of Insureon\'s 110 findings, 56 are in shared components; of TechInsurance\'s 59, 38 are. Thirty-four of Insureon\'s findings mirror TechInsurance defects exactly, which is why the two tickets are meant to be done together.',
-    metrics: [],
-    fix: {
-      summary: 'Fix the shared components rather than each page that uses them.',
-      technical:
-        'Address the link, image and disclosure primitives so names, landmarks and hiding behaviour are correct by default.',
-      risk: 'Broad blast radius by definition — these components are used everywhere, so this needs the widest visual QA of any phase.',
-      riskLevel: 'medium',
-    },
-    verify:
-      'Re-scan all ten page types on both brands and confirm the per-page counts drop together rather than one page at a time.',
     inScope: true,
   },
 

@@ -604,6 +604,11 @@ function WhatCounts() {
           responds to a click but was never marked as a button. No standard rulebook can see it.
           Ours counts it.
         </p>
+        <p>
+          Most of the defects lived in a handful of shared building blocks — the navigation, the
+          link and image primitives, the expandable panels — so they were fixed at the source.
+          That is why the counts fall on every page at once rather than one page at a time.
+        </p>
       </div>
 
       <div className="mt-8">

@@ -130,8 +130,11 @@ colour-only links carried that flag until design decided the fix in Aug 2026,
 and now sit in the main list like everything else.
 
 **`detection: 'manual'` is load-bearing.** It marks findings no scanner can
-catch — the hamburger `<div>`, the hover-only desktop menu — and the UI badges
-them so a green automated report never reads as done.
+catch, and the UI badges them so a green automated report never reads as done.
+The hover-only desktop menu used to be one; it is now filed against the
+scanner's "menu panels nothing announces" figure, which is the mark a hover-only
+menu leaves — the hand check (Tab, Enter) stays in its verify step because the
+scanner never presses keys.
 
 ## Deploying
 
