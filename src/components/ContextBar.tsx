@@ -120,7 +120,6 @@ export function ContextBar() {
                 {BRAND_LABEL[b]}
               </option>
             ))}
-            <option value="both">Both sites</option>
           </select>
         </Field>
 

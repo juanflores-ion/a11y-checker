@@ -11,9 +11,13 @@ import {
   type ViewportName,
 } from '@/lib/model';
 
-/** 'both' or one brand: what the data pages show columns for. */
-export type SiteSelection = 'both' | Brand;
-export const SITE_SELECTIONS: readonly SiteSelection[] = ['both', ...BRANDS];
+/**
+ * One brand: the site every data page shows. There is no "both" — two sites
+ * side by side doubled every figure, and the one reader who wants the
+ * comparison can open two tabs.
+ */
+export type SiteSelection = Brand;
+export const SITE_SELECTIONS: readonly SiteSelection[] = BRANDS;
 
 export interface RunSummary {
   id: string;
@@ -53,15 +57,10 @@ interface RunSelection {
    */
   compareMissingViewport: boolean;
   /* --- site ------------------------------------------------------- */
-  /**
-   * Which site's figures are on screen. One site by default — the first brand
-   * — because two side by side doubles every number on the page, and the point
-   * of the control is fewer figures at a glance. "Both" is there for the
-   * reader who wants the comparison.
-   */
+  /** Which site's figures are on screen. The first brand until chosen otherwise. */
   site: SiteSelection;
   setSite: (s: SiteSelection) => void;
-  /** The brands the tables should render columns for, in canonical order. */
+  /** Always exactly the selected site — a one-element array so tables map over it unchanged. */
   brands: Brand[];
 }
 
@@ -191,7 +190,7 @@ export function RunProvider({
       compareMissingViewport: !!compare && !compareHasViewport,
       site,
       setSite,
-      brands: site === 'both' ? [...BRANDS] : [site],
+      brands: [site],
     };
   }, [runs, currentId, compareId, viewport, site, setCurrentId, setCompareId, setViewport, setSite]);
 
