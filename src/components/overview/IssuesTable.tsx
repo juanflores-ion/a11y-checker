@@ -223,7 +223,9 @@ function IssueRows({
       </tr>
       {open ? (
         <tr id={panelId}>
-          <Td colSpan={5} className="h-auto border-b-0 bg-paper/50 pb-8 pl-[3.25rem] pr-6 pt-5">
+          {/* Equal top and bottom: measured 20px over 32px before this, which
+              reads as the content sitting low in its own block. */}
+          <Td colSpan={5} className="h-auto border-b-0 bg-paper/50 py-7 pl-[3.25rem] pr-6">
             <IssueDetail issue={issue} brands={brands} metricsByBrand={metricsByBrand} muted={muted} />
           </Td>
         </tr>
@@ -318,7 +320,7 @@ function IssueDetail({
   muted?: boolean;
 }) {
   return (
-    <div className="grid max-w-6xl gap-x-8 gap-y-4 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)]">
+    <div className="grid max-w-6xl items-start gap-x-8 gap-y-4 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)]">
       <div>
         <p className="mb-3 text-[14px] leading-snug text-ink">{issue.plain}</p>
         <IssuePicture picture={issue.picture} />
