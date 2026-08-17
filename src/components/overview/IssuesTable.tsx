@@ -11,7 +11,7 @@ import { CodeSample } from '../Primitives';
 import { SegmentedControl } from '../ui/SegmentedControl';
 import { SiteChip } from '../ui/SiteChip';
 import { StatusDot, type DotTone } from '../ui/StatusDot';
-import { FIGURE_CLASS, Table, TBody, Td, Th, THead, GroupRow, ToggleCell } from '../ui/Table';
+import { FIGURE_CLASS, Table, TBody, Td, Th, THead, GroupRow } from '../ui/Table';
 import { Tag } from '../ui/Tag';
 import { IssuePicture } from './IssuePicture';
 
@@ -45,7 +45,22 @@ export function IssuesTable({
   metricsByBrand: Record<Brand, Record<string, ResolvedMetric[]>>;
 }) {
   const [site, setSite] = useState<SiteFilter>('both');
-  const [openId, setOpenId] = useState<string | null>(null);
+  /**
+   * Every row starts open, and the state tracks what has been *closed*.
+   *
+   * The row's whole point is the picture and the plain sentence inside it; a
+   * table of 16 collapsed titles asks the reader to guess that anything is
+   * there. Closing is the deliberate act — for the reader who has read one and
+   * wants it out of the way — so nothing is hidden on arrival.
+   */
+  const [closed, setClosed] = useState<ReadonlySet<string>>(() => new Set());
+  const toggle = (id: string) =>
+    setClosed((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
 
   const { tracked, parked } = useMemo(() => {
     const sorted = sortIssues(ISSUES);
@@ -61,7 +76,8 @@ export function IssuesTable({
           What’s wrong, and what would fix it{' '}
           <span className="font-normal text-faint">
             · {visible.length} issue{visible.length === 1 ? '' : 's'}
-            {parked.length ? ` · ${parked.length} owned elsewhere` : ''}, hardest-blocking first
+            {parked.length ? ` · ${parked.length} owned elsewhere` : ''}, hardest-blocking first ·
+            click a row to fold it away
           </span>
         </h2>
         <SegmentedControl<SiteFilter>
@@ -78,16 +94,14 @@ export function IssuesTable({
       <Table label="Issues" className="[&>table]:min-w-[46rem]">
         <THead>
           <tr>
-            <Th className="w-8">#</Th>
+            <Th className="w-14">#</Th>
             <Th className="w-28">Severity</Th>
             <Th>Issue</Th>
             <Th className="w-28">Sites</Th>
             <Th align="right" className="w-40">
               Measured now
             </Th>
-            <Th className="w-8">
-              <span className="sr-only">Detail</span>
-            </Th>
+
           </tr>
         </THead>
         <TBody>
@@ -98,13 +112,13 @@ export function IssuesTable({
               issue={issue}
               brandsShown={brandsShown}
               metricsByBrand={metricsByBrand}
-              open={openId === issue.id}
-              onToggle={() => setOpenId(openId === issue.id ? null : issue.id)}
+              open={!closed.has(issue.id)}
+              onToggle={() => toggle(issue.id)}
             />
           ))}
           {parked.length ? (
             <>
-              <GroupRow colSpan={6}>
+              <GroupRow colSpan={5}>
                 Measured, but owned elsewhere — styling and brand-palette decisions, tracked here,
                 not part of this workstream
               </GroupRow>
@@ -115,8 +129,8 @@ export function IssuesTable({
                   issue={issue}
                   brandsShown={brandsShown}
                   metricsByBrand={metricsByBrand}
-                  open={openId === issue.id}
-                  onToggle={() => setOpenId(openId === issue.id ? null : issue.id)}
+                  open={!closed.has(issue.id)}
+                  onToggle={() => toggle(issue.id)}
                   muted
                 />
               ))}
@@ -149,8 +163,16 @@ function IssueRows({
   const panelId = `issue-${issue.id}`;
   return (
     <>
-      <tr className={open ? 'bg-paper/40' : undefined}>
-        <Td className="font-mono text-xs text-faint tnum">{index ?? '·'}</Td>
+      <tr
+        onClick={onToggle}
+        className={`cursor-pointer transition-colors hover:bg-paper/60 ${open ? 'bg-paper/40' : ''}`}
+      >
+        <Td className="pr-0 font-mono text-xs text-faint tnum">
+          <span className="inline-flex items-center gap-1.5">
+            <Caret open={open} />
+            {index ?? '·'}
+          </span>
+        </Td>
         <Td>
           <span className={`inline-flex items-center gap-1.5 whitespace-nowrap text-[11.5px] font-medium ${muted ? 'text-faint' : SEVERITY_TEXT[issue.severity]}`}>
             <StatusDot tone={muted ? 'na' : SEVERITY_DOT[issue.severity]} />
@@ -160,7 +182,12 @@ function IssueRows({
         <Td className={muted ? 'text-muted' : ''}>
           <button
             type="button"
-            onClick={onToggle}
+            onClick={(e) => {
+              // The row already toggles; without this the click counts twice
+              // and the row reopens as fast as it closes.
+              e.stopPropagation();
+              onToggle();
+            }}
             aria-expanded={open}
             aria-controls={open ? panelId : undefined}
             className={`text-left hover:underline underline-offset-2 ${open ? 'font-medium text-ink' : ''}`}
@@ -183,16 +210,30 @@ function IssueRows({
         <Td align="right" className="whitespace-nowrap font-mono text-xs tnum">
           <HeadlineFigure issue={issue} brands={brands} metricsByBrand={metricsByBrand} muted={muted} />
         </Td>
-        <ToggleCell open={open} onToggle={onToggle} controls={panelId} />
       </tr>
       {open ? (
         <tr id={panelId}>
-          <Td colSpan={6} className="h-auto bg-paper/40 py-4 pl-[3.25rem] pr-6">
+          <Td colSpan={5} className="h-auto bg-paper/40 py-4 pl-[3.25rem] pr-6">
             <IssueDetail issue={issue} brands={brands} metricsByBrand={metricsByBrand} muted={muted} />
           </Td>
         </tr>
       ) : null}
     </>
+  );
+}
+
+/** The disclosure marker, on the left where a reader expects to find one. */
+function Caret({ open }: { open: boolean }) {
+  return (
+    <svg
+      width="8"
+      height="8"
+      viewBox="0 0 8 8"
+      aria-hidden="true"
+      className={`transition-transform ${open ? 'rotate-90' : ''}`}
+    >
+      <path d="M2 1l4 3-4 3z" fill="currentColor" />
+    </svg>
   );
 }
 
