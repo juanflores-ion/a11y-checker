@@ -16,14 +16,11 @@
  * This endpoint fetches a URL it is handed and reports what it found. Left
  * open, that is a server-side request forgery hole with a UI on top: anyone
  * could point it at a cloud metadata endpoint or an internal host and read
- * back the result. The standalone dev server manages that risk by binding to
- * 127.0.0.1 — it is only reachable from the machine running it. A public
- * function has no such protection, so it only scans hosts we have named.
- *
- * Add staging hosts with SCAN_ALLOWED_HOSTS (comma-separated). Suffix matching
- * is deliberate: "insureon.com" also allows "staging.insureon.com", but never
- * "insureon.com.evil.test", which is why the check is on dot-boundaries and
- * not `includes()`.
+ * back the result. A public function has no network boundary to hide behind,
+ * so it only scans hosts we have named: the tracked sites, their staging
+ * origins from `SITES`, and SCAN_ALLOWED_HOSTS (comma-separated). The rule
+ * itself lives in scanner/allowlist.mjs, shared with the standalone server so
+ * the two cannot drift.
  */
 import { execFileSync } from 'node:child_process';
 import path from 'node:path';
@@ -31,6 +28,7 @@ import path from 'node:path';
 import { NextResponse } from 'next/server';
 
 import { SITES } from '@/lib/sites';
+import { hostAllowed, parseAllowedHosts } from '../../../../scanner/allowlist.mjs';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -101,19 +99,12 @@ function probeVersion(): string | null {
 }
 
 function allowedHosts(): string[] {
-  const configured = (process.env.SCAN_ALLOWED_HOSTS ?? '')
-    .split(',')
-    .map((h) => h.trim().toLowerCase())
-    .filter(Boolean);
-  const tracked = Object.values(SITES).map((s) => s.host.replace(/^www\./, '').toLowerCase());
-  return [...new Set([...tracked, ...configured])];
-}
-
-function hostAllowed(hostname: string, allowed: string[]): boolean {
-  const host = hostname.toLowerCase();
-  // Exact match, or a subdomain of an allowed host. Dot-boundary only, so a
-  // lookalike domain that merely *contains* an allowed name can't slip past.
-  return allowed.some((a) => host === a || host.endsWith(`.${a}`));
+  const tracked = Object.values(SITES).flatMap((s) => {
+    const hosts = [s.host.replace(/^www\./, '')];
+    if (s.staging) hosts.push(new URL(s.staging).hostname);
+    return hosts;
+  });
+  return parseAllowedHosts(process.env.SCAN_ALLOWED_HOSTS, tracked);
 }
 
 function parseUrls(input: unknown): { urls: string[]; error?: string } {
@@ -141,8 +132,8 @@ function parseUrls(input: unknown): { urls: string[]; error?: string } {
         urls: [],
         error:
           `${parsed.hostname} isn't on the allowlist. This endpoint only scans our own sites ` +
-          `(${allowed.join(', ')}). Add a staging host with SCAN_ALLOWED_HOSTS, or run the ` +
-          `scanner locally to scan anything.`,
+          `(${allowed.join(', ')}). Add a staging host with SCAN_ALLOWED_HOSTS, or point ` +
+          `Scanner at one running inside your network.`,
       };
     }
     urls.push(parsed.toString());
@@ -245,7 +236,7 @@ export async function POST(request: Request) {
       {
         error:
           'Could not start a browser on the server. ' +
-          `Run the scanner locally as a fallback. (${(err as Error).message})`,
+          `Point Scanner at one running on your machine as a fallback. (${(err as Error).message})`,
       },
       { status: 503 }
     );

@@ -13,26 +13,35 @@
  * same numbers a scheduled run would have produced that day.
  *
  * SECURITY — read this before running it anywhere but your own machine:
- * this server will open a real headless browser and navigate to *any* URL
+ * this server will open a real headless browser and navigate to the URLs
  * it's handed in a POST body. That's exactly the point — it's how you point
  * it at a staging environment — but it also means anyone who can reach this
- * port can make your machine issue requests to wherever they choose,
- * including internal hosts you can reach but they can't. That's why it:
- *   - binds to 127.0.0.1 by default, not your network interface
- *   - only accepts http:// and https:// targets
- *   - caps requests to a handful of URLs and runs them one at a time
- * Don't put this behind a public port, a reverse proxy, or a tunnel without
- * adding real authentication in front of it first.
+ * port can make your machine issue requests, including to internal hosts you
+ * can reach but they can't. Two modes:
+ *
+ *   Local (default): no token, any http(s) URL. Binds to 127.0.0.1, so only
+ *   this machine can reach it. Never tunnel or proxy it in this mode.
+ *
+ *   Shared (SCAN_TOKEN set): the mode for a tunnel. Every /scan needs
+ *   `Authorization: Bearer <token>`, and only the tracked sites plus
+ *   SCAN_ALLOWED_HOSTS are scanned — the same rule the hosted /api/scan
+ *   route applies (see allowlist.mjs). SCAN_ALLOWED_HOSTS on its own also
+ *   turns the allowlist on.
+ *
+ * In both modes it only accepts http:// and https:// targets, caps a request
+ * to a handful of URLs and runs them one at a time.
  *
  * Endpoints:
- *   GET  /health         -> { ok, busy, axeVersion }
- *   POST /scan           <- { urls: string[] }
+ *   GET  /health         -> { ok, busy, axeVersion, authRequired, tokenAccepted }
+ *   POST /scan           <- { urls: string[] }   (+ Authorization in shared mode)
  *                         -> { startedAt, finishedAt, results: PageResult[] }
  */
+import { timingSafeEqual } from 'node:crypto';
 import http from 'node:http';
 
 import { chromium } from 'playwright';
 
+import { hostAllowed, parseAllowedHosts } from './allowlist.mjs';
 import { DEFAULT_PROFILE, PROFILES, PROFILE_NAMES, launchContext, launchOptions, scanPage } from './core.mjs';
 
 const PORT = Number(process.env.PORT ?? 4790);
@@ -40,6 +49,19 @@ const HOST = process.env.HOST ?? '127.0.0.1';
 const ALLOWED_ORIGIN = process.env.ALLOWED_ORIGIN ?? '*';
 const MAX_URLS_PER_REQUEST = 10;
 const BODY_LIMIT_BYTES = 1_000_000;
+
+/** Shared mode. Empty or unset means local mode: no token, no allowlist. */
+const TOKEN = (process.env.SCAN_TOKEN ?? '').trim() || null;
+/**
+ * Null means "any host" — local mode's whole point is a preview build on
+ * localhost:8080 or a domain that isn't ours yet. Set the moment a token is
+ * set (a tunnelled server must not be a proxy into the network the laptop is
+ * on) or when SCAN_ALLOWED_HOSTS names hosts explicitly.
+ */
+const ALLOWED_HOSTS =
+  TOKEN || (process.env.SCAN_ALLOWED_HOSTS ?? '').trim()
+    ? parseAllowedHosts(process.env.SCAN_ALLOWED_HOSTS)
+    : null;
 
 // One scan at a time. Headless Chromium isn't free, and this is a local dev
 // tool for one person at a time, not a service meant to take concurrent load.
@@ -49,7 +71,7 @@ let lastAxeVersion = null;
 function withCors(req, res) {
   res.setHeader('Access-Control-Allow-Origin', ALLOWED_ORIGIN);
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
   res.setHeader('Vary', 'Origin, Access-Control-Request-Private-Network');
 
   /**
@@ -71,6 +93,19 @@ function withCors(req, res) {
   if (req.headers['access-control-request-private-network'] === 'true') {
     res.setHeader('Access-Control-Allow-Private-Network', 'true');
   }
+}
+
+/**
+ * Constant-time compare against SCAN_TOKEN. Length leaks first, which is
+ * fine — the token is random, not a password someone chose.
+ */
+function authorised(req) {
+  if (!TOKEN) return true;
+  const header = req.headers.authorization ?? '';
+  const given = header.startsWith('Bearer ') ? header.slice('Bearer '.length).trim() : '';
+  const a = Buffer.from(given);
+  const b = Buffer.from(TOKEN);
+  return a.length === b.length && timingSafeEqual(a, b);
 }
 
 function sendJson(res, status, body) {
@@ -113,12 +148,22 @@ function normaliseUrls(input) {
     if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
       throw new Error(`Only http:// and https:// URLs are supported: "${s}"`);
     }
+    if (ALLOWED_HOSTS && !hostAllowed(parsed.hostname, ALLOWED_HOSTS)) {
+      throw new Error(
+        `${parsed.hostname} isn't on this scanner's allowlist (${ALLOWED_HOSTS.join(', ')}). ` +
+          'Whoever runs it can add a host with SCAN_ALLOWED_HOSTS.'
+      );
+    }
     seen.add(parsed.toString());
   }
   return [...seen];
 }
 
 async function handleScan(req, res) {
+  if (!authorised(req)) {
+    sendJson(res, 401, { error: 'This scanner needs a token, and the one given was missing or wrong.' });
+    return;
+  }
   if (busy) {
     sendJson(res, 429, { error: 'A scan is already running on this server. Wait for it to finish.' });
     return;
@@ -187,7 +232,15 @@ const server = http.createServer((req, res) => {
   const { pathname } = new URL(req.url, `http://${req.headers.host}`);
 
   if (req.method === 'GET' && pathname === '/health') {
-    sendJson(res, 200, { ok: true, busy, axeVersion: lastAxeVersion });
+    // `tokenAccepted` lets the dashboard's "Check again" validate a pasted
+    // token before anyone scans. Same oracle /scan already offers, no wider.
+    sendJson(res, 200, {
+      ok: true,
+      busy,
+      axeVersion: lastAxeVersion,
+      authRequired: Boolean(TOKEN),
+      tokenAccepted: authorised(req),
+    });
     return;
   }
 
@@ -206,10 +259,22 @@ const server = http.createServer((req, res) => {
 server.listen(PORT, HOST, () => {
   console.log(`Live scan server on http://${HOST}:${PORT}`);
   console.log('POST { "urls": ["https://example.com"] } to /scan');
+  if (TOKEN) {
+    console.log(`Shared mode: /scan requires the token in SCAN_TOKEN.`);
+    console.log(`Scans only: ${ALLOWED_HOSTS.join(', ')}  (extend with SCAN_ALLOWED_HOSTS)`);
+  } else {
+    console.log(
+      ALLOWED_HOSTS
+        ? `Local mode, allowlist on: ${ALLOWED_HOSTS.join(', ')}`
+        : 'Local mode: no token, any URL. Set SCAN_TOKEN before tunnelling this.'
+    );
+  }
   if (HOST !== '127.0.0.1' && HOST !== 'localhost') {
     console.warn(
       `\nWARNING: bound to ${HOST}, not localhost.`,
-      'This server visits any URL it is given — do not expose it beyond machines you trust.'
+      TOKEN
+        ? 'Anyone with the token can scan the allowlisted hosts from this machine.'
+        : 'This server visits any URL it is given — do not expose it beyond machines you trust.'
     );
   }
 });

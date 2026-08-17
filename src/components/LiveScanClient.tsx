@@ -23,16 +23,19 @@ import { NumCell, Table, TBody, Td, Th, THead, ToggleCell } from './ui/Table';
 
 /**
  * Empty string means "this site's own /api/scan" — the hosted scanner, which
- * works for anyone who opens the dashboard. Setting an address here switches
- * to a scanner running on your own machine instead: slower to set up, but no
- * host allowlist and a higher per-request cap, which is what you want for a
- * staging URL that isn't on our domains yet.
+ * works for anyone who opens the dashboard but can only reach the public
+ * internet. Setting an address switches to a scanner someone is running
+ * inside the network — on this machine (localhost) or on a colleague's,
+ * reached through a tunnel URL — which is how a staging host gets scanned.
+ * A tunnelled scanner is started with a token; the token travels with every
+ * request as a bearer header and is kept next to the address.
  */
 const HOSTED = '';
 const MAX_URLS_HOSTED = 3;
 const MAX_URLS_LOCAL = 10;
 const MAX_COMPARE_PAIRS = 5;
 const STORAGE_KEY = 'agent-readiness:scan-server';
+const TOKEN_STORAGE_KEY = 'agent-readiness:scan-token';
 
 /** Where a scan request goes, given the configured server address. */
 function endpoints(serverUrl: string) {
@@ -43,7 +46,21 @@ function endpoints(serverUrl: string) {
 }
 
 type LiveScanResult = PageResult & { axeVersion?: string | null };
-type Health = 'unknown' | 'checking' | 'online' | 'offline';
+/** `token`: the scanner answered, but wants a token we don't have or rejected the one we sent. */
+type Health = 'unknown' | 'checking' | 'online' | 'offline' | 'token';
+
+/** The scanner answered with an error of its own — the network is fine, so it is not "offline". */
+class ScanRequestError extends Error {
+  status: number;
+  constructor(message: string, status: number) {
+    super(message);
+    this.status = status;
+  }
+}
+
+function authHeaders(serverUrl: string, token: string): Record<string, string> {
+  return !endpoints(serverUrl).hosted && token.trim() ? { Authorization: `Bearer ${token.trim()}` } : {};
+}
 type Mode = 'scan' | 'compare';
 
 const SCAN_EXAMPLES = productionUrls();
@@ -92,6 +109,7 @@ function describeFetchError(err: unknown, serverUrl: string): string {
 
 export function LiveScanClient({ mode }: { mode: Mode }) {
   const [serverUrl, setServerUrl] = useState(HOSTED);
+  const [token, setToken] = useState('');
   const [health, setHealth] = useState<Health>('unknown');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -119,37 +137,60 @@ export function LiveScanClient({ mode }: { mode: Mode }) {
   // the static export — both wait for a real client mount.
   useEffect(() => {
     let saved: string | null = null;
+    let savedToken: string | null = null;
     try {
       saved = window.localStorage.getItem(STORAGE_KEY);
+      savedToken = window.localStorage.getItem(TOKEN_STORAGE_KEY);
     } catch {
       // No persisted value — fall back to the default silently.
     }
     if (saved) setServerUrl(saved);
-    checkHealth(saved ?? HOSTED);
+    if (savedToken) setToken(savedToken);
+    checkHealth(saved ?? HOSTED, savedToken ?? '');
     return () => abortRef.current?.abort();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  async function checkHealth(url: string) {
+  async function checkHealth(url: string, tok: string) {
     setHealth('checking');
     try {
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 4000);
-      const res = await fetch(endpoints(url).health, { signal: controller.signal });
+      const res = await fetch(endpoints(url).health, {
+        headers: authHeaders(url, tok),
+        signal: controller.signal,
+      });
       clearTimeout(timeout);
-      setHealth(res.ok ? 'online' : 'offline');
+      if (!res.ok) {
+        setHealth('offline');
+        return;
+      }
+      const body = (await res.json().catch(() => null)) as
+        | { authRequired?: boolean; tokenAccepted?: boolean }
+        | null;
+      const tokenProblem = Boolean(body?.authRequired) && (!tok.trim() || body?.tokenAccepted === false);
+      setHealth(tokenProblem ? 'token' : 'online');
     } catch {
       setHealth('offline');
     }
   }
 
-  function saveServerUrl(next: string) {
-    setServerUrl(next);
+  function persist(key: string, value: string) {
     try {
-      window.localStorage.setItem(STORAGE_KEY, next);
+      window.localStorage.setItem(key, value);
     } catch {
       // Value still works for this session even if it can't be persisted.
     }
+  }
+
+  function saveServerUrl(next: string) {
+    setServerUrl(next);
+    persist(STORAGE_KEY, next);
+  }
+
+  function saveToken(next: string) {
+    setToken(next);
+    persist(TOKEN_STORAGE_KEY, next);
   }
 
   async function callScanServer(urls: string[]): Promise<LiveScanResult[]> {
@@ -159,13 +200,15 @@ export function LiveScanClient({ mode }: { mode: Mode }) {
     try {
       const res = await fetch(endpoints(serverUrl).scan, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...authHeaders(serverUrl, token) },
         body: JSON.stringify({ urls, viewport }),
         signal: controller.signal,
       });
       const body = await res.json().catch(() => null);
-      if (!res.ok) throw new Error(body?.error ?? `Scan server returned ${res.status}`);
-      setHealth('online');
+      // It answered, so it is reachable: a 401 means the token, anything else
+      // is a complaint about the request, not an outage.
+      setHealth(res.status === 401 ? 'token' : 'online');
+      if (!res.ok) throw new ScanRequestError(body?.error ?? `Scan server returned ${res.status}`, res.status);
       setScannedAt((body.finishedAt as string) ?? new Date().toISOString());
       return body.results as LiveScanResult[];
     } finally {
@@ -187,7 +230,7 @@ export function LiveScanClient({ mode }: { mode: Mode }) {
     if (urls.length > maxUrls) {
       setError(
         `That’s ${urls.length} URLs — this scanner takes ${maxUrls} at a time` +
-          (hosted ? '. Run the scanner locally to raise that.' : '.')
+          (hosted ? '. A scanner inside your network takes ten.' : '.')
       );
       return;
     }
@@ -200,7 +243,7 @@ export function LiveScanClient({ mode }: { mode: Mode }) {
       setResults(await callScanServer(urls));
     } catch (err) {
       setError(describeFetchError(err, serverUrl));
-      setHealth('offline');
+      if (!(err instanceof ScanRequestError)) setHealth('offline');
     } finally {
       setBusy(false);
     }
@@ -253,7 +296,7 @@ export function LiveScanClient({ mode }: { mode: Mode }) {
       );
     } catch (err) {
       setError(describeFetchError(err, serverUrl));
-      setHealth('offline');
+      if (!(err instanceof ScanRequestError)) setHealth('offline');
     } finally {
       setBusy(false);
     }
@@ -326,7 +369,14 @@ export function LiveScanClient({ mode }: { mode: Mode }) {
             <div className="text-xs text-muted">
               Scanner
               <div className="mt-1">
-                <ServerStatus serverUrl={serverUrl} health={health} onServerUrlChange={saveServerUrl} onRecheck={() => checkHealth(serverUrl)} />
+                <ServerStatus
+                  serverUrl={serverUrl}
+                  token={token}
+                  health={health}
+                  onServerUrlChange={saveServerUrl}
+                  onTokenChange={saveToken}
+                  onRecheck={() => checkHealth(serverUrl, token)}
+                />
               </div>
             </div>
           </div>
@@ -430,27 +480,39 @@ function ExampleChips({
 
 function ServerStatus({
   serverUrl,
+  token,
   health,
   onServerUrlChange,
+  onTokenChange,
   onRecheck,
 }: {
   serverUrl: string;
+  token: string;
   health: Health;
   onServerUrlChange: (url: string) => void;
+  onTokenChange: (token: string) => void;
   onRecheck: () => void;
 }) {
   const dotClass =
-    health === 'online' ? 'bg-good' : health === 'offline' ? 'bg-critical' : 'bg-faint';
+    health === 'online'
+      ? 'bg-good'
+      : health === 'offline'
+      ? 'bg-critical'
+      : health === 'token'
+      ? 'bg-serious'
+      : 'bg-faint';
   const hosted = !serverUrl.trim();
   const labelText =
     health === 'online'
       ? hosted
         ? 'Scanner ready'
-        : 'Local scanner ready'
+        : 'Your scanner ready'
       : health === 'offline'
       ? hosted
         ? 'Scanner unavailable'
-        : 'Local scanner offline'
+        : 'Your scanner offline'
+      : health === 'token'
+      ? 'Scanner needs a token'
       : health === 'checking'
       ? 'Checking…'
       : 'Scanner';
@@ -467,23 +529,38 @@ function ServerStatus({
           <Eyebrow>Which scanner</Eyebrow>
           <p className="mt-1 text-xs leading-relaxed text-muted">
             {hosted
-              ? 'Running on this site — nothing to install. Limited to our own domains and a few URLs per scan.'
-              : 'Running on your machine. No domain restrictions and a higher cap, so use this for a staging host that isn’t on our domains yet.'}
+              ? 'Running on this site — nothing to install. Limited to our own public domains and a few URLs per scan.'
+              : 'Running inside the network — on this machine, or on a colleague’s through a tunnel URL. This is how staging gets scanned. If it was started with a token, enter it below.'}
           </p>
         </div>
 
         <label className="block">
           <span className="text-eyebrow font-medium text-muted">
-            Local scanner address <span className="text-faint">· blank uses this site</span>
+            Scanner address <span className="text-faint">· blank uses this site</span>
           </span>
           <input
             type="text"
             value={serverUrl}
-            placeholder="http://localhost:4790"
+            placeholder="http://localhost:4790 or a tunnel URL"
             onChange={(e) => onServerUrlChange(e.target.value)}
             className="mt-1 w-full rounded-card border border-rule bg-paper px-2.5 py-1.5 font-mono text-xs transition-shadow"
           />
         </label>
+
+        {!hosted ? (
+          <label className="block">
+            <span className="text-eyebrow font-medium text-muted">
+              Token <span className="text-faint">· only if the scanner asks for one</span>
+            </span>
+            <input
+              type="password"
+              value={token}
+              autoComplete="off"
+              onChange={(e) => onTokenChange(e.target.value)}
+              className="mt-1 w-full rounded-card border border-rule bg-paper px-2.5 py-1.5 font-mono text-xs transition-shadow"
+            />
+          </label>
+        ) : null}
 
         <button
           type="button"
@@ -493,16 +570,23 @@ function ServerStatus({
           Check again
         </button>
 
+        {health === 'token' ? (
+          <p className="text-xs leading-relaxed text-muted">
+            This scanner was started with a token. Paste the one whoever started it gave you, then check again.
+          </p>
+        ) : null}
+
         {health === 'offline' ? (
           <p className="text-xs leading-relaxed text-muted">
             {hosted ? (
-              'This site’s scanner didn’t respond. Try again, or point this at a local scanner:'
+              'This site’s scanner didn’t respond. Try again, or point this at a scanner inside your network:'
             ) : (
-              <>Nothing is answering there. Start it with:</>
+              <>Nothing is answering there. On the machine that should be running it:</>
             )}
             <code className="mt-1.5 block rounded-card border border-rule bg-paper px-2 py-1.5 font-mono text-[11px] text-ink">
               npm run scan-server
             </code>
+            <span className="mt-1.5 block">To share it through a tunnel, see “Reach staging through a tunnel” in the README.</span>
           </p>
         ) : null}
       </div>

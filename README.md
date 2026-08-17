@@ -39,9 +39,11 @@ at once.
 A *single-page* scan is fast enough to serve on demand, and there are two ways
 to get one: `/api/scan` on the host, and `scanner/server.mjs` on your own
 machine. Both exist on purpose. The hosted route makes Scan work for anyone who
-opens the dashboard; the local server exists because that route
-is deliberately capped at three URLs and an allowlist, which is right for a
-public endpoint and wrong for scanning a staging box you own.
+opens the dashboard; the local server exists because that route is capped at
+three URLs and can only reach the public internet, which is right for a public
+endpoint and useless for a staging box behind the VPN. Run inside the network
+and shared through a tunnel, the local server is how staging gets scanned —
+see "Reach staging through a tunnel" under Live scan.
 
 What keeps "static" and "live" from becoming two different measurements that
 quietly drift apart is that **both call `scanPage()` in `core.mjs`.** Nothing
@@ -160,13 +162,14 @@ Two limits, both deliberate:
   so it is capped honestly rather than optimistically.
 - **An allowlist.** This endpoint fetches a URL it is handed and reports what
   it found; left open on a public host that is server-side request forgery with
-  a UI on top. It scans our own domains and their subdomains only. Add staging
-  hosts with `SCAN_ALLOWED_HOSTS` (comma-separated), or run the scanner locally
-  to scan anything at all. Matching is on dot boundaries, so `insureon.com`
-  allows `staging.insureon.com` and never `insureon.com.evil.test`.
+  a UI on top. It scans our own domains and their subdomains only — the rule
+  lives in `scanner/allowlist.mjs`, shared with the standalone server. Add
+  hosts with `SCAN_ALLOWED_HOSTS` (comma-separated). Matching is on dot
+  boundaries, so `insureon.com` allows `staging.insureon.com` and never
+  `insureon.com.evil.test`.
 
-Point the Scanner control on Scan at a local address to bypass
-both limits.
+Point the Scanner control on Scan at a scanner running inside the network to
+reach staging and raise the cap — see "Reach staging through a tunnel".
 
 ### Recording a full run without installing anything
 
@@ -440,39 +443,79 @@ counts stop being comparable and every earlier run is void as a baseline.
 ## Live scan
 
 For a URL that isn't one of the fixed 20 — a staging domain, a redesign
-preview, a one-off page a stakeholder is asking about — use the live scan
-server and the dashboard's **Scan** page instead of the CLI.
+preview, a one-off page a stakeholder is asking about — use the dashboard's
+**Scan** page. It sends the URLs to a scanner and shows the results; which
+scanner is a setting on the page (**Scanner · change**):
 
-`npm run dev` already starts it. To run it on its own:
-
-```bash
-npm run scan-server             # http://127.0.0.1:4790
-```
-
-Then open the viewer and go to **Scan**. Paste in up to 10 URLs, one per line, and run it. The page shows
-whether it can reach the server, and gives you the exact command above if not.
+- **This site's scanner** (the default, address blank) runs on the host as
+  `/api/scan`. Nothing to install, but it can only reach the public internet
+  and only scans our own domains, three URLs at a time.
+- **A scanner inside the network** — `npm run scan-server` on a machine that
+  can reach staging — takes any address you give the page: `http://localhost:4790`
+  on your own machine, or a tunnel URL when a colleague is running it for you.
+  Up to ten URLs at a time.
 
 **Scan → Before / after** is the one QA wants once fixes reach staging: current
 on the left, fixed on the right, both scanned in the same session and diffed
 check by check.
 
-This calls the identical `scanPage()` the scheduled scan uses, so if you point
-it at one of the ten tracked URLs, the numbers should land in the same place
-that day's scheduled run would have put them. What it does *not* do is feed
-into history: nothing from a live scan is written to `data/runs/`, so
-Runs and Overview never see it. Download the JSON from the
-results if you want a record — folding it into the tracked history is a
-manual step, on purpose, because an arbitrary URL doesn't have an obvious
-`pageKey` in the fixed home/policy/major/… taxonomy the rest of this dashboard
-assumes.
+Both scanners call the identical `scanPage()` the scheduled scan uses, so a
+live scan of one of the ten tracked URLs should land on the same numbers that
+day's scheduled run would have put there. What a live scan does *not* do is
+feed into history: nothing is written to `data/runs/`, so Runs and Overview
+never see it. Download the JSON from the results if you want a record —
+folding it into the tracked history is a manual step, on purpose, because an
+arbitrary URL doesn't have an obvious `pageKey` in the fixed
+home/policy/major/… taxonomy the rest of this dashboard assumes.
 
-**Security note.** The live scan server will open a real headless browser and
-visit *any* URL it's handed — that's the point, it's how you reach a staging
-environment, but it also means anyone who can reach that port can make your
-machine issue requests to wherever they choose. It binds to `127.0.0.1` by
-default and caps a request to 10 URLs, scanned one at a time. Don't put it
-behind a public port, a reverse proxy, or a tunnel without adding real
-authentication in front of it.
+### Reach staging through a tunnel
+
+Staging is only reachable from inside the org's network, and the hosted
+dashboard is not. The way round it: one person on the VPN runs the scanner on
+their laptop and exposes it through a Cloudflare tunnel; everyone else keeps
+using the hosted dashboard and points **Scanner** at the tunnel URL.
+
+On the laptop, two terminals. First the scanner, in **shared mode** — a token
+and an allowlist, both required before this server is safe to expose:
+
+```bash
+SCAN_TOKEN=$(openssl rand -hex 16) \
+SCAN_ALLOWED_HOSTS=staging.insureon.com,staging.techinsurance.com \
+npm run scan-server
+# prints the mode it is in and the hosts it will scan; the token is $SCAN_TOKEN
+```
+
+Then the tunnel, from the terminal (the `cloudflared` CLI, no account needed
+for a quick tunnel):
+
+```bash
+cloudflared tunnel --url http://127.0.0.1:4790
+# prints https://<random-words>.trycloudflare.com
+```
+
+Hand QA two things: that URL and the token. On the dashboard's Scan page they
+open **Scanner · change**, paste the URL into *Scanner address* and the token
+into *Token*, and *Check again* should read "Your scanner ready". Everything
+else — Before / after, the device picker, the results — works exactly as
+before. Quick tunnels get a fresh URL every time `cloudflared` restarts, so
+re-share it when you restart; the token can stay the same for as long as you
+like.
+
+**Why both guards, every time.** The scanner opens a real browser and visits
+the URLs it is handed. Tunnelled without them, anyone who has the link can make
+your VPN-connected laptop fetch internal hosts and read back the page. With
+them: the token gates every request (`Authorization: Bearer`, checked in
+constant time), and the allowlist — the tracked sites plus whatever
+`SCAN_ALLOWED_HOSTS` names, matched on dot boundaries — is enforced by the same
+`scanner/allowlist.mjs` the hosted `/api/scan` uses. Setting `SCAN_TOKEN`
+turns the allowlist on automatically. In **local mode** (no token) the server
+scans any URL, which is right for a preview build on `localhost:8080` and is
+why local mode binds to `127.0.0.1` and must never be tunnelled or proxied.
+
+The scanner also needs a Chromium that can start. On a fresh WSL/Ubuntu machine
+that means the system libraries Playwright's build links against, once:
+`sudo apt-get install -y libnspr4 libnss3 libasound2t64` (or
+`sudo npx playwright install-deps chromium`).
 
 ## Reading the numbers
 
