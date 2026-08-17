@@ -49,11 +49,17 @@ export function ContextBar() {
   const showsData = pathname === '/' || pathname.startsWith('/runs');
   if (!showsData || !current) return null;
 
+  /**
+   * The instrument stamp — which axe, which scanner build, which Chromium
+   * produced these figures. It matters to whoever audits a number, not to
+   * whoever reads one, so it sits behind an icon at the far right and shows
+   * on hover or focus rather than taking a third of the strip.
+   */
   const stamp = [
     current.axeVersion ? `axe-core ${current.axeVersion}` : 'axe-core not recorded',
     current.probeVersion ? `scanner ${current.probeVersion}` : 'scanner not recorded',
     current.browserVersion ?? 'browser not recorded',
-  ].join(' · ');
+  ];
 
   return (
     <div className="border-t border-rule bg-card/60">
@@ -109,12 +115,12 @@ export function ContextBar() {
             value={site}
             onChange={(e) => setSite(e.target.value as SiteSelection)}
           >
-            <option value="both">Both</option>
             {BRANDS.map((b) => (
               <option key={b} value={b}>
                 {BRAND_LABEL[b]}
               </option>
             ))}
+            <option value="both">Both sites</option>
           </select>
         </Field>
 
@@ -145,8 +151,29 @@ export function ContextBar() {
           </span>
         ) : null}
 
-        <span className="ml-auto truncate font-mono text-[11px] text-faint" title="The instrument that produced these figures">
-          {stamp}
+        <span className="group relative ml-auto flex items-center">
+          <button
+            type="button"
+            aria-label={`Measured with ${stamp.join(', ')}`}
+            className="rounded-full p-1 text-faint transition-colors hover:text-ink focus-visible:text-ink"
+          >
+            <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">
+              <circle cx="7" cy="7" r="6" fill="none" stroke="currentColor" strokeWidth="1.3" />
+              <path d="M7 6.2v4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+              <circle cx="7" cy="4" r="0.8" fill="currentColor" />
+            </svg>
+          </button>
+          <span
+            role="tooltip"
+            className="pointer-events-none absolute right-0 top-full z-30 mt-1.5 hidden w-max rounded-card border border-rule bg-card px-3 py-2 font-mono text-[11px] leading-relaxed text-muted shadow-pop group-hover:block group-focus-within:block"
+          >
+            <span className="mb-0.5 block font-sans text-[10.5px] uppercase tracking-[0.06em] text-faint">Measured with</span>
+            {stamp.map((line) => (
+              <span key={line} className="block">
+                {line}
+              </span>
+            ))}
+          </span>
         </span>
       </div>
     </div>

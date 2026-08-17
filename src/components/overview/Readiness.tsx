@@ -1,7 +1,7 @@
 'use client';
 
 import { ISSUES } from '@/lib/issues';
-import { BRAND_LABEL, type Brand } from '@/lib/model';
+import { BRAND_LABEL, BRANDS, type Brand } from '@/lib/model';
 import { useRuns } from '../RunContext';
 import type { OverviewBrandSnapshot } from './types';
 
@@ -12,6 +12,11 @@ import type { OverviewBrandSnapshot } from './types';
  * shows, and the count beside it is the blocking issues the catalogue lists
  * for that site. When a fix lands on staging and a new run is recorded, this
  * is the thing on the page that visibly moves.
+ *
+ * Both sites always show here, whatever the Site control says: two bars are
+ * the one place the reader gets both verdicts at a glance, and everything
+ * below narrows to the selected site. The selected row is the bright one;
+ * clicking either row selects it.
  */
 export function Readiness({
   now,
@@ -20,10 +25,11 @@ export function Readiness({
   now: Record<Brand, OverviewBrandSnapshot>;
   before: Record<Brand, OverviewBrandSnapshot> | null;
 }) {
-  const { brands } = useRuns();
+  const { site, setSite } = useRuns();
   return (
     <section aria-label="Readiness" className="rounded-card border border-rule bg-card shadow-card">
-      {brands.map((b, i) => {
+      {BRANDS.map((b, i) => {
+        const selected = site === 'both' || site === b;
         const { passed, total } = now[b].passRatio;
         const prev = before ? before[b].passRatio.passed : null;
         const pct = total ? Math.round((passed / total) * 100) : 0;
@@ -31,9 +37,20 @@ export function Readiness({
         return (
           <div
             key={b}
-            className={`grid grid-cols-[minmax(7rem,9rem)_1fr_auto] items-center gap-x-5 px-4 py-3 sm:gap-x-6 ${
+            role="button"
+            tabIndex={0}
+            aria-pressed={site === b}
+            title={site === b ? `Showing ${BRAND_LABEL[b]} below` : `Show ${BRAND_LABEL[b]} below`}
+            onClick={() => setSite(b)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                setSite(b);
+              }
+            }}
+            className={`grid cursor-pointer grid-cols-[minmax(7rem,9rem)_1fr_auto] items-center gap-x-5 px-4 py-3 transition-colors hover:bg-white/[0.03] sm:gap-x-6 ${
               i > 0 ? 'border-t border-rule' : ''
-            }`}
+            } ${selected ? '' : 'opacity-55'}`}
           >
             <span className="text-sm font-semibold text-ink">{BRAND_LABEL[b]}</span>
             <div
