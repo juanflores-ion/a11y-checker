@@ -5,8 +5,9 @@ import { Fragment } from 'react';
 
 import { makeDelta, SCORECARD_GROUPS, type ScorecardRow } from '@/lib/aggregate';
 import { cellTone, formatCount } from '@/lib/format';
-import { BRAND_LABEL, BRANDS, type Brand } from '@/lib/model';
+import { BRAND_LABEL, type Brand } from '@/lib/model';
 import { DeltaChip } from '../Primitives';
+import { useRuns } from '../RunContext';
 import { StatusDot } from '../ui/StatusDot';
 import { GroupRow, NumCell, Table, TBody, Td, Th, THead } from '../ui/Table';
 import type { OverviewBrandSnapshot } from './types';
@@ -23,6 +24,7 @@ export function Scorecard({
   now: Record<Brand, OverviewBrandSnapshot>;
   before: Record<Brand, OverviewBrandSnapshot> | null;
 }) {
+  const { brands: BRANDS } = useRuns();
   const rows = now[BRANDS[0]].scorecard.filter((r) => r.inScope);
   const groups = groupRows(rows);
   const cols = 2 + BRANDS.length;
@@ -79,17 +81,6 @@ export function Scorecard({
       </Table>
 
       <div className="mt-2 flex flex-wrap items-baseline gap-x-5 gap-y-1 px-1 text-xs text-muted">
-        <span>
-          Targets met:{' '}
-          {BRANDS.map((b, i) => (
-            <Fragment key={b}>
-              {i > 0 ? ' · ' : ''}
-              <span className="font-medium text-ink">
-                {BRAND_LABEL[b]} {now[b].passRatio.passed} of {now[b].passRatio.total}
-              </span>
-            </Fragment>
-          ))}
-        </span>
         <span>
           Failing elements, in-scope rules:{' '}
           {BRANDS.map((b, i) => (

@@ -6,16 +6,14 @@ import { Fragment, useMemo, useState } from 'react';
 import type { ResolvedMetric } from '@/lib/aggregate';
 import { cellTone, NOT_MEASURABLE_TITLE, NOT_MEASURED_TITLE } from '@/lib/format';
 import { ISSUES, SEVERITY_LABEL, sortIssues, type Issue, type Severity } from '@/lib/issues';
-import { BRAND_LABEL, BRANDS, type Brand } from '@/lib/model';
+import { BRAND_LABEL, type Brand } from '@/lib/model';
 import { CodeSample } from '../Primitives';
-import { SegmentedControl } from '../ui/SegmentedControl';
+import { useRuns } from '../RunContext';
 import { SiteChip } from '../ui/SiteChip';
 import { StatusDot, type DotTone } from '../ui/StatusDot';
 import { FIGURE_CLASS, Table, TBody, Td, Th, THead, GroupRow } from '../ui/Table';
 import { Tag } from '../ui/Tag';
 import { IssuePicture } from './IssuePicture';
-
-type SiteFilter = Brand | 'both';
 
 const SEVERITY_DOT: Record<Severity, DotTone> = {
   blocking: 'bad',
@@ -44,7 +42,8 @@ export function IssuesTable({
 }: {
   metricsByBrand: Record<Brand, Record<string, ResolvedMetric[]>>;
 }) {
-  const [site, setSite] = useState<SiteFilter>('both');
+  /** The context bar's Site control decides which brands' issues and figures show. */
+  const { site, brands: brandsShown } = useRuns();
   /**
    * The blocking issues start open; everything below them starts folded.
    *
@@ -70,7 +69,6 @@ export function IssuesTable({
     return { tracked: sorted.filter((i) => i.inScope), parked: sorted.filter((i) => !i.inScope) };
   }, []);
   const visible = site === 'both' ? tracked : tracked.filter((i) => i.brands.includes(site));
-  const brandsShown: Brand[] = site === 'both' ? [...BRANDS] : [site];
 
   return (
     <section aria-labelledby="issues">
@@ -83,15 +81,6 @@ export function IssuesTable({
             blocking ones open, click any row to open or fold it
           </span>
         </h2>
-        <SegmentedControl<SiteFilter>
-          ariaLabel="Filter issues by site"
-          value={site}
-          onChange={setSite}
-          options={[
-            { value: 'both', label: 'Both sites' },
-            ...BRANDS.map((b) => ({ value: b, label: BRAND_LABEL[b] })),
-          ]}
-        />
       </div>
 
       <Table label="Issues" className="[&>table]:min-w-[46rem]">
