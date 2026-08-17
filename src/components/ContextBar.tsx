@@ -9,6 +9,12 @@ const selectClass =
   'appearance-none rounded-[7px] border border-rule bg-card py-[3px] pl-2 pr-6 font-mono text-xs text-ink ' +
   'hover:border-accent focus-visible:border-accent max-w-[18rem] truncate';
 
+/**
+ * The picker needs the label — it is what tells two runs apart. The bar does
+ * not: with one run on file it is a note to nobody, sitting in the strip that
+ * is supposed to say briefly which measurement is on screen. So the label
+ * shows where you choose a run, and hovers on the plain-text case.
+ */
 function runText(run: { display: string; label?: string }) {
   return run.label ? `${run.display} — ${run.label}` : run.display;
 }
@@ -65,7 +71,9 @@ export function ContextBar() {
               ))}
             </select>
           ) : (
-            <span className="truncate font-mono text-xs text-ink">{runText(current)}</span>
+            <span className="truncate font-mono text-xs text-ink" title={current.label ?? undefined}>
+              {current.display}
+            </span>
           )}
         </Field>
 
