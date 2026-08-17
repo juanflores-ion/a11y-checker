@@ -130,7 +130,7 @@ export function RulesClient({
           })}
 
           <GroupRow colSpan={cols}>
-            Our checks — properties a rule engine can’t see, measured directly · probe {current?.probeVersion ?? 'version not recorded'}
+            Scanner checks — controls and links checked directly in the browser; no standard rule covers these · scanner {current?.probeVersion ?? 'version not recorded'}
           </GroupRow>
           {!now.hasProbes ? (
             <tr>
@@ -147,7 +147,6 @@ export function RulesClient({
                       <StatusDot tone={IMPACT_DOT[check.impact]} className="mr-2" />
                       {check.label}
                     </button>
-                    <Tag tone="phantom" className="ml-2">our probe</Tag>
                     {check.id === 'clickable-no-role' ? <Tag className="ml-1.5" title={check.note}>not a target</Tag> : null}
                   </Td>
                   {BRANDS.map((brand) => {

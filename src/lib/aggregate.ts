@@ -680,7 +680,7 @@ export function scorecard(run: Run, brand: Brand): ScorecardRow[] {
       met: hasProbeData(run, brand) ? ghostControlCount(run, brand) === 0 : null,
       inScope: true,
       notMeasured: !hasProbeData(run, brand),
-      note: 'Measured by our own probe — no rule engine can see these.',
+      note: 'Checked directly by the scanner — no standard rule can see these.',
     },
     {
       key: 'unfindable-links',
@@ -1027,7 +1027,7 @@ export const PROBE_CHECKS = [
     id: 'ghost-controls',
     label: "Controls an agent can't identify",
     impact: 'critical' as const,
-    note: 'Real click listener, no role, no name, not in the tab order. No rule engine can see these.',
+    note: 'Real click listener, no role, no name, not in the tab order. No standard rule can see these.',
     stability: metricStability('ghost-controls'),
   },
   {

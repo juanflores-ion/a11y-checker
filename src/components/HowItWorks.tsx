@@ -355,7 +355,7 @@ const STEPS = [
     body: 'axe-core, the engine behind Google PageSpeed: buttons with no name, fields with no label, poor contrast.',
   },
   {
-    title: 'Run our own checks',
+    title: 'Run the scanner’s own checks',
     body: 'Is it in the list? Is it announced? Can it be reached by keyboard? Anything doubtful is confirmed with the browser first.',
   },
   {
@@ -698,9 +698,9 @@ function Stamp({ figures }: { figures: HowItWorksFigures | null }) {
           note="Which version of the standard rule engine ran."
         />
         <StampRow
-          label="Our checks"
+          label="Scanner"
           value={figures?.probeVersion}
-          note="Which version of our own checks ran. A change in the checks is not a change in the site."
+          note="Which version of the scanner’s own checks ran. A change in the checks is not a change in the site."
         />
         <StampRow
           label="Browser"

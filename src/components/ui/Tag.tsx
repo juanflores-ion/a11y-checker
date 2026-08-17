@@ -1,4 +1,4 @@
-/** Quiet inline tag: `n/m`, `drifts`, `our probe`, `manual finding`. Never louder than the figure next to it. */
+/** Quiet inline tag: `n/m`, `drifts`, `manual finding`. Never louder than the figure next to it. */
 export function Tag({
   children,
   tone = 'neutral',
