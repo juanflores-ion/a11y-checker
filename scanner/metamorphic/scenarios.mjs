@@ -364,6 +364,20 @@ const COMBOBOX_SHAPES = {
   'indicators-wrapper-deep':
     `<div class="valueBox"><div class="inner">${COMBOBOX_INPUT}</div></div>` +
     `<div class="indicators"><div class="inner">${CHEVRON}</div></div>`,
+  /**
+   * react-select with nothing selected, as it actually renders: the placeholder
+   * text stands beside the input's wrapper, an indicator separator stands
+   * beside the chevron's, and emotion's SSR `<style>` tags sit next to the
+   * nodes they style. Insureon's profession picker, 17 Aug 2026 — the shape on
+   * which the rescue was found not to fire, because the placeholder is neither
+   * half nor a wrapper of one. The whole control box carries `cursor: pointer`
+   * on that site (see `.select` below), which is what makes the placeholder a
+   * candidate in its own right and the case worth having here.
+   */
+  'with-placeholder':
+    '<style data-emotion="css placeholder">.placeholder{color:#808080}</style>' +
+    `<div class="valueBox"><div class="placeholder" id="rs-placeholder">Insurance type</div><div class="inner">${COMBOBOX_INPUT}</div></div>` +
+    `<div class="indicators"><span class="sep"></span><div class="inner">${CHEVRON}</div></div>`,
 };
 
 function comboboxPage(o) {
@@ -373,8 +387,13 @@ function comboboxPage(o) {
     html: page({
       title: 'Combobox chevron',
       css: [
-        '.select{width:260px;display:flex;align-items:center;gap:8px;padding:4px 8px;border:1px solid #ccc}',
-        '.valueBox{flex:1}',
+        // cursor: pointer on the whole box is how insureon.com ships react-select;
+        // it makes every inert child compute to pointer too, which is the shape
+        // the rescue has to see through.
+        '.select{width:260px;display:flex;align-items:center;gap:8px;padding:4px 8px;border:1px solid #ccc;cursor:pointer}',
+        '.valueBox{flex:1;display:flex;align-items:center;gap:6px}',
+        '.placeholder{flex:1;font-size:14px}',
+        '.sep{display:inline-block;width:1px;height:20px;background:#ccc}',
         '.inner{display:flex;align-items:center}',
         '.indicators{display:flex;align-items:center}',
         '.cbx{width:100%;border:0}',
