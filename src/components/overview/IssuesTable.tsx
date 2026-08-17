@@ -13,6 +13,7 @@ import { SiteChip } from '../ui/SiteChip';
 import { StatusDot, type DotTone } from '../ui/StatusDot';
 import { FIGURE_CLASS, Table, TBody, Td, Th, THead, GroupRow, ToggleCell } from '../ui/Table';
 import { Tag } from '../ui/Tag';
+import { IssuePicture } from './IssuePicture';
 
 type SiteFilter = Brand | 'both';
 
@@ -248,6 +249,12 @@ function Figure({ m, muted = false }: { m: ResolvedMetric | undefined; muted?: b
   );
 }
 
+/**
+ * The expanded row, for someone who is not going to read a page of prose:
+ * one plain sentence, the Now → After picture, the fix in a line with its risk,
+ * the live figures — and one "Details" disclosure holding everything that used
+ * to be six paragraphs (why it matters, mechanism, sources, verify, samples).
+ */
 function IssueDetail({
   issue,
   brands,
@@ -260,67 +267,96 @@ function IssueDetail({
   muted?: boolean;
 }) {
   return (
-    <div className="grid max-w-5xl gap-x-8 gap-y-4 text-[12.5px] leading-relaxed sm:grid-cols-2">
-      <Block title="What breaks">
-        <p className="text-ink">{issue.whatBreaks}</p>
-        {issue.metrics.length ? (
-          <table className="mt-2 border-collapse text-xs">
-            <tbody>
-              {issue.metrics.map((ref, i) => (
-                <tr key={i}>
-                  <td className="pr-4 text-muted">{ref.label}</td>
-                  {brands.map((b) => (
-                    <td key={b} className="pr-3 text-right font-mono tnum">
-                      <span className="mr-1 text-faint">{BRAND_LABEL[b]}</span>
-                      <Figure m={metricsByBrand[b]?.[issue.id]?.[i]} muted={muted} />
-                    </td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        ) : (
-          <p className="mt-1 text-muted">No automated measurement — found by reading the code and testing by hand.</p>
-        )}
-      </Block>
-      <Block title="Why it matters">
-        <p className="text-ink">{issue.whyItMatters}</p>
-      </Block>
-      <Block title="Technical">
-        <p className="text-muted">{issue.technical}</p>
-        {issue.sources?.length ? (
-          <ul className="mt-1.5 space-y-0.5">
-            {issue.sources.map((s) => (
-              <li key={s} className="break-all font-mono text-[11px] text-faint">{s}</li>
-            ))}
-          </ul>
-        ) : null}
-      </Block>
-      <Block title={<>Fix <Tag className="ml-1">{RISK_LABEL[issue.fix.riskLevel]}</Tag></>}>
-        <p className="text-ink">{issue.fix.summary}</p>
-        <p className="mt-1 text-muted">{issue.fix.technical}</p>
-        <p className="mt-1 text-muted"><span className="text-faint">Risk:</span> {issue.fix.risk}</p>
-      </Block>
-      <Block title="Verify">
-        <p className="text-muted">
-          {issue.verify}{' '}
-          <Link href="/scan?mode=compare" className="text-accent underline underline-offset-2">Scan → Before / after</Link>{' '}
-          shows whether it moved.
+    <div className="grid max-w-6xl gap-x-8 gap-y-4 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)]">
+      <div>
+        <p className="mb-3 text-[14px] leading-snug text-ink">{issue.plain}</p>
+        <IssuePicture picture={issue.picture} />
+      </div>
+      <div className="text-[12.5px] leading-relaxed">
+        <p className="text-[13px] text-ink">
+          <span className="font-medium">Fix:</span> {issue.fix.summary}{' '}
+          <Tag className="ml-1 align-[1px]">{RISK_LABEL[issue.fix.riskLevel]}</Tag>
         </p>
-      </Block>
-      {issue.samples?.length ? (
-        <Block title="Sample markup, captured by the scanner">
-          <div className="space-y-2">
-            {issue.samples.map((s, i) => (
-              <div key={i}>
-                <p className="mb-1 text-[11px] text-faint">{s.caption}</p>
-                <CodeSample html={s.code} />
-              </div>
-            ))}
+        <Figures issue={issue} brands={brands} metricsByBrand={metricsByBrand} muted={muted} />
+        <details className="group mt-3">
+          <summary className="cursor-pointer list-none text-[12px] text-muted hover:text-ink [&::-webkit-details-marker]:hidden">
+            <span aria-hidden="true" className="mr-1 inline-block transition-transform group-open:rotate-90">›</span>
+            Details
+          </summary>
+          <div className="mt-3 space-y-3 border-l border-rule pl-3">
+            <Block title="Why it matters">
+              <p className="text-ink">{issue.whyItMatters}</p>
+            </Block>
+            <Block title="What breaks, exactly">
+              <p className="text-muted">{issue.whatBreaks}</p>
+            </Block>
+            <Block title="Technical">
+              <p className="text-muted">{issue.technical}</p>
+              <p className="mt-1 text-muted">{issue.fix.technical}</p>
+              <p className="mt-1 text-muted"><span className="text-faint">Risk:</span> {issue.fix.risk}</p>
+              {issue.sources?.length ? (
+                <ul className="mt-1.5 space-y-0.5">
+                  {issue.sources.map((s) => (
+                    <li key={s} className="break-all font-mono text-[11px] text-faint">{s}</li>
+                  ))}
+                </ul>
+              ) : null}
+            </Block>
+            <Block title="Verify">
+              <p className="text-muted">
+                {issue.verify}{' '}
+                <Link href="/scan?mode=compare" className="text-accent underline underline-offset-2">Scan → Before / after</Link>{' '}
+                shows whether it moved.
+              </p>
+            </Block>
+            {issue.samples?.length ? (
+              <Block title="Sample markup, captured by the scanner">
+                <div className="space-y-2">
+                  {issue.samples.map((s, i) => (
+                    <div key={i}>
+                      <p className="mb-1 text-[11px] text-faint">{s.caption}</p>
+                      <CodeSample html={s.code} />
+                    </div>
+                  ))}
+                </div>
+              </Block>
+            ) : null}
           </div>
-        </Block>
-      ) : null}
+        </details>
+      </div>
     </div>
+  );
+}
+
+/** The live figures, one line per metric: label, then a figure per site shown. */
+function Figures({
+  issue,
+  brands,
+  metricsByBrand,
+  muted,
+}: {
+  issue: Issue;
+  brands: Brand[];
+  metricsByBrand: Record<Brand, Record<string, ResolvedMetric[]>>;
+  muted: boolean;
+}) {
+  if (!issue.metrics.length) return null;
+  return (
+    <table className="mt-2 border-collapse font-mono text-[11.5px] tnum">
+      <tbody>
+        {issue.metrics.map((ref, i) => (
+          <tr key={i}>
+            <td className="pr-4 text-muted">{ref.label}</td>
+            {brands.map((b) => (
+              <td key={b} className="pr-3 text-right">
+                <span className="mr-1 text-faint">{BRAND_LABEL[b]}</span>
+                <Figure m={metricsByBrand[b]?.[issue.id]?.[i]} muted={muted} />
+              </td>
+            ))}
+          </tr>
+        ))}
+      </tbody>
+    </table>
   );
 }
 

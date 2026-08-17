@@ -60,6 +60,29 @@ export type Detection = 'scanner' | 'manual';
  * A number to pull from the current run rather than hardcode. Resolved per
  * brand at build time so the catalogue never carries a stale figure.
  */
+/**
+ * What an agent is told when it lands on the thing, before and after the fix,
+ * plus the visible label the pictogram should carry, when there is one.
+ */
+export interface Hears {
+  hears: string;
+  label?: string;
+}
+
+/**
+ * The little Now → After picture on every expanded row. A closed set of
+ * pictograms, drawn once in `IssuePicture.tsx`; the data only says which one
+ * and what the agent hears on each side. New issues pick from this set — a
+ * paragraph is not an alternative.
+ */
+export type IssuePicture =
+  | { kind: 'control'; control: 'burger' | 'close' | 'back' | 'input' | 'link' | 'card'; now: Hears; fixed: Hears }
+  | { kind: 'menu'; variant: 'hover' | 'unfindable'; now: Hears; fixed: Hears }
+  | { kind: 'panel'; variant: 'drawer' | 'related' | 'hidden'; now: Hears; fixed: Hears }
+  | { kind: 'page'; variant: 'main' | 'regions' }
+  | { kind: 'text'; variant: 'contrast' | 'link-colour' }
+  | { kind: 'headings' };
+
 export type MetricRef =
   | { kind: 'rule'; ruleId: string; label: string }
   | { kind: 'phantom'; label: string }
@@ -100,6 +123,15 @@ export interface Issue {
   severity: Severity;
   brands: Brand[];
   detection: Detection;
+
+  /**
+   * The one sentence a non-technical reader gets first: everyday words, no
+   * markup, no rule names. The expanded row leads with this and the picture
+   * below; everything technical sits behind "Details".
+   */
+  plain: string;
+  /** The Now → After-the-fix picture drawn for this issue. */
+  picture: IssuePicture;
 
   /** One sentence. What a person or an agent actually experiences. */
   whatBreaks: string;
@@ -171,6 +203,9 @@ export const ISSUES: Issue[] = [
     severity: 'blocking',
     brands: ['insureon', 'techinsurance'],
     detection: 'scanner',
+    plain:
+      'On a phone the menu looks closed, but underneath all its links are still live. An agent stepping through the page hits about seventy links it cannot see — on every page.',
+    picture: { kind: 'panel', variant: 'drawer', now: { hears: 'link, link, link… ~70 stops behind a closed menu' }, fixed: { hears: 'button “Menu”, collapsed — nothing behind it until opened' } },
     whatBreaks:
       'The mobile menu looks closed, but every link inside it is still live and still announced. An agent reading the page is handed roughly seventy navigation links that go nowhere, on every single page.',
     whyItMatters:
@@ -202,6 +237,9 @@ export const ISSUES: Issue[] = [
     severity: 'blocking',
     brands: ['insureon', 'techinsurance'],
     detection: 'scanner',
+    plain:
+      'The three-line icon that opens the mobile menu looks like a button but isn’t one. To an agent it is an unnamed shape — it can’t tell what it does, and can’t press it.',
+    picture: { kind: 'control', control: 'burger', now: { hears: '— nothing —' }, fixed: { label: 'Menu', hears: 'button, “Menu”, collapsed' } },
     whatBreaks:
       'The hamburger icon that opens mobile navigation is a plain container with a click handler. It has no name and no role, so an agent cannot tell it is a button, and a keyboard user cannot reach it at all.',
     whyItMatters:
@@ -231,6 +269,9 @@ export const ISSUES: Issue[] = [
     severity: 'blocking',
     brands: ['insureon', 'techinsurance'],
     detection: 'scanner',
+    plain:
+      'The box where you type your profession to start a quote has no name. An agent sees a text box and no idea what to put in it.',
+    picture: { kind: 'control', control: 'input', now: { label: 'What kind of work do you do?', hears: 'text box — no name' }, fixed: { label: 'What kind of work do you do?', hears: 'text box, “What kind of work do you do?”' } },
     whatBreaks:
       'The type-ahead field where a customer enters their profession — the first step of getting a quote — is announced with no name at all. An agent can see a text box, but nothing tells it what to type there.',
     whyItMatters:
@@ -267,6 +308,9 @@ export const ISSUES: Issue[] = [
     severity: 'blocking',
     brands: ['insureon', 'techinsurance'],
     detection: 'scanner',
+    plain:
+      'The × that closes the quote pop-up is a button with no name. It is the only way out of that pop-up, and nothing says what it does.',
+    picture: { kind: 'control', control: 'close', now: { hears: 'button — no name' }, fixed: { label: 'Close', hears: 'button, “Close”' } },
     whatBreaks:
       'The X that closes the quote pop-up is an empty button. It is the only way out of that dialog, and nothing describes what it does.',
     whyItMatters:
@@ -294,6 +338,9 @@ export const ISSUES: Issue[] = [
     severity: 'blocking',
     brands: ['insureon'],
     detection: 'scanner',
+    plain:
+      'The big product menu opens only when a mouse pointer moves over it. An agent has no mouse — so 56 category links might as well not exist.',
+    picture: { kind: 'menu', variant: 'hover', now: { hears: 'link “Products” — that’s all' }, fixed: { hears: 'button “Products”, has menu — press, and the links appear' } },
     whatBreaks:
       'On a desktop screen the main navigation opens when the mouse moves over it, and by no other means. There is nothing to click and nothing to focus, so an agent or a keyboard user cannot open it at all.',
     whyItMatters:
@@ -321,6 +368,9 @@ export const ISSUES: Issue[] = [
     severity: 'serious',
     brands: ['insureon', 'techinsurance'],
     detection: 'scanner',
+    plain:
+      'Inside the mobile menu, the control that takes you back up a level has no name. On Insureon it isn’t even a button.',
+    picture: { kind: 'control', control: 'back', now: { hears: '— nothing — (Insureon) · button, no name (TechInsurance)' }, fixed: { label: 'Back', hears: 'button, “Back”' } },
     whatBreaks:
       'Stepping back up a level inside the mobile menu is done with an empty control. It has no name, so nothing indicates what it does.',
     whyItMatters:
@@ -357,6 +407,9 @@ export const ISSUES: Issue[] = [
     severity: 'serious',
     brands: ['techinsurance'],
     detection: 'scanner',
+    plain:
+      'Every page carries a link with no text and no destination. It is still there for an agent — a stop that leads nowhere.',
+    picture: { kind: 'control', control: 'link', now: { hears: 'link — no name, goes nowhere' }, fixed: { hears: 'nothing — the link is not rendered when there is nothing to link to' } },
     whatBreaks:
       'An empty link with an empty destination is rendered unconditionally. It has no text and goes nowhere, but it is still in the tab order and still announced.',
     whyItMatters:
@@ -391,6 +444,9 @@ export const ISSUES: Issue[] = [
     severity: 'serious',
     brands: ['insureon'],
     detection: 'scanner',
+    plain:
+      'On blog articles the collapsed “related topics” panels are hidden the same broken way as the menu: closed to the eye, still live underneath.',
+    picture: { kind: 'panel', variant: 'related', now: { hears: 'link, link, link… tags behind a closed panel' }, fixed: { hears: 'button “Related topics”, collapsed' } },
     whatBreaks:
       'The collapsed "related topics" panels on blog articles use the same broken hiding technique as the menu. Their tag links stay live and tabbable while collapsed.',
     whyItMatters:
@@ -420,6 +476,9 @@ export const ISSUES: Issue[] = [
     severity: 'blocking',
     brands: ['insureon', 'techinsurance'],
     detection: 'scanner',
+    plain:
+      'On desktop most of the navigation lives inside menus that nothing announces. Of roughly sixty links, an agent can find about eight.',
+    picture: { kind: 'menu', variant: 'unfindable', now: { hears: '8 links — the other 56 are simply not there' }, fixed: { hears: 'button “Products”, has menu — all 60 reachable' } },
     whatBreaks:
       'The desktop mega-menu is hidden with display:none until a mouse hovers it, and nothing else on the page says those destinations exist. An agent reading the home page finds a handful of navigation links instead of the full set — the rest are in the HTML but absent from the accessibility tree.',
     whyItMatters:
@@ -456,6 +515,9 @@ export const ISSUES: Issue[] = [
     severity: 'moderate',
     brands: ['insureon', 'techinsurance'],
     detection: 'scanner',
+    plain:
+      'Every page is one long block. Nothing says “the actual content starts here”, so an agent has to wade through the header and menus on every page to find it.',
+    picture: { kind: 'page', variant: 'main' },
     whatBreaks:
       'Not one page carries the standard marker that says "the actual content begins here". Every page on both sites is missing it.',
     whyItMatters:
@@ -486,6 +548,9 @@ export const ISSUES: Issue[] = [
     severity: 'moderate',
     brands: ['insureon', 'techinsurance'],
     detection: 'scanner',
+    plain:
+      'Most of each page is not inside any labelled section — no “this is the header”, “this is the content”, “this is the footer” — so there is no structure to move around by.',
+    picture: { kind: 'page', variant: 'regions' },
     whatBreaks:
       'Large parts of each page are not inside any named region, so there is no structure for an agent to navigate by — just an undifferentiated run of content.',
     whyItMatters:
@@ -511,6 +576,9 @@ export const ISSUES: Issue[] = [
     severity: 'moderate',
     brands: ['insureon', 'techinsurance'],
     detection: 'scanner',
+    plain:
+      'The headings jump a level — a small heading directly under a big one with nothing in between — so the outline of the page doesn’t match how it is organised.',
+    picture: { kind: 'headings' },
     whatBreaks:
       'Some pages jump from one heading level to another without the one in between, so the outline of the page does not reflect how it is actually organised.',
     whyItMatters:
@@ -540,6 +608,9 @@ export const ISSUES: Issue[] = [
     severity: 'serious',
     brands: ['insureon'],
     detection: 'scanner',
+    plain:
+      'Some parts of the page are marked “hidden” for assistive technology, yet you can still land on them. Hidden and reachable at the same time is a contradiction.',
+    picture: { kind: 'panel', variant: 'hidden', now: { hears: '(hidden) — and yet the cursor lands here' }, fixed: { hears: 'hidden, and skipped' } },
     whatBreaks:
       'Some elements are explicitly marked hidden from assistive technology while still being focusable, which is a direct contradiction.',
     whyItMatters:
@@ -565,6 +636,9 @@ export const ISSUES: Issue[] = [
     severity: 'moderate',
     brands: ['insureon', 'techinsurance'],
     detection: 'scanner',
+    plain:
+      'Product cards, accordion rows and carousel dots react to a click but tell an agent nothing about themselves. A person discovers them by hovering; an agent can’t.',
+    picture: { kind: 'control', control: 'card', now: { hears: 'text: “General liability…” — nothing to press' }, fixed: { hears: 'link, “General liability” — the card’s title is the link' } },
     whatBreaks:
       'Large parts of each page — product cards, accordion rows, carousel dots — react to a click while telling an agent nothing about themselves. A mouse user discovers them by hovering. An agent has no hover and no way to know they do anything.',
     whyItMatters:
@@ -594,6 +668,9 @@ export const ISSUES: Issue[] = [
     severity: 'serious',
     brands: ['insureon', 'techinsurance'],
     detection: 'scanner',
+    plain:
+      'Links inside paragraphs look exactly like the text around them apart from a slightly different colour. If you can’t see that difference, there is no link.',
+    picture: { kind: 'text', variant: 'link-colour' },
     whatBreaks:
       'Inline links inside paragraphs are distinguished from the surrounding text only by their colour — no underline, no other cue.',
     whyItMatters:
@@ -617,6 +694,9 @@ export const ISSUES: Issue[] = [
     severity: 'moderate',
     brands: ['insureon', 'techinsurance'],
     detection: 'scanner',
+    plain:
+      'Some grey text is too light to read comfortably. It is measured against a fixed minimum, and it falls short.',
+    picture: { kind: 'text', variant: 'contrast' },
     whatBreaks: 'Text and background colours are too close together to read comfortably.',
     whyItMatters:
       'A readability problem for people, and it is measured by the same automated audits that agent platforms and Lighthouse run.',
