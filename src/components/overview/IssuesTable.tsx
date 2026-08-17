@@ -163,23 +163,31 @@ function IssueRows({
   const panelId = `issue-${issue.id}`;
   return (
     <>
+      {/**
+        * Every row is open by default, so without a heavier boundary the page
+        * reads as one long run of text and nobody can see where an issue ends.
+        * Each issue is drawn as a card: a 2px rule above its header, a tinted
+        * header strip, and the detail sharing the header's tint below it.
+        */}
       <tr
         onClick={onToggle}
-        className={`cursor-pointer transition-colors hover:bg-paper/60 ${open ? 'bg-paper/40' : ''}`}
+        className={`cursor-pointer border-t-[3px] border-rule transition-colors ${
+          open ? 'bg-white/[0.045] hover:bg-white/[0.06]' : 'hover:bg-paper/60'
+        }`}
       >
-        <Td className="pr-0 font-mono text-xs text-faint tnum">
+        <Td className={`pr-0 font-mono text-xs text-faint tnum ${open ? 'h-11 border-b-0' : ''}`}>
           <span className="inline-flex items-center gap-1.5">
             <Caret open={open} />
             {index ?? '·'}
           </span>
         </Td>
-        <Td>
+        <Td className={open ? 'border-b-0' : ''}>
           <span className={`inline-flex items-center gap-1.5 whitespace-nowrap text-[11.5px] font-medium ${muted ? 'text-faint' : SEVERITY_TEXT[issue.severity]}`}>
             <StatusDot tone={muted ? 'na' : SEVERITY_DOT[issue.severity]} />
             {muted ? 'Owned elsewhere' : SEVERITY_LABEL[issue.severity]}
           </span>
         </Td>
-        <Td className={muted ? 'text-muted' : ''}>
+        <Td className={`${muted ? 'text-muted' : ''} ${open ? 'border-b-0' : ''}`}>
           <button
             type="button"
             onClick={(e) => {
@@ -190,7 +198,9 @@ function IssueRows({
             }}
             aria-expanded={open}
             aria-controls={open ? panelId : undefined}
-            className={`text-left hover:underline underline-offset-2 ${open ? 'font-medium text-ink' : ''}`}
+            className={`text-left text-[13.5px] font-semibold tracking-tight hover:underline underline-offset-2 ${
+              open ? 'text-ink' : 'text-ink/90'
+            }`}
           >
             {issue.title}
           </button>
@@ -200,20 +210,20 @@ function IssueRows({
             </Tag>
           ) : null}
         </Td>
-        <Td>
+        <Td className={open ? 'border-b-0' : ''}>
           <span className="inline-flex gap-1">
             {issue.brands.map((b) => (
               <SiteChip key={b} brand={b} />
             ))}
           </span>
         </Td>
-        <Td align="right" className="whitespace-nowrap font-mono text-xs tnum">
+        <Td align="right" className={`whitespace-nowrap font-mono text-xs tnum ${open ? 'border-b-0' : ''}`}>
           <HeadlineFigure issue={issue} brands={brands} metricsByBrand={metricsByBrand} muted={muted} />
         </Td>
       </tr>
       {open ? (
         <tr id={panelId}>
-          <Td colSpan={5} className="h-auto bg-paper/40 py-4 pl-[3.25rem] pr-6">
+          <Td colSpan={5} className="h-auto border-b-0 bg-paper/50 pb-8 pl-[3.25rem] pr-6 pt-5">
             <IssueDetail issue={issue} brands={brands} metricsByBrand={metricsByBrand} muted={muted} />
           </Td>
         </tr>
