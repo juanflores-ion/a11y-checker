@@ -5,7 +5,7 @@ import { Fragment, useState } from 'react';
 
 import { makeDelta, PROBE_CHECKS } from '@/lib/aggregate';
 import { impactTone } from '@/lib/format';
-import { BRAND_LABEL, BRAND_SHORT, BRANDS, PAGE_LABEL, type Brand } from '@/lib/model';
+import { BRAND_LABEL, BRAND_SHORT, PAGE_LABEL, type Brand } from '@/lib/model';
 import { ruleMeta, type Impact } from '@/lib/rules';
 import { DeltaChip } from './Primitives';
 import { useRuns } from './RunContext';
@@ -44,7 +44,7 @@ export function RulesClient({
   ruleIds: string[];
   pageOrder: string[];
 }) {
-  const { currentKey, compareKey, current } = useRuns();
+  const { currentKey, compareKey, current, brands: BRANDS } = useRuns();
   /**
    * The first check is open on landing and the rest are closed.
    *
@@ -255,6 +255,7 @@ function PerPageRow({
   pageOrder: string[];
   note: string;
 }) {
+  const { brands: BRANDS } = useRuns();
   return (
     <tr id={id}>
       {/* Same equal top/bottom as the issues table — see IssuesTable. */}

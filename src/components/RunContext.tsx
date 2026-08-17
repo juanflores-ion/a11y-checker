@@ -3,11 +3,17 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 
 import {
+  BRANDS,
   DEFAULT_VIEWPORT,
   VIEWPORT_NAMES,
   viewKey,
+  type Brand,
   type ViewportName,
 } from '@/lib/model';
+
+/** 'both' or one brand: what the data pages show columns for. */
+export type SiteSelection = 'both' | Brand;
+export const SITE_SELECTIONS: readonly SiteSelection[] = ['both', ...BRANDS];
 
 export interface RunSummary {
   id: string;
@@ -46,23 +52,38 @@ interface RunSelection {
    * other profile, which would diff two different pages.
    */
   compareMissingViewport: boolean;
+  /* --- site ------------------------------------------------------- */
+  /**
+   * Which site's figures are on screen. Both by default — the two brands share
+   * a codebase and are read side by side — but every table doubles its numbers
+   * that way, so a reader can narrow to one and halve the page.
+   */
+  site: SiteSelection;
+  setSite: (s: SiteSelection) => void;
+  /** The brands the tables should render columns for, in canonical order. */
+  brands: Brand[];
 }
 
 const Ctx = createContext<RunSelection | null>(null);
 
-/** Read "#current=…&compare=…&viewport=…" so a link to a view is shareable. */
-function readHash(): { current?: string; compare?: string; viewport?: string } {
+/** Read "#current=…&compare=…&viewport=…&site=…" so a link to a view is shareable. */
+function readHash(): { current?: string; compare?: string; viewport?: string; site?: string } {
   if (typeof window === 'undefined') return {};
   const params = new URLSearchParams(window.location.hash.replace(/^#/, ''));
   return {
     current: params.get('current') ?? undefined,
     compare: params.get('compare') ?? undefined,
     viewport: params.get('viewport') ?? undefined,
+    site: params.get('site') ?? undefined,
   };
 }
 
 function isViewport(v: string | undefined): v is ViewportName {
   return !!v && (VIEWPORT_NAMES as readonly string[]).includes(v);
+}
+
+function isSite(v: string | undefined): v is SiteSelection {
+  return !!v && (SITE_SELECTIONS as readonly string[]).includes(v);
 }
 
 export function RunProvider({
@@ -78,45 +99,58 @@ export function RunProvider({
   const [currentId, setCurrentIdState] = useState(latest);
   const [compareId, setCompareIdState] = useState<string | null>(previous);
   const [viewport, setViewportState] = useState<ViewportName>(DEFAULT_VIEWPORT);
+  const [site, setSiteState] = useState<SiteSelection>('both');
 
   // Hydrate from the URL after mount so the static HTML stays deterministic.
   useEffect(() => {
-    const { current, compare, viewport: vp } = readHash();
+    const { current, compare, viewport: vp, site: st } = readHash();
     if (current && runs.some((r) => r.id === current)) setCurrentIdState(current);
     if (compare === 'none') setCompareIdState(null);
     else if (compare && runs.some((r) => r.id === compare)) setCompareIdState(compare);
     if (isViewport(vp)) setViewportState(vp);
+    if (isSite(st)) setSiteState(st);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const writeHash = useCallback((cur: string, cmp: string | null, vp: ViewportName) => {
-    if (typeof window === 'undefined') return;
-    const params = new URLSearchParams({ current: cur, compare: cmp ?? 'none', viewport: vp });
-    window.history.replaceState(null, '', `${window.location.pathname}#${params}`);
-  }, []);
+  const writeHash = useCallback(
+    (cur: string, cmp: string | null, vp: ViewportName, st: SiteSelection) => {
+      if (typeof window === 'undefined') return;
+      const params = new URLSearchParams({ current: cur, compare: cmp ?? 'none', viewport: vp, site: st });
+      window.history.replaceState(null, '', `${window.location.pathname}#${params}`);
+    },
+    []
+  );
 
   const setCurrentId = useCallback(
     (id: string) => {
       setCurrentIdState(id);
-      writeHash(id, compareId, viewport);
+      writeHash(id, compareId, viewport, site);
     },
-    [compareId, viewport, writeHash]
+    [compareId, viewport, site, writeHash]
   );
 
   const setCompareId = useCallback(
     (id: string | null) => {
       setCompareIdState(id);
-      writeHash(currentId, id, viewport);
+      writeHash(currentId, id, viewport, site);
     },
-    [currentId, viewport, writeHash]
+    [currentId, viewport, site, writeHash]
   );
 
   const setViewport = useCallback(
     (v: ViewportName) => {
       setViewportState(v);
-      writeHash(currentId, compareId, v);
+      writeHash(currentId, compareId, v, site);
     },
-    [currentId, compareId, writeHash]
+    [currentId, compareId, site, writeHash]
+  );
+
+  const setSite = useCallback(
+    (s: SiteSelection) => {
+      setSiteState(s);
+      writeHash(currentId, compareId, viewport, s);
+    },
+    [currentId, compareId, viewport, writeHash]
   );
 
   const value = useMemo<RunSelection>(() => {
@@ -154,8 +188,11 @@ export function RunProvider({
       compareKey:
         compare && compareHasViewport ? viewKey(compare.id, effective) : null,
       compareMissingViewport: !!compare && !compareHasViewport,
+      site,
+      setSite,
+      brands: site === 'both' ? [...BRANDS] : [site],
     };
-  }, [runs, currentId, compareId, viewport, setCurrentId, setCompareId, setViewport]);
+  }, [runs, currentId, compareId, viewport, site, setCurrentId, setCompareId, setViewport, setSite]);
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

@@ -2,8 +2,8 @@
 
 import { usePathname } from 'next/navigation';
 
-import { VIEWPORT_LABEL, type ViewportName } from '@/lib/model';
-import { useRuns } from './RunContext';
+import { BRAND_LABEL, BRANDS, VIEWPORT_LABEL, type ViewportName } from '@/lib/model';
+import { useRuns, type SiteSelection } from './RunContext';
 
 const selectClass =
   'appearance-none rounded-[7px] border border-rule bg-card py-[3px] pl-2 pr-6 font-mono text-xs text-ink ' +
@@ -42,6 +42,8 @@ export function ContextBar() {
     setViewport,
     availableViewports,
     compareMissingViewport,
+    site,
+    setSite,
   } = useRuns();
 
   const showsData = pathname === '/' || pathname.startsWith('/runs');
@@ -98,6 +100,22 @@ export function ContextBar() {
               {viewport === 'desktop' ? ' — what agents get' : ''}
             </span>
           )}
+        </Field>
+
+        <Field label="Site">
+          <select
+            aria-label="Site"
+            className={selectClass}
+            value={site}
+            onChange={(e) => setSite(e.target.value as SiteSelection)}
+          >
+            <option value="both">Both</option>
+            {BRANDS.map((b) => (
+              <option key={b} value={b}>
+                {BRAND_LABEL[b]}
+              </option>
+            ))}
+          </select>
         </Field>
 
         {runs.length >= 2 ? (

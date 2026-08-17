@@ -3,7 +3,7 @@
 import Link from 'next/link';
 
 import type { MatrixCell } from '@/lib/pageMatrix';
-import { BRAND_LABEL, BRANDS, PAGE_LABEL, type Brand, type Verdict } from '@/lib/model';
+import { BRAND_LABEL, PAGE_LABEL, type Brand, type Verdict } from '@/lib/model';
 import { useRuns } from '../RunContext';
 import { StatusDot, type DotTone } from '../ui/StatusDot';
 import { Table, TBody, Td, Th, THead } from '../ui/Table';
@@ -19,7 +19,7 @@ export function PagesMatrixClient({
   byRun: Record<string, Record<Brand, Record<string, MatrixCell>>>;
   pageOrder: string[];
 }) {
-  const { currentKey } = useRuns();
+  const { currentKey, brands: BRANDS } = useRuns();
   const now = byRun[currentKey];
   if (!now) return <p className="text-sm text-muted">No scan data for this run.</p>;
 

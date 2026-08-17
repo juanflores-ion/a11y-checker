@@ -5,6 +5,7 @@ import type { ResolvedMetric } from '@/lib/aggregate';
 import { useRuns } from '../RunContext';
 import { PageHeader } from '../ui/PageHeader';
 import { IssuesTable } from './IssuesTable';
+import { Readiness } from './Readiness';
 import { Scorecard } from './Scorecard';
 import type { OverviewSnapshots } from './types';
 
@@ -34,6 +35,7 @@ export function OverviewClient({ snapshots }: { snapshots: OverviewSnapshots }) 
         title="Overview"
         description="Where Insureon and TechInsurance stand for an AI agent, from the selected production scan."
       />
+      <Readiness now={now} before={before} />
       <Scorecard now={now} before={before} />
       <IssuesTable metricsByBrand={metricsByBrand} />
     </div>
