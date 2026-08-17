@@ -480,7 +480,7 @@ and an allowlist, both required before this server is safe to expose:
 
 ```bash
 SCAN_TOKEN=$(openssl rand -hex 16) \
-SCAN_ALLOWED_HOSTS=staging.insureon.com,staging.techinsurance.com \
+SCAN_ALLOWED_HOSTS=staging.forsureon.com \
 npm run scan-server
 # prints the mode it is in and the hosts it will scan; the token is $SCAN_TOKEN
 ```
