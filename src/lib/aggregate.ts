@@ -589,6 +589,7 @@ export const SCORECARD_GROUPS: ReadonlyArray<{ title: string; keys: readonly str
     keys: ['button-name', 'link-name', 'emptyHref', 'label', 'ghost-controls', 'phantom'],
   },
   { title: 'Structure', keys: ['hasMain', 'unfindable-links', 'region'] },
+  { title: 'Styling', keys: ['link-in-text-block', 'color-contrast'] },
 ];
 
 export function scorecard(run: Run, brand: Brand): ScorecardRow[] {
@@ -722,8 +723,8 @@ export function scorecard(run: Run, brand: Brand): ScorecardRow[] {
       value: get('link-in-text-block'),
       target: null,
       met: null,
-      inScope: false,
-      note: 'A styling change, not a markup fix.',
+      inScope: true,
+      note: 'Fixed in the brand CSS with design. Drifts with content, so no pass/fail line — expect a sharp drop, then noise.',
     },
     {
       key: 'color-contrast',
@@ -731,8 +732,8 @@ export function scorecard(run: Run, brand: Brand): ScorecardRow[] {
       value: get('color-contrast'),
       target: null,
       met: null,
-      inScope: false,
-      note: 'A styling change, not a markup fix.',
+      inScope: true,
+      note: 'Fixed in the palette with design. Drifts with content, so no pass/fail line — expect a sharp drop, then noise.',
     },
   ];
 

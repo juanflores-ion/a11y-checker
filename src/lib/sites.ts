@@ -14,8 +14,10 @@ export interface SiteConfig {
   /** Shown when someone is about to scan it live. */
   host: string;
   /**
-   * Staging origin, when there is one. Prefilled on the Compare page so QA
-   * doesn't have to remember it. Null until a staging host exists.
+   * Staging origin, when there is one. Fills the After side on Scan → Before /
+   * after so QA doesn't have to remember it, and is on the hosted route's
+   * allowlist. Reachable only inside the org network — see "Reach staging
+   * through a tunnel" in the README. Null until a staging host exists.
    */
   staging: string | null;
 }
@@ -24,12 +26,12 @@ export const SITES: Record<Brand, SiteConfig> = {
   insureon: {
     url: 'https://www.insureon.com/',
     host: 'www.insureon.com',
-    staging: null,
+    staging: 'https://cd-preview.ion.staging.forsureon.com/',
   },
   techinsurance: {
     url: 'https://www.techinsurance.com/',
     host: 'www.techinsurance.com',
-    staging: null,
+    staging: 'https://cd-preview.tig.staging.forsureon.com/',
   },
 };
 

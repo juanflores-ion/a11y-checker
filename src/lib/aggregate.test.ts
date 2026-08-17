@@ -1332,11 +1332,14 @@ test("Insureon's zeros are flagged as misleading; TechInsurance's non-zeros are 
   assert.equal(tig.find((r) => r.key === 'button-name')!.misleadingZero, false);
 });
 
-test('contrast and colour-only links are marked out of scope', () => {
+test('every scorecard row is in scope, and the styling rows still carry no hard target', () => {
   const rows = scorecard(baseline, 'insureon');
-  assert.equal(rows.find((r) => r.key === 'color-contrast')!.inScope, false);
-  assert.equal(rows.find((r) => r.key === 'link-in-text-block')!.inScope, false);
-  assert.equal(rows.find((r) => r.key === 'region')!.inScope, true);
+  assert.ok(rows.every((r) => r.inScope));
+  for (const key of ['color-contrast', 'link-in-text-block']) {
+    const row = rows.find((r) => r.key === key)!;
+    assert.equal(row.target, null);
+    assert.equal(row.met, null);
+  }
 });
 
 test('pass ratio counts only rows with a hard target', () => {

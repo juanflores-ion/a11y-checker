@@ -4,7 +4,11 @@ export interface RuleMeta {
   id: string;
   label: string;
   impact: Impact;
-  /** false = a brand/design decision, deliberately not part of this workstream. */
+  /**
+   * false = a brand/design decision with a different owner, not part of this
+   * workstream. None today: the two styling rules joined it in Aug 2026 once
+   * design decided the fix.
+   */
   inScope: boolean;
   /**
    * true = the count must be exact. Any movement is signal.
@@ -63,13 +67,13 @@ const KNOWN: Record<string, Omit<RuleMeta, 'id'>> = {
   'link-in-text-block': {
     label: 'Links identified by colour only',
     impact: 'serious',
-    inScope: false,
+    inScope: true,
     exact: false,
   },
   'color-contrast': {
     label: 'Text contrast too low',
     impact: 'serious',
-    inScope: false,
+    inScope: true,
     exact: false,
   },
 };

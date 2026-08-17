@@ -113,9 +113,9 @@ export interface PageDiff {
    * confident number" is the failure this tool keeps having to design out.
    *
    * It only fires if the caller states both profiles. `LiveScanClient` holds
-   * one `viewport` for the whole compare run and currently passes neither, so
-   * today the guard is unarmed — hence `viewports` above, which shows on screen
-   * whether it was armed rather than leaving the answer to a code reading.
+   * one `viewport` for the whole compare run and passes it for both sides, so
+   * the guard is armed but should stay silent — `viewports` above shows on
+   * screen which profile was stated rather than leaving that to a code reading.
    */
   viewportMismatch?: { before: string; after: string };
   /**

@@ -290,7 +290,10 @@ export function LiveScanClient({ mode }: { mode: Mode }) {
             p.beforeUrl ?? '',
             p.afterUrl ?? '',
             p.beforeUrl ? byUrl.get(p.beforeUrl) ?? null : null,
-            p.afterUrl ? byUrl.get(p.afterUrl) ?? null : null
+            p.afterUrl ? byUrl.get(p.afterUrl) ?? null : null,
+            // One profile for the whole run, so both sides carry it and the
+            // card can say which device the figures describe.
+            { before: viewport, after: viewport }
           )
         )
       );
@@ -387,9 +390,19 @@ export function LiveScanClient({ mode }: { mode: Mode }) {
             <ExampleChips examples={SCAN_EXAMPLES} onPick={(url) => setUrlsText((t) => (t.trim() ? `${t.trim()}\n${url}` : url))} />
           ) : (
             <div className="flex flex-wrap items-center gap-1.5 text-xs text-faint">
-              <span>Fill Before with</span>
+              <span>Fill {Object.values(SITES).some((s) => s.staging) ? 'both sides' : 'Before'} with</span>
               {Object.entries(SITES).map(([brand, site]) => (
-                <button key={brand} type="button" onClick={() => setBeforeText((t) => (t.trim() ? `${t.trim()}\n${site.url}` : site.url))} className="rounded-[6px] border border-rule bg-paper px-2 py-0.5 font-mono text-[11px] text-muted hover:border-accent/40 hover:text-accent">
+                <button
+                  key={brand}
+                  type="button"
+                  title={site.staging ? `Before: ${site.url}\nAfter: ${site.staging}` : site.url}
+                  onClick={() => {
+                    const append = (t: string, url: string) => (t.trim() ? `${t.trim()}\n${url}` : url);
+                    setBeforeText((t) => append(t, site.url));
+                    if (site.staging) setAfterText((t) => append(t, site.staging as string));
+                  }}
+                  className="rounded-[6px] border border-rule bg-paper px-2 py-0.5 font-mono text-[11px] text-muted hover:border-accent/40 hover:text-accent"
+                >
                   {site.host}
                 </button>
               ))}

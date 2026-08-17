@@ -627,13 +627,13 @@ export const ISSUES: Issue[] = [
       'axe\'s link-in-text-block rule. Counts drift between runs with content changes, so small movements here are not regressions.',
     metrics: [{ kind: 'rule', ruleId: 'link-in-text-block', label: 'Colour-only links' }],
     fix: {
-      summary: 'A styling decision — underline inline links, or raise the colour difference.',
+      summary: 'Give inline links a cue that is not colour — decided with design and applied in the brand CSS.',
       technical: 'Brand-level CSS change to inline link styling.',
-      risk: 'Changes how every article page looks. Owned by design, not by this workstream.',
+      risk: 'Changes how every article page looks; the styling is design’s call and was made with them.',
       riskLevel: 'medium',
     },
-    verify: 'Parked pending a design decision.',
-    inScope: false,
+    verify: 'Re-scan and watch link-in-text-block. It drifts with content, so read the direction, not the last digit.',
+    inScope: true,
   },
 
   {
@@ -644,17 +644,17 @@ export const ISSUES: Issue[] = [
     detection: 'scanner',
     whatBreaks: 'Text and background colours are too close together to read comfortably.',
     whyItMatters:
-      'A readability problem for people, and it is measured by the same automated audits — but it is a brand palette decision with a different owner, so it is tracked here rather than fixed here.',
+      'A readability problem for people, and it is measured by the same automated audits that agent platforms and Lighthouse run.',
     technical: 'axe\'s color-contrast rule. Drifts with content, like the other styling rules.',
     metrics: [{ kind: 'rule', ruleId: 'color-contrast', label: 'Low-contrast text nodes' }],
     fix: {
-      summary: 'A brand palette decision, deliberately kept out of this workstream.',
+      summary: 'Move the failing text and background pairs to a passing contrast — decided with design and applied in the palette.',
       technical: 'Palette-level CSS change.',
-      risk: 'Changes brand colours site-wide.',
+      risk: 'Changes brand colours site-wide; made with design.',
       riskLevel: 'medium',
     },
-    verify: 'Parked pending a design decision.',
-    inScope: false,
+    verify: 'Re-scan and watch color-contrast. It drifts with content, so read the direction, not the last digit.',
+    inScope: true,
   },
 ];
 
