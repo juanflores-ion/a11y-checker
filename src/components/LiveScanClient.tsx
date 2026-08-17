@@ -64,6 +64,10 @@ function authHeaders(serverUrl: string, token: string): Record<string, string> {
 type Mode = 'scan' | 'compare';
 
 const SCAN_EXAMPLES = productionUrls();
+/** Real addresses in the placeholders, so nobody has to guess the staging shape. */
+const FIRST_SITE = Object.values(SITES)[0];
+const PLACEHOLDER_PROD = FIRST_SITE.url;
+const PLACEHOLDER_STAGING = Object.values(SITES).find((s) => s.staging)?.staging ?? 'https://staging.example.com/';
 
 function trimSlash(url: string) {
   return url.replace(/\/+$/, '');
@@ -331,7 +335,7 @@ export function LiveScanClient({ mode }: { mode: Mode }) {
                 rows={3}
                 value={urlsText}
                 onChange={(e) => setUrlsText(e.target.value)}
-                placeholder={`https://www.example.com/\nhttps://staging.example.com/pricing`}
+                placeholder={`${PLACEHOLDER_PROD}\n${PLACEHOLDER_STAGING}`}
                 className="w-full resize-y rounded-card border border-rule bg-paper px-3 py-2 font-mono text-xs leading-relaxed text-ink"
               />
             </div>
@@ -341,13 +345,13 @@ export function LiveScanClient({ mode }: { mode: Mode }) {
                 <label htmlFor="compare-before" className="mb-1 block text-xs text-muted">
                   <span className="font-medium text-ink">Before</span> · live production
                 </label>
-                <textarea id="compare-before" rows={3} value={beforeText} onChange={(e) => setBeforeText(e.target.value)} placeholder="https://www.example.com/" className="w-full resize-y rounded-card border border-rule bg-paper px-3 py-2 font-mono text-xs leading-relaxed text-ink" />
+                <textarea id="compare-before" rows={3} value={beforeText} onChange={(e) => setBeforeText(e.target.value)} placeholder={PLACEHOLDER_PROD} className="w-full resize-y rounded-card border border-rule bg-paper px-3 py-2 font-mono text-xs leading-relaxed text-ink" />
               </div>
               <div>
                 <label htmlFor="compare-after" className="mb-1 block text-xs text-muted">
                   <span className="font-medium text-ink">After</span> · staging or a preview build
                 </label>
-                <textarea id="compare-after" rows={3} value={afterText} onChange={(e) => setAfterText(e.target.value)} placeholder="https://staging.example.com/" className="w-full resize-y rounded-card border border-rule bg-paper px-3 py-2 font-mono text-xs leading-relaxed text-ink" />
+                <textarea id="compare-after" rows={3} value={afterText} onChange={(e) => setAfterText(e.target.value)} placeholder={PLACEHOLDER_STAGING} className="w-full resize-y rounded-card border border-rule bg-paper px-3 py-2 font-mono text-xs leading-relaxed text-ink" />
               </div>
             </div>
           )}
