@@ -560,31 +560,6 @@ export const ISSUES: Issue[] = [
   },
 
   {
-    id: 'shared-components',
-    title: 'The shared building blocks reintroduce these problems',
-    severity: 'moderate',
-    brands: ['insureon', 'techinsurance'],
-    detection: 'manual',
-    whatBreaks:
-      'The components that generate links, images and expandable panels across both sites are where most of these defects originate, so fixing individual pages does not hold.',
-    whyItMatters:
-      'Ninety-four of the 169 findings sit in shared components. Fix them once and a large share of the list clears at the source — skip them and the same defects come back with the next feature.',
-    technical:
-      'Of Insureon\'s 110 findings, 56 are in shared components; of TechInsurance\'s 59, 38 are. Thirty-four of Insureon\'s findings mirror TechInsurance defects exactly, which is why the two tickets are meant to be done together.',
-    metrics: [],
-    fix: {
-      summary: 'Fix the shared components rather than each page that uses them.',
-      technical:
-        'Address the link, image and disclosure primitives so names, landmarks and hiding behaviour are correct by default.',
-      risk: 'Broad blast radius by definition — these components are used everywhere, so this needs the widest visual QA of any phase.',
-      riskLevel: 'medium',
-    },
-    verify:
-      'Re-scan all ten page types on both brands and confirm the per-page counts drop together rather than one page at a time.',
-    inScope: true,
-  },
-
-  {
     id: 'clickable-without-role',
     title: 'Cards and list items respond to clicks but announce nothing',
     severity: 'moderate',
