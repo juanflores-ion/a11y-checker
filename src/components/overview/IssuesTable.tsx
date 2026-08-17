@@ -6,10 +6,9 @@ import { Fragment, useMemo, useState } from 'react';
 import type { ResolvedMetric } from '@/lib/aggregate';
 import { cellTone, NOT_MEASURABLE_TITLE, NOT_MEASURED_TITLE } from '@/lib/format';
 import { ISSUES, SEVERITY_LABEL, sortIssues, type Issue, type Severity } from '@/lib/issues';
-import { BRAND_LABEL, type Brand } from '@/lib/model';
+import type { Brand } from '@/lib/model';
 import { CodeSample } from '../Primitives';
 import { useRuns } from '../RunContext';
-import { SiteChip } from '../ui/SiteChip';
 import { StatusDot, type DotTone } from '../ui/StatusDot';
 import { FIGURE_CLASS, Table, TBody, Td, Th, THead, GroupRow } from '../ui/Table';
 import { Tag } from '../ui/Tag';
@@ -68,7 +67,7 @@ export function IssuesTable({
     const sorted = sortIssues(ISSUES);
     return { tracked: sorted.filter((i) => i.inScope), parked: sorted.filter((i) => !i.inScope) };
   }, []);
-  const visible = site === 'both' ? tracked : tracked.filter((i) => i.brands.includes(site));
+  const visible = tracked.filter((i) => i.brands.includes(site));
 
   return (
     <section aria-labelledby="issues">
@@ -89,7 +88,6 @@ export function IssuesTable({
             <Th className="w-14">#</Th>
             <Th className="w-28">Severity</Th>
             <Th>Issue</Th>
-            <Th className="w-28">Sites</Th>
             <Th align="right" className="w-40">
               Measured now
             </Th>
@@ -110,7 +108,7 @@ export function IssuesTable({
           ))}
           {parked.length ? (
             <>
-              <GroupRow colSpan={5}>
+              <GroupRow colSpan={4}>
                 Measured, but owned elsewhere — styling and brand-palette decisions, tracked here,
                 not part of this workstream
               </GroupRow>
@@ -202,13 +200,6 @@ function IssueRows({
             </Tag>
           ) : null}
         </Td>
-        <Td className={open ? 'border-b-0' : ''}>
-          <span className="inline-flex gap-1">
-            {issue.brands.map((b) => (
-              <SiteChip key={b} brand={b} />
-            ))}
-          </span>
-        </Td>
         <Td align="right" className={`whitespace-nowrap font-mono text-xs tnum ${open ? 'border-b-0' : ''}`}>
           <HeadlineFigure issue={issue} brands={brands} metricsByBrand={metricsByBrand} muted={muted} />
         </Td>
@@ -217,7 +208,7 @@ function IssueRows({
         <tr id={panelId}>
           {/* Equal top and bottom: measured 20px over 32px before this, which
               reads as the content sitting low in its own block. */}
-          <Td colSpan={5} className="h-auto border-b-0 bg-paper/50 py-7 pl-[3.25rem] pr-6">
+          <Td colSpan={4} className="h-auto border-b-0 bg-paper/50 py-7 pl-[3.25rem] pr-6">
             <IssueDetail issue={issue} brands={brands} metricsByBrand={metricsByBrand} muted={muted} />
           </Td>
         </tr>
@@ -394,7 +385,6 @@ function Figures({
             <td className="pr-4 text-muted">{ref.label}</td>
             {brands.map((b) => (
               <td key={b} className="pr-3 text-right">
-                <span className="mr-1 text-faint">{BRAND_LABEL[b]}</span>
                 <Figure m={metricsByBrand[b]?.[issue.id]?.[i]} muted={muted} />
               </td>
             ))}

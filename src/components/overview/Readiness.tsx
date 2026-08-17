@@ -15,7 +15,7 @@ import type { OverviewBrandSnapshot } from './types';
  *
  * Both sites always show here, whatever the Site control says: two bars are
  * the one place the reader gets both verdicts at a glance, and everything
- * below narrows to the selected site. The selected row is the bright one;
+ * below is the selected site only. The selected row is the bright one;
  * clicking either row selects it.
  */
 export function Readiness({
@@ -29,7 +29,7 @@ export function Readiness({
   return (
     <section aria-label="Readiness" className="rounded-card border border-rule bg-card shadow-card">
       {BRANDS.map((b, i) => {
-        const selected = site === 'both' || site === b;
+        const selected = site === b;
         const { passed, total } = now[b].passRatio;
         const prev = before ? before[b].passRatio.passed : null;
         const pct = total ? Math.round((passed / total) * 100) : 0;
