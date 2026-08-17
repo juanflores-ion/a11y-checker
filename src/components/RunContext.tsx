@@ -54,9 +54,10 @@ interface RunSelection {
   compareMissingViewport: boolean;
   /* --- site ------------------------------------------------------- */
   /**
-   * Which site's figures are on screen. Both by default — the two brands share
-   * a codebase and are read side by side — but every table doubles its numbers
-   * that way, so a reader can narrow to one and halve the page.
+   * Which site's figures are on screen. One site by default — the first brand
+   * — because two side by side doubles every number on the page, and the point
+   * of the control is fewer figures at a glance. "Both" is there for the
+   * reader who wants the comparison.
    */
   site: SiteSelection;
   setSite: (s: SiteSelection) => void;
@@ -99,7 +100,7 @@ export function RunProvider({
   const [currentId, setCurrentIdState] = useState(latest);
   const [compareId, setCompareIdState] = useState<string | null>(previous);
   const [viewport, setViewportState] = useState<ViewportName>(DEFAULT_VIEWPORT);
-  const [site, setSiteState] = useState<SiteSelection>('both');
+  const [site, setSiteState] = useState<SiteSelection>(BRANDS[0]);
 
   // Hydrate from the URL after mount so the static HTML stays deterministic.
   useEffect(() => {
