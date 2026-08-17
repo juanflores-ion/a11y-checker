@@ -10,7 +10,7 @@ import { ruleMeta, type Impact } from '@/lib/rules';
 import { DeltaChip } from './Primitives';
 import { useRuns } from './RunContext';
 import { StatusDot, type DotTone } from './ui/StatusDot';
-import { GroupRow, NumCell, Table, TBody, Td, Th, THead, ToggleCell } from './ui/Table';
+import { GroupRow, NumCell, Table, TBody, Td, Th, THead } from './ui/Table';
 import { Tag } from './ui/Tag';
 
 export interface RulesRunData {
@@ -45,13 +45,21 @@ export function RulesClient({
   pageOrder: string[];
 }) {
   const { currentKey, compareKey, current } = useRuns();
-  const [open, setOpen] = useState<string | null>(null);
+  /**
+   * The first check is open on landing and the rest are closed.
+   *
+   * Sixteen open panels is what the issues table wants — each one is an
+   * argument someone should read. This table is a list of figures, and one
+   * opened panel is enough to show that a row has a per-page breakdown behind
+   * it without burying the list it belongs to.
+   */
+  const [open, setOpen] = useState<string | null>(ruleIds[0] ?? null);
 
   const now = byRun[currentKey];
   const before = compareKey ? byRun[compareKey] ?? null : null;
   if (!now) return <p className="text-sm text-muted">No scan data for this run.</p>;
 
-  const cols = 2 + BRANDS.length;
+  const cols = 1 + BRANDS.length;
   const firing = BRANDS.map(
     (b) =>
       `${BRAND_SHORT[b]} ${now.impacts[b]?.critical ?? 0} critical · ${now.impacts[b]?.serious ?? 0} serious · ${now.impacts[b]?.moderate ?? 0} moderate`
@@ -64,22 +72,20 @@ export function RulesClient({
           Failing elements per check
         </h2>
         <p className="text-xs text-faint">
-          Colour is by impact, not by count · expand a row for the page types that carry it · drifts = small movement between scans is normal
+          Colour is by impact, not by count · click a row for the page types that carry it · drifts = small movement between scans is normal
         </p>
       </div>
 
       <Table label="Failing elements per check">
         <THead>
           <tr>
-            <Th className="w-[52%]">Check</Th>
+            <Th className="w-[56%]">Check</Th>
             {BRANDS.map((b) => (
               <Th key={b} align="right">
                 {BRAND_LABEL[b]}
               </Th>
             ))}
-            <Th className="w-8">
-              <span className="sr-only">Detail</span>
-            </Th>
+
           </tr>
         </THead>
         <TBody>
@@ -90,9 +96,26 @@ export function RulesClient({
             const meta = ruleMeta(id);
             return (
               <Fragment key={id}>
-                <tr>
-                  <Td>
-                    <button type="button" onClick={() => setOpen(open === id ? null : id)} aria-expanded={open === id} className="text-left hover:underline underline-offset-2">
+                <tr
+                  onClick={() => setOpen(open === id ? null : id)}
+                  className={`cursor-pointer border-t-[3px] border-rule transition-colors ${
+                    open === id ? 'bg-white/[0.045] hover:bg-white/[0.06]' : 'hover:bg-paper/60'
+                  }`}
+                >
+                  <Td className={open === id ? 'h-11 border-b-0' : ''}>
+                    <span className="mr-1.5 inline-flex w-3 justify-center text-faint">
+                      <Caret open={open === id} />
+                    </span>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setOpen(open === id ? null : id);
+                      }}
+                      aria-expanded={open === id}
+                      aria-controls={open === id ? `rule-panel-${id}` : undefined}
+                      className="text-left font-medium hover:underline underline-offset-2"
+                    >
                       <StatusDot tone={IMPACT_DOT[meta.impact]} className="mr-2" />
                       {meta.label}
                     </button>
@@ -104,16 +127,16 @@ export function RulesClient({
                     const prev = before ? before.totals[brand]?.[id] ?? 0 : null;
                     const misleading = (meta.misleadingZeroOn ?? []).includes(brand) && value === 0;
                     return (
-                      <NumCell key={brand} tone={impactTone(meta.impact, value, misleading)} text={value.toLocaleString()}>
+                      <NumCell
+                        key={brand}
+                        tone={impactTone(meta.impact, value, misleading)}
+                        text={value.toLocaleString()}
+                        className={open === id ? 'border-b-0' : ''}
+                      >
                         {before ? <DeltaChip delta={makeDelta(value, prev, meta.exact, id)} className="ml-2" /> : null}
                       </NumCell>
                     );
                   })}
-                  <ToggleCell
-                    open={open === id}
-                    onToggle={() => setOpen(open === id ? null : id)}
-                    controls={`rule-panel-${id}`}
-                  />
                 </tr>
                 {open === id ? (
                   <PerPageRow
@@ -141,9 +164,26 @@ export function RulesClient({
           ) : (
             PROBE_CHECKS.map((check) => (
               <Fragment key={check.id}>
-                <tr>
-                  <Td>
-                    <button type="button" onClick={() => setOpen(open === check.id ? null : check.id)} aria-expanded={open === check.id} className="text-left hover:underline underline-offset-2">
+                <tr
+                  onClick={() => setOpen(open === check.id ? null : check.id)}
+                  className={`cursor-pointer border-t-[3px] border-rule transition-colors ${
+                    open === check.id ? 'bg-white/[0.045] hover:bg-white/[0.06]' : 'hover:bg-paper/60'
+                  }`}
+                >
+                  <Td className={open === check.id ? 'h-11 border-b-0' : ''}>
+                    <span className="mr-1.5 inline-flex w-3 justify-center text-faint">
+                      <Caret open={open === check.id} />
+                    </span>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setOpen(open === check.id ? null : check.id);
+                      }}
+                      aria-expanded={open === check.id}
+                      aria-controls={open === check.id ? `probe-panel-${check.id}` : undefined}
+                      className="text-left font-medium hover:underline underline-offset-2"
+                    >
                       <StatusDot tone={IMPACT_DOT[check.impact]} className="mr-2" />
                       {check.label}
                     </button>
@@ -153,16 +193,16 @@ export function RulesClient({
                     const value = now.probeTotals[brand]?.[check.id] ?? 0;
                     const prev = before?.hasProbes ? before.probeTotals[brand]?.[check.id] ?? 0 : null;
                     return (
-                      <NumCell key={brand} tone={impactTone(check.impact, value, false)} text={value.toLocaleString()}>
+                      <NumCell
+                        key={brand}
+                        tone={impactTone(check.impact, value, false)}
+                        text={value.toLocaleString()}
+                        className={open === check.id ? 'border-b-0' : ''}
+                      >
                         {before?.hasProbes ? <DeltaChip delta={makeDelta(value, prev, true, check.id)} className="ml-2" /> : null}
                       </NumCell>
                     );
                   })}
-                  <ToggleCell
-                    open={open === check.id}
-                    onToggle={() => setOpen(open === check.id ? null : check.id)}
-                    controls={`probe-panel-${check.id}`}
-                  />
                 </tr>
                 {open === check.id ? (
                   <PerPageRow
@@ -184,6 +224,21 @@ export function RulesClient({
 }
 
 /** The per-page breakdown under an expanded row: brands down, page types across, cells link to the page detail. */
+/** Same marker as the issues table: on the left, pointing down when open. */
+function Caret({ open }: { open: boolean }) {
+  return (
+    <svg
+      width="8"
+      height="8"
+      viewBox="0 0 8 8"
+      aria-hidden="true"
+      className={`transition-transform ${open ? 'rotate-90' : ''}`}
+    >
+      <path d="M2 1l4 3-4 3z" fill="currentColor" />
+    </svg>
+  );
+}
+
 function PerPageRow({
   id,
   cols,
@@ -202,7 +257,8 @@ function PerPageRow({
 }) {
   return (
     <tr id={id}>
-      <Td colSpan={cols} className="h-auto bg-paper/40 py-3 pl-9 pr-4">
+      {/* Same equal top/bottom as the issues table — see IssuesTable. */}
+      <Td colSpan={cols} className="h-auto border-b-0 bg-paper/50 py-6 pl-9 pr-4">
         <div className="overflow-x-auto rounded-card border border-rule bg-card">
           <table className="w-full border-collapse text-[11.5px]">
             <thead>
