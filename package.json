@@ -8,7 +8,7 @@
     "build": "next build",
     "start": "node scripts/start.mjs",
     "lint": "next lint",
-    "test": "tsx src/lib/aggregate.test.ts && tsx src/lib/compare.test.ts && tsx src/lib/format.test.ts && tsx src/lib/pageMatrix.test.ts",
+    "test": "tsx src/lib/aggregate.test.ts && tsx src/lib/compare.test.ts && tsx src/lib/format.test.ts && tsx src/lib/pageMatrix.test.ts && node --test scanner/allowlist.test.mjs",
     "metamorphic": "node scanner/metamorphic/run.mjs",
     "scan": "node scanner/scan.mjs --out data/runs",
     "scan-server": "node scanner/server.mjs"

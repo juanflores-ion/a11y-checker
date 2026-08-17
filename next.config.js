@@ -64,6 +64,8 @@ const nextConfig = {
       '/api/scan': [
         './scanner/core.mjs',
         './scanner/probes.mjs',
+        './scanner/allowlist.mjs',
+        './scanner/targets.mjs',
         './node_modules/axe-core/axe.js',
         './node_modules/axe-core/package.json',
         './node_modules/@sparticuz/chromium/bin/**',
