@@ -4,7 +4,7 @@ import { targetList } from '../../../scanner/targets.mjs';
 
 export const metadata = {
   title: 'Scan — Agent Readiness',
-  description: 'Measure a URL now, check a fix before and after, or record a full run.',
+  description: 'Check a fix before and after, measure a URL now, or record a full run.',
 };
 
 export default function ScanPage() {
