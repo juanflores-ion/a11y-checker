@@ -35,7 +35,7 @@ export const TARGETS = {
   techinsurance: {
     home: 'https://www.techinsurance.com/',
     policy: 'https://www.techinsurance.com/general-liability-insurance',
-    major: 'https://www.techinsurance.com/it-consultant-insurance',
+    major: 'https://www.techinsurance.com/technology-business-insurance/it-consulting',
     minor: 'https://www.techinsurance.com/technology-business-insurance/software-development',
     article: 'https://www.techinsurance.com/resources/how-to-file-a-business-insurance-claim',
     resources: 'https://www.techinsurance.com/resources',

@@ -907,11 +907,13 @@ export function collectMeasurements() {
      *      640×480 climb, and it is what makes all four header shapes above
      *      report again: the climb never leaves `<header>`.
      *   3. That ancestor is the WIDGET, not a chunk of page: every element
-     *      inside it is the candidate, the combobox, inside one of them, or a
-     *      role-less wrapper around one of them. react-select passes at every
-     *      depth it ships — `IndicatorsContainer` and `ValueContainer` are
-     *      exactly such wrappers — and a header that also holds a logo, a
-     *      heading or a second control does not.
+     *      inside it is the candidate, the combobox, inside one of them, a
+     *      role-less wrapper around one of them, or the widget's own inert
+     *      furniture (placeholder text, a separator, an SSR `<style>` tag — see
+     *      `isWidgetFurniture`). react-select passes at every depth it ships —
+     *      `IndicatorsContainer` and `ValueContainer` are exactly such wrappers
+     *      — and a header that also holds a logo, a heading or a second control
+     *      does not.
      *
      * The residual risk, stated rather than hidden: a nameless clickable and a
      * named combobox alone together inside a role-less div are indistinguishable
@@ -928,13 +930,42 @@ export function collectMeasurements() {
 
     const isUsableCombobox = (el) => roleOf(el) === POPUP_PAIRED_ROLE && isUsableControl(el);
 
+    /**
+     * The widget's own furniture, which the packaging test must let through.
+     *
+     * react-select puts more than the two halves inside its control box: the
+     * placeholder text while nothing is selected, the chosen value's label once
+     * something is, an indicator separator, and — in server-rendered output —
+     * the `<style>` tag emotion writes beside every styled node. None of it has
+     * a role, none of it can take focus, and none of it carries a click signal
+     * of its own: the placeholder computes to `pointer` only because the whole
+     * control box does, and that cursor is the box's, inherited.
+     *
+     * Measured on insureon.com's profession picker ("What kind of work do you
+     * do?", 17 Aug 2026, local build): with the placeholder showing, the rule
+     * as it stood — every node is one half or a wrapper of one half — failed on
+     * the placeholder div and reported the chevron on every page that carries
+     * the picker, which is the exact finding this rescue exists to withhold.
+     * The metamorphic fixture had no placeholder, so the suite could not see it;
+     * it has one now.
+     *
+     * Still refused, so the header shapes in `neighbour-irrelevance` keep
+     * reporting: anything with a role, anything focusable, and any candidate
+     * whose click signal is its own — a second control or a second nameless
+     * clickable is not furniture. Hidden inputs are form plumbing, not focus.
+     */
+    const isWidgetFurniture = (n) =>
+      !roleOf(n) &&
+      !(n.matches(FOCUSABLE) && !n.matches('input[type="hidden"]')) &&
+      (!isCandidate(n) || inheritsSignal(n));
+
     const isWidgetPackaging = (scope, el, combobox) =>
       [...scope.querySelectorAll('*')].every((n) => {
         if (n === el || el.contains(n)) return true;
         if (n === combobox || combobox.contains(n)) return true;
         // A wrapper around either half is packaging only if it is packaging.
         if (n.contains(el) || n.contains(combobox)) return !roleOf(n);
-        return false;
+        return isWidgetFurniture(n);
       });
 
     const operatedByCombobox = (el) => {

@@ -523,10 +523,17 @@ export const FAMILIES = [
       'rescue until it never fires" fails here while neighbour-irrelevance passes, and ' +
       'the two together describe the only shape that satisfies both — a relationship ' +
       'between the candidate and the control that announces it.\n\n' +
-      'The three variants are the same widget with the chevron at three depths, because ' +
-      'depth is what the live shape turns on: react-select puts the chevron inside ' +
+      'The first three variants are the same widget with the chevron at three depths, ' +
+      'because depth is what the live shape turns on: react-select puts the chevron inside ' +
       'IndicatorsContainer, a sibling of the container holding the input, so a rescue that ' +
-      'looks only at the chevron\'s own parent never sees the combobox at all.',
+      'looks only at the chevron\'s own parent never sees the combobox at all.\n\n' +
+      'The fourth is the widget with nothing selected, as it renders on insureon.com: ' +
+      'placeholder text beside the input, a separator beside the chevron, an SSR <style> ' +
+      'tag, and cursor: pointer on the whole control box. Measured 17 Aug 2026, the rescue ' +
+      'did not fire on it — the placeholder is neither half nor a wrapper of one, so the ' +
+      'packaging test refused the scope and the chevron was reported on every page ' +
+      'carrying the picker. The three earlier variants had no placeholder, which is why ' +
+      'this suite passed while the live site did not.',
     ...preservesEverything(),
     variants: [
       {
@@ -542,6 +549,11 @@ export const FAMILIES = [
       {
         id: 'indicators-wrapper-deep',
         options: { scenario: 'combobox', combobox: 'indicators-wrapper-deep' },
+        expects: { ghostCandidates: 0, ghostControls: 0 },
+      },
+      {
+        id: 'with-placeholder',
+        options: { scenario: 'combobox', combobox: 'with-placeholder' },
         expects: { ghostCandidates: 0, ghostControls: 0 },
       },
     ],
