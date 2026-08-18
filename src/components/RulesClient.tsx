@@ -9,6 +9,7 @@ import { BRAND_LABEL, BRAND_SHORT, PAGE_LABEL, type Brand } from '@/lib/model';
 import { ruleMeta, type Impact } from '@/lib/rules';
 import { DeltaChip } from './Primitives';
 import { useRuns } from './RunContext';
+import { SectionHead } from './ui/SectionHead';
 import { StatusDot, type DotTone } from './ui/StatusDot';
 import { GroupRow, NumCell, Table, TBody, Td, Th, THead } from './ui/Table';
 import { Tag } from './ui/Tag';
@@ -67,14 +68,12 @@ export function RulesClient({
 
   return (
     <section aria-labelledby="by-check">
-      <div className="mb-2 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-        <h2 id="by-check" className="text-sm font-semibold text-ink">
-          Failing elements per check
-        </h2>
-        <p className="text-xs text-faint">
-          Colour is by impact, not by count · click a row for the page types that carry it · drifts = small movement between scans is normal
-        </p>
-      </div>
+      <SectionHead
+        chapter={false}
+        id="by-check"
+        title="Failing elements per check"
+        note="Colour is by impact, not by count. Click a row for the page types that carry it · drifts = small movement between scans is normal."
+      />
 
       <Table label="Failing elements per check">
         <THead>
@@ -89,7 +88,7 @@ export function RulesClient({
           </tr>
         </THead>
         <TBody>
-          <GroupRow colSpan={cols}>
+          <GroupRow colSpan={cols} variant="note">
             Standard rulebook — axe-core {current?.axeVersion ?? 'version not recorded'} · rules firing: {firing}
           </GroupRow>
           {ruleIds.map((id) => {
@@ -152,7 +151,7 @@ export function RulesClient({
             );
           })}
 
-          <GroupRow colSpan={cols}>
+          <GroupRow colSpan={cols} variant="note">
             Scanner checks — controls and links checked directly in the browser; no standard rule covers these · scanner {current?.probeVersion ?? 'version not recorded'}
           </GroupRow>
           {!now.hasProbes ? (

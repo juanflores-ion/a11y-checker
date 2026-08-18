@@ -27,7 +27,7 @@ export function Readiness({
 }) {
   const { site, setSite } = useRuns();
   return (
-    <section aria-label="Readiness" className="rounded-card border border-rule bg-card shadow-card">
+    <section aria-label="Readiness" className="rounded-lg border border-rule bg-card shadow-card">
       {BRANDS.map((b, i) => {
         const selected = site === b;
         const { passed, total } = now[b].passRatio;
@@ -48,7 +48,7 @@ export function Readiness({
                 setSite(b);
               }
             }}
-            className={`grid cursor-pointer grid-cols-[minmax(7rem,9rem)_1fr_auto] items-center gap-x-5 px-4 py-3 transition-colors hover:bg-white/[0.03] sm:gap-x-6 ${
+            className={`grid cursor-pointer grid-cols-[minmax(7rem,9rem)_1fr_auto] items-center gap-x-5 px-5 py-4 transition-colors hover:bg-white/[0.03] sm:gap-x-7 ${
               i > 0 ? 'border-t border-rule' : ''
             } ${selected ? '' : 'opacity-55'}`}
           >
@@ -59,7 +59,7 @@ export function Readiness({
               aria-valuemin={0}
               aria-valuemax={total}
               aria-valuenow={passed}
-              className="relative h-2 overflow-hidden rounded-full bg-rule"
+              className="relative h-2.5 overflow-hidden rounded-full bg-rule"
             >
               <span
                 className={`absolute inset-y-0 left-0 rounded-full transition-[width] ${passed === total ? 'bg-good' : 'bg-good/80'}`}

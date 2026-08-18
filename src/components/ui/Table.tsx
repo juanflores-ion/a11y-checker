@@ -3,9 +3,13 @@ import { StatusDot } from './StatusDot';
 import { Tag } from './Tag';
 
 /**
- * Dense table primitives. 36px rows, 13px type, hairline rules, one card
- * border around the whole thing. Numbers are always mono, tabular and
- * right-aligned; colour comes only from `NumCell`'s tone.
+ * Table primitives. 44px rows, 13px type, hairline rules, one card border
+ * around the whole thing. Numbers are always mono, tabular and right-aligned;
+ * colour comes only from `NumCell`'s tone.
+ *
+ * Rows were 36px, which put eleven metrics and fifteen issues on screen as one
+ * unbroken field of stripes. 44px is the row height at which a reader can put
+ * a finger on one line and keep it.
  */
 export function Table({
   children,
@@ -61,7 +65,7 @@ export function Th({
   return (
     <th
       scope={scope}
-      className={`border-b border-rule px-3 py-2 text-[11.5px] font-medium text-muted ${
+      className={`border-b border-rule px-3 py-2.5 text-[11.5px] font-medium text-muted ${
         align === 'right' ? 'text-right' : 'text-left'
       } ${className}`}
     >
@@ -84,7 +88,7 @@ export function Td({
   return (
     <td
       colSpan={colSpan}
-      className={`h-9 border-b border-rule px-3 align-middle ${
+      className={`h-11 border-b border-rule px-3 align-middle ${
         align === 'right' ? 'text-right' : 'text-left'
       } ${className}`}
     >
@@ -93,13 +97,32 @@ export function Td({
   );
 }
 
-/** A full-width muted row that names the group beneath it. */
-export function GroupRow({ children, colSpan }: { children: React.ReactNode; colSpan: number }) {
+/**
+ * A full-width muted row that names the group beneath it.
+ *
+ * `label` is a short name — "Dead ends", "Structure" — and is set in caps so
+ * it reads as a divider rather than as data. `note` is for the sentence-length
+ * captions ("Standard rulebook — axe-core 4.13.0 · rules firing: …"), which in
+ * caps read as shouting.
+ */
+export function GroupRow({
+  children,
+  colSpan,
+  variant = 'label',
+}: {
+  children: React.ReactNode;
+  colSpan: number;
+  variant?: 'label' | 'note';
+}) {
   return (
     <tr>
       <td
         colSpan={colSpan}
-        className="border-b border-rule bg-paper/60 px-3 py-1.5 text-[11.5px] font-medium text-muted"
+        className={`border-b border-rule bg-paper/60 px-3 py-2 font-medium text-faint ${
+          variant === 'label'
+            ? 'text-[11px] uppercase tracking-[0.07em]'
+            : 'text-[11.5px] text-muted'
+        }`}
       >
         {children}
       </td>

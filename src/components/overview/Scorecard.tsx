@@ -7,6 +7,7 @@ import { makeDelta, SCORECARD_GROUPS, type ScorecardRow } from '@/lib/aggregate'
 import { cellTone, formatCount } from '@/lib/format';
 import { BRAND_LABEL, type Brand } from '@/lib/model';
 import { DeltaChip } from '../Primitives';
+import { SectionHead } from '../ui/SectionHead';
 import { useRuns } from '../RunContext';
 import { StatusDot } from '../ui/StatusDot';
 import { GroupRow, NumCell, Table, TBody, Td, Th, THead } from '../ui/Table';
@@ -32,14 +33,16 @@ export function Scorecard({
 
   return (
     <section aria-labelledby="against-target">
-      <div className="mb-2 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-        <h2 id="against-target" className="text-sm font-semibold text-ink">
-          Against target
-        </h2>
-        <p className="text-xs text-faint">
-          Colour only where a target is missed · n/m = the check can’t fire on this site’s markup
-        </p>
-      </div>
+      <SectionHead
+        id="against-target"
+        title="Against target"
+        note={
+          <>
+            Eight targets, measured on every page of the run. Colour appears only where one is
+            missed · n/m = the check can’t fire on this site’s markup.
+          </>
+        }
+      />
 
       <Table label="Against target">
         <THead>

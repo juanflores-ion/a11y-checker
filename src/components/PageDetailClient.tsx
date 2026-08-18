@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { BRAND_LABEL, BRANDS, PAGE_LABEL, isFailedPage, type Brand, type PageResult } from '@/lib/model';
 import { RunsHeader } from './RunsHeader';
 import { ScanResultCard } from './ScanResultCard';
+import { SectionHead } from './ui/SectionHead';
 import { useRuns } from './RunContext';
 
 export type PageDetailByRun = Record<
@@ -54,7 +55,11 @@ export function PageDetailClient({
           </div>
         }
       />
-      <p className="mb-3 text-sm font-medium text-ink">{BRAND_LABEL[brand]} — {PAGE_LABEL[pageKey] ?? pageKey}</p>
+      <SectionHead
+        chapter={false}
+        title={`${BRAND_LABEL[brand]} — ${PAGE_LABEL[pageKey] ?? pageKey}`}
+        note="Everything the scanner recorded for this one page, with the markup it captured."
+      />
 
       {!entry || !entry.present || !entry.result ? (
         <p className="text-sm text-muted">This page type wasn’t part of the selected run. Pick a different run in the bar above.</p>
