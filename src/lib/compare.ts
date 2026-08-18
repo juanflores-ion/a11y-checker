@@ -304,3 +304,116 @@ export function pairUrls(beforeUrls: string[], afterUrls: string[]): Array<{
     afterUrl: afterUrls[i] ?? null,
   }));
 }
+
+/* ------------------------------------------------------------------ */
+/* Reading a diff: the verdict, what moved, what is left               */
+/* ------------------------------------------------------------------ */
+
+/**
+ * One line in the card: a check or a headline metric, with its two numbers.
+ *
+ * Rules and scanner metrics are deliberately the same shape here. A reader
+ * asking "did my fix work" does not care which engine produced a figure — they
+ * care whether it moved — and the card that kept them apart printed the same
+ * movement three times over.
+ */
+export interface CompareLine {
+  key: string;
+  label: string;
+  before: number;
+  after: number;
+  change: number;
+  /** Rules carry an impact so the card can keep its severity dot. */
+  ruleId?: string;
+}
+
+export type CompareVerdict = 'better' | 'worse' | 'same' | 'unknown';
+
+export interface CompareSummary {
+  verdict: CompareVerdict;
+  /** The answer, in one line. Empty when there is nothing to compare. */
+  headline: string;
+  /** The counts behind it, including the empty cases said out loud. */
+  detail: string;
+  /** Everything that changed, biggest movement first. */
+  moved: CompareLine[];
+  /** Everything still failing after the fix, worst first. */
+  stillThere: CompareLine[];
+}
+
+/** "1 fewer failing element" / "40 fewer failing elements" */
+function plural(n: number, one: string, many: string): string {
+  return `${n} ${n === 1 ? one : many}`;
+}
+
+/**
+ * What the card says at the top, and which lines sit under each heading.
+ *
+ * The verdict comes off the failing-element total, because that is the figure
+ * every check contributes to and the only one that can move in both
+ * directions. A pair that cannot be compared gets `unknown` rather than a
+ * cheerful zero — the card already explains why, and inventing "no change"
+ * from two scans that never happened is the false-clean shape this codebase
+ * has shipped twice before.
+ */
+export function summariseDiff(diff: PageDiff): CompareSummary {
+  const moved: CompareLine[] = [];
+  const stillThere: CompareLine[] = [];
+
+  if (diff.notComparable || diff.totalBefore === null || diff.totalAfter === null) {
+    return { verdict: 'unknown', headline: '', detail: '', moved, stillThere };
+  }
+
+  // The tool's headline metric rides alongside the rules, not above them.
+  if (diff.unfindableBefore !== null && diff.unfindableAfter !== null) {
+    const line: CompareLine = {
+      key: 'unfindable-links',
+      label: 'Links an agent cannot find',
+      before: diff.unfindableBefore,
+      after: diff.unfindableAfter,
+      change: diff.unfindableAfter - diff.unfindableBefore,
+    };
+    if (line.change !== 0) moved.push(line);
+    else if (line.after > 0) stillThere.push(line);
+  }
+
+  for (const rule of diff.rules) {
+    const line: CompareLine = {
+      key: rule.id,
+      label: rule.id,
+      before: rule.before,
+      after: rule.after,
+      change: rule.change,
+      ruleId: rule.id,
+    };
+    if (rule.change !== 0) moved.push(line);
+    else if (rule.after > 0) stillThere.push(line);
+  }
+
+  moved.sort((a, b) => Math.abs(b.change) - Math.abs(a.change));
+  stillThere.sort((a, b) => b.after - a.after);
+
+  const change = diff.totalAfter - diff.totalBefore;
+  const verdict: CompareVerdict = change < 0 ? 'better' : change > 0 ? 'worse' : 'same';
+  const headline =
+    change < 0
+      ? `${plural(-change, 'fewer failing element', 'fewer failing elements')} after the fix`
+      : change > 0
+      ? `${plural(change, 'more failing element', 'more failing elements')} after the fix`
+      : 'No change in failing elements';
+
+  const improved = diff.rules.filter((r) => r.status === 'improved' || r.status === 'resolved').length;
+  const worse = diff.rules.filter((r) => r.status === 'worsened' || r.status === 'new').length;
+  const unchanged = diff.rules.filter((r) => r.status === 'unchanged').length;
+  const parts: string[] = [];
+  if (improved) parts.push(plural(improved, 'check improved', 'checks improved'));
+  if (worse) parts.push(plural(worse, 'check worse', 'checks worse'));
+  if (unchanged) parts.push(plural(unchanged, 'unchanged', 'unchanged'));
+  /**
+   * Said out loud, always. "Nothing new appeared" is a result, and a card that
+   * leaves the reader to infer it from an absence has not reported it.
+   */
+  parts.push(diff.newCount ? plural(diff.newCount, 'new check failing', 'new checks failing') : 'nothing new appeared');
+
+  return { verdict, headline, detail: `${parts.join(' · ')}.`, moved, stillThere };
+}

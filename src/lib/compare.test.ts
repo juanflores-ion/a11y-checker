@@ -13,7 +13,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { diffPages, pairUrls } from './compare';
+import { diffPages, pairUrls, summariseDiff } from './compare';
 import type { ScannedPage } from './model';
 
 function page(overrides: Partial<ScannedPage> = {}): ScannedPage {
@@ -399,4 +399,65 @@ test('an unmeasured side reports not-measured, not identity-mismatch', () => {
     error: 'HTTP 503',
   });
   assert.equal(diff.notComparable, 'not-measured');
+});
+
+/* ------------------------------------------------------------------ */
+/* The verdict a reader sees at the top of the card                    */
+/* ------------------------------------------------------------------ */
+
+test('fewer failing elements reads as better, and says by how many', () => {
+  const before = page({ violations: [{ id: 'region', impact: 'moderate', n: 66 }] });
+  const after = page({ violations: [{ id: 'region', impact: 'moderate', n: 26 }] });
+  const s = summariseDiff(diffPages('prod', 'staging', before, after));
+
+  assert.equal(s.verdict, 'better');
+  assert.equal(s.headline, '40 fewer failing elements after the fix');
+  assert.match(s.detail, /1 check improved/);
+  assert.equal(s.moved.length, 1);
+  assert.equal(s.moved[0].change, -40);
+  assert.equal(s.stillThere.length, 0);
+});
+
+test('one more failing element is singular, and reads as worse', () => {
+  const before = page({ violations: [{ id: 'region', impact: 'moderate', n: 1 }] });
+  const after = page({ violations: [{ id: 'region', impact: 'moderate', n: 2 }] });
+  const s = summariseDiff(diffPages('prod', 'staging', before, after));
+
+  assert.equal(s.verdict, 'worse');
+  assert.equal(s.headline, '1 more failing element after the fix');
+});
+
+test('a check that did not move is "still there", not "moved"', () => {
+  const v = [{ id: 'region', impact: 'moderate' as const, n: 4 }];
+  const s = summariseDiff(diffPages('prod', 'staging', page({ violations: v }), page({ violations: v })));
+
+  assert.equal(s.verdict, 'same');
+  assert.equal(s.headline, 'No change in failing elements');
+  assert.equal(s.moved.length, 0);
+  assert.deepEqual(s.stillThere.map((l) => [l.key, l.after]), [['region', 4]]);
+});
+
+test('the empty case is stated, never left to be inferred', () => {
+  const before = page({ violations: [{ id: 'region', impact: 'moderate', n: 3 }] });
+  const after = page({ violations: [{ id: 'region', impact: 'moderate', n: 1 }] });
+  assert.match(summariseDiff(diffPages('p', 's', before, after)).detail, /nothing new appeared/);
+
+  const withNew = page({ violations: [{ id: 'region', impact: 'moderate', n: 1 }, { id: 'label', impact: 'critical', n: 2 }] });
+  assert.match(summariseDiff(diffPages('p', 's', before, withNew)).detail, /1 new check failing/);
+});
+
+test('a pair that cannot be compared gets no verdict at all', () => {
+  const failed = page({ url: 'https://s/', error: 'timeout' } as never);
+  const s = summariseDiff(diffPages('prod', 'staging', page(), failed));
+
+  assert.equal(s.verdict, 'unknown');
+  assert.equal(s.headline, '');
+  assert.deepEqual([s.moved, s.stillThere], [[], []]);
+});
+
+test('the headline metric rides with the rules, on whichever list fits', () => {
+  const before = page({ unreachableTotals: { unannouncedLinks: 9 } } as never);
+  const after = page({ unreachableTotals: { unannouncedLinks: 2 } } as never);
+  const moved = summariseDiff(diffPages('p', 's', before, after)).moved;
+  assert.ok(moved.some((l) => l.key === 'unfindable-links' && l.change === -7), JSON.stringify(moved));
 });
