@@ -503,7 +503,10 @@ types you want (all ten are ticked to begin with), and each one becomes a pair
 — the tracked production URL on the Before side, the same path on that site's
 staging origin on the After side, derived from `staging` in `src/lib/sites.ts`.
 Both sides are scanned in the same session, at one device profile, and diffed
-check by check. Ten pages is twenty URLs, which no scanner takes at once, so
+check by check. The card leads with the answer — **Better / Worse / No
+change**, and by how many failing elements — then lists what moved and what is
+still there afterwards, each check appearing exactly once. Raw per-side counts,
+the rule-by-rule table and the phantom-focusable caveat live behind Details. Ten pages is twenty URLs, which no scanner takes at once, so
 the page splits the work into batches the chosen scanner accepts and counts
 them off as they land. Anything off the list — a preview build, one page
 mid-fix — goes under **Other URLs**, paired line by line and added to whatever

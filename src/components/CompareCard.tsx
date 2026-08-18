@@ -1,26 +1,10 @@
 import { makeDelta } from '@/lib/aggregate';
 import { isFailedPage, VIEWPORT_LABEL } from '@/lib/model';
-import type { NotComparable, PageDiff, RuleDiffStatus } from '@/lib/compare';
+import { summariseDiff, type CompareLine, type CompareVerdict, type NotComparable, type PageDiff } from '@/lib/compare';
 import { ruleMeta } from '@/lib/rules';
 import { DeltaChip, Eyebrow, ImpactDot, Notice } from './Primitives';
 import { ScanResultCard } from './ScanResultCard';
 import { NumCell, Table, TBody, Td, Th, THead } from './ui/Table';
-
-const STATUS_LABEL: Record<RuleDiffStatus, string> = {
-  resolved: 'Resolved',
-  new: 'New',
-  worsened: 'Worse',
-  improved: 'Better',
-  unchanged: 'Unchanged',
-};
-
-const STATUS_TONE: Record<RuleDiffStatus, string> = {
-  resolved: 'text-good',
-  new: 'text-critical',
-  worsened: 'text-serious',
-  improved: 'text-good',
-  unchanged: 'text-faint',
-};
 
 const NOT_COMPARABLE_REASON: Record<NotComparable, string> = {
   'not-measured': 'a side was never measured',
@@ -49,7 +33,7 @@ function viewportLabel(name: string): string {
  * two device profiles renders no figures at all, because these sites serve
  * different markup per device and every row of that diff is noise.
  */
-export function CompareCard({ diff }: { diff: PageDiff }) {
+export function CompareCard({ diff, title }: { diff: PageDiff; title?: string }) {
   const beforeFailed = diff.before && isFailedPage(diff.before);
   const afterFailed = diff.after && isFailedPage(diff.after);
   const beforeMissing = diff.beforeUrl === '';
@@ -67,12 +51,43 @@ export function CompareCard({ diff }: { diff: PageDiff }) {
    */
   const showFigures = !diff.viewportMismatch && !diff.identityMismatch;
 
+  const summary = summariseDiff(diff);
+
   return (
-    <div className="space-y-4 rounded-lg border border-rule bg-card p-4 shadow-card">
-      <div className="grid gap-3 sm:grid-cols-2">
-        <UrlLabel label="Before" url={diff.beforeUrl} viewport={diff.viewports.before} />
-        <UrlLabel label="After" url={diff.afterUrl} viewport={diff.viewports.after} />
-      </div>
+    <div className="space-y-5 rounded-lg border border-rule bg-card p-5 shadow-card">
+      {/*
+        The answer first.
+        
+        This card exists to settle one question — did the fix work — and the
+        version before this one never said. It led with three figures of
+        different kinds, printed the same movement in a table underneath, and
+        printed it a third time inside "Full detail". The verdict line states
+        the conclusion; everything below is the evidence for it, each fact in
+        exactly one place.
+      */}
+      <header className="flex flex-wrap items-start gap-x-4 gap-y-3 border-b border-rule pb-5">
+        {summary.verdict !== 'unknown' ? <VerdictBadge verdict={summary.verdict} /> : null}
+        <div className="min-w-[16rem] flex-1">
+          <h3 className="font-display text-xl font-semibold leading-snug tracking-tight text-ink">
+            {summary.verdict === 'unknown' ? 'Not comparable' : summary.headline}
+          </h3>
+          <p className="mt-1.5 text-sm text-muted">
+            {summary.verdict === 'unknown'
+              ? diff.notComparable
+                ? `No comparison: ${NOT_COMPARABLE_REASON[diff.notComparable]}. Whatever was measured is in the detail below, on its own terms.`
+                : 'One side was never measured, so there is nothing to compare.'
+              : summary.detail}
+          </p>
+        </div>
+        <div className="ml-auto text-right font-mono text-[11px] leading-relaxed text-faint">
+          {title ? <div className="text-muted">{title}</div> : null}
+          <div>{hostOf(diff.beforeUrl)}</div>
+          <div>{hostOf(diff.afterUrl)}</div>
+          <div>{[diff.viewports.before, diff.viewports.after].every((v) => v === diff.viewports.before)
+            ? viewportLabel(diff.viewports.before ?? 'device not stated')
+            : 'two device profiles'}</div>
+        </div>
+      </header>
 
       {diff.viewportMismatch ? (
         <Notice tone="error" title="Not comparable — two different device profiles">
@@ -129,130 +144,197 @@ export function CompareCard({ diff }: { diff: PageDiff }) {
         </Notice>
       ) : null}
 
-      {showFigures ? (
-        <>
-          <div className="flex flex-wrap items-end gap-x-8 gap-y-3 border-y border-rule py-4">
-            {/*
-              The unfindable count leads. It is the corrected metric — hidden
-              *and* unannounced — and Compare rendered it nowhere at all until
-              now, while giving the top line to the phantom count, which still
-              carries the false positive. The fix that matters most was the one
-              this screen couldn't show.
-            */}
-            <DeltaFigure
-              label="Links an agent cannot find"
-              before={diff.unfindableBefore}
-              after={diff.unfindableAfter}
-              comparable={comparable}
-              size="lead"
-            />
-            <DeltaFigure
-              label="Failing nodes"
-              before={diff.totalBefore}
-              after={diff.totalAfter}
-              comparable={comparable}
-            />
-            <div className="ml-auto flex gap-5">
-              {diff.resolvedCount !== null && diff.resolvedCount > 0 ? (
-                <span className="font-mono text-sm text-good">
-                  {diff.resolvedCount} resolved
-                </span>
-              ) : null}
-              {diff.newCount !== null && diff.newCount > 0 ? (
-                <span className="font-mono text-sm text-critical">{diff.newCount} new</span>
-              ) : null}
-              {diff.resolvedCount === 0 && diff.newCount === 0 && diff.rules.length > 0 ? (
-                <span className="font-mono text-sm text-faint">no rules resolved or new</span>
-              ) : null}
-            </div>
+      {summary.moved.length > 0 ? (
+        <section>
+          <Eyebrow className="mb-2.5">What moved</Eyebrow>
+          <div className="space-y-1.5">
+            {summary.moved.map((line) => (
+              <MovedRow key={line.key} line={line} />
+            ))}
           </div>
-
-          <div className="flex flex-wrap items-baseline gap-x-5 gap-y-1.5">
-            <DeltaFigure
-              label="Phantom focusable"
-              before={diff.phantomBefore}
-              after={diff.phantomAfter}
-              comparable={comparable}
-              size="small"
-            />
-            <p className="max-w-measure text-xs leading-relaxed text-faint">
-              Counts every focusable control inside the closed mega-menu, including panels a
-              disclosure button correctly announces — so it over-reports on exactly the code
-              that has been fixed. A lead to check by hand, not a verdict.
-            </p>
-          </div>
-        </>
+        </section>
       ) : null}
 
-      {diff.notComparable ? (
-        <p className="text-sm text-muted">
-          No rule-by-rule comparison: {NOT_COMPARABLE_REASON[diff.notComparable]}. Whatever was
-          measured is in the full detail below, on its own terms.
-        </p>
-      ) : diff.rules.length === 0 ? (
-        <p className="text-sm text-good">No axe findings on either side.</p>
-      ) : (
-        <Table label="Rule-by-rule comparison">
-          <THead>
-            <tr>
-              <Th>Check</Th>
-              <Th align="right">Before</Th>
-              <Th align="right">After</Th>
-              <Th align="right">Change</Th>
-              <Th align="right">Status</Th>
-            </tr>
-          </THead>
-          <TBody>
-            {diff.rules.map((r) => {
-              const meta = ruleMeta(r.id);
-              return (
-                <tr key={r.id}>
-                  <Td>
-                    <span className="flex items-center gap-2">
-                      <ImpactDot impact={meta.impact} />
-                      {meta.label}
-                    </span>
-                  </Td>
-                  <NumCell tone="neutral" text={String(r.before)} />
-                  <NumCell tone="neutral" text={String(r.after)} />
-                  <Td align="right">
-                    <DeltaChip delta={makeDelta(r.after, r.before, ruleMeta(r.id).exact, r.id)} />
-                  </Td>
-                  <Td align="right" className={`text-xs font-medium ${STATUS_TONE[r.status]}`}>
-                    {STATUS_LABEL[r.status]}
-                  </Td>
-                </tr>
-              );
-            })}
-          </TBody>
-        </Table>
-      )}
+      {summary.stillThere.length > 0 ? (
+        <section>
+          <Eyebrow className="mb-2.5">Still there after the fix</Eyebrow>
+          <div className="overflow-hidden rounded-card border border-rule">
+            {summary.stillThere.map((line) => (
+              <div
+                key={line.key}
+                className="flex items-center justify-between gap-4 border-b border-rule/70 px-4 py-2.5 text-sm last:border-b-0"
+              >
+                <span className="flex items-center gap-2 text-ink">
+                  {line.ruleId ? <ImpactDot impact={ruleMeta(line.ruleId).impact} /> : null}
+                  <RuleLabel line={line} />
+                </span>
+                <span className="whitespace-nowrap font-mono text-xs text-muted tnum">
+                  <span className={line.after > 0 ? 'font-medium text-ink' : ''}>{line.after}</span>{' '}
+                  · unchanged
+                </span>
+              </div>
+            ))}
+          </div>
+        </section>
+      ) : null}
+
+      {summary.verdict !== 'unknown' && summary.moved.length === 0 && summary.stillThere.length === 0 ? (
+        <p className="text-sm text-good">Nothing failing on either side.</p>
+      ) : null}
 
       <details className="group">
         <summary className="cursor-pointer text-eyebrow font-medium text-accent [&::-webkit-details-marker]:hidden">
-          Full detail, both sides ▾
+          Details · every check, both sides, raw counts ▾
         </summary>
-        <div className="mt-4 grid gap-6 lg:grid-cols-2">
-          <div>
-            <Eyebrow className="mb-2">Before</Eyebrow>
-            {diff.before && !isFailedPage(diff.before) ? (
-              <ScanResultCard page={diff.before} compact />
-            ) : (
-              <p className="text-sm text-faint">Not measured.</p>
-            )}
-          </div>
-          <div>
-            <Eyebrow className="mb-2">After</Eyebrow>
-            {diff.after && !isFailedPage(diff.after) ? (
-              <ScanResultCard page={diff.after} compact />
-            ) : (
-              <p className="text-sm text-faint">Not measured.</p>
-            )}
+        <div className="mt-4 space-y-5">
+          {diff.rules.length > 0 ? (
+            <Table label="Rule-by-rule comparison">
+              <THead>
+                <tr>
+                  <Th>Check</Th>
+                  <Th align="right">Before</Th>
+                  <Th align="right">After</Th>
+                  <Th align="right">Change</Th>
+                </tr>
+              </THead>
+              <TBody>
+                {diff.rules.map((r) => {
+                  const meta = ruleMeta(r.id);
+                  return (
+                    <tr key={r.id}>
+                      <Td>
+                        <span className="flex items-center gap-2">
+                          <ImpactDot impact={meta.impact} />
+                          {meta.label}
+                        </span>
+                      </Td>
+                      <NumCell tone="neutral" text={String(r.before)} />
+                      <NumCell tone="neutral" text={String(r.after)} />
+                      <Td align="right">
+                        <DeltaChip delta={makeDelta(r.after, r.before, meta.exact, r.id)} />
+                      </Td>
+                    </tr>
+                  );
+                })}
+              </TBody>
+            </Table>
+          ) : null}
+
+          {/*
+            Demoted, not deleted. It over-reports on exactly the code that has
+            been fixed, so it cannot sit next to a verdict — but it is still a
+            lead worth having once you are reading detail.
+          */}
+          {showFigures ? (
+            <div className="flex flex-wrap items-baseline gap-x-5 gap-y-1.5">
+              <DeltaFigure
+                label="Phantom focusable"
+                before={diff.phantomBefore}
+                after={diff.phantomAfter}
+                comparable={comparable}
+                size="small"
+              />
+              <p className="max-w-measure text-xs leading-relaxed text-faint">
+                Counts every focusable control inside the closed mega-menu, including panels a
+                disclosure button correctly announces — so it over-reports on exactly the code
+                that has been fixed. A lead to check by hand, not a verdict.
+              </p>
+            </div>
+          ) : null}
+
+          <div className="grid gap-6 lg:grid-cols-2">
+            <div>
+              <Eyebrow className="mb-2">Before · {diff.beforeUrl || 'not given'}</Eyebrow>
+              {diff.before && !isFailedPage(diff.before) ? (
+                <ScanResultCard page={diff.before} compact />
+              ) : (
+                <p className="text-sm text-faint">Not measured.</p>
+              )}
+            </div>
+            <div>
+              <Eyebrow className="mb-2">After · {diff.afterUrl || 'not given'}</Eyebrow>
+              {diff.after && !isFailedPage(diff.after) ? (
+                <ScanResultCard page={diff.after} compact />
+              ) : (
+                <p className="text-sm text-faint">Not measured.</p>
+              )}
+            </div>
           </div>
         </div>
       </details>
     </div>
   );
+}
+
+/** Better / Worse / No change, from the failing-element total. */
+function VerdictBadge({ verdict }: { verdict: CompareVerdict }) {
+  const tone =
+    verdict === 'better'
+      ? 'border-good/40 bg-good/10 text-good'
+      : verdict === 'worse'
+      ? 'border-critical/40 bg-critical/10 text-critical'
+      : 'border-rule bg-paper text-muted';
+  const label = verdict === 'better' ? 'Better' : verdict === 'worse' ? 'Worse' : 'No change';
+  return (
+    <span className={`mt-0.5 whitespace-nowrap rounded-pill border px-3 py-1 text-xs font-semibold ${tone}`}>
+      {label}
+    </span>
+  );
+}
+
+/** A check whose number changed: name, both figures, and the size of the move. */
+function MovedRow({ line }: { line: CompareLine }) {
+  const better = line.change < 0;
+  return (
+    <div
+      className={`flex flex-wrap items-center justify-between gap-x-5 gap-y-1 rounded-card border px-4 py-2.5 ${
+        better ? 'border-good/25 bg-good/[0.05]' : 'border-critical/25 bg-critical/[0.05]'
+      }`}
+    >
+      <span className="flex items-center gap-2 text-sm text-ink">
+        {line.ruleId ? <ImpactDot impact={ruleMeta(line.ruleId).impact} /> : null}
+        <RuleLabel line={line} />
+      </span>
+      <span className="flex items-baseline gap-4 font-mono text-xs tnum">
+        <span className="text-muted">
+          <span className="font-medium text-ink">{line.before}</span>
+          <span className="px-1.5 text-faint">→</span>
+          <span className="font-medium text-ink">{line.after}</span>
+        </span>
+        <span className={`font-medium ${better ? 'text-good' : 'text-critical'}`}>
+          {better ? `${-line.change} fixed` : `${line.change} more`}
+        </span>
+      </span>
+    </div>
+  );
+}
+
+/**
+ * A metric carries its own label; a rule gets the catalogue's wording.
+ *
+ * `ruleMeta` falls back to the bare axe id for rules the catalogue has no
+ * copy for — `frame-title`, `label-title-only`. Printed as prose those read
+ * as a bug; printed as mono they read as what they are, an identifier we have
+ * not written a name for yet.
+ */
+function RuleLabel({ line }: { line: CompareLine }) {
+  const meta = line.ruleId ? ruleMeta(line.ruleId) : null;
+  const named = !meta || meta.label !== meta.id;
+  return named ? (
+    <span>{meta ? meta.label : line.label}</span>
+  ) : (
+    <span className="font-mono text-[12.5px] text-muted">{meta.id}</span>
+  );
+}
+
+/** Just the host — the full URL is in the detail, and this is an identity line. */
+function hostOf(url: string): string {
+  if (!url) return 'not given';
+  try {
+    return new URL(url).host;
+  } catch {
+    return url;
+  }
 }
 
 function UrlLabel({

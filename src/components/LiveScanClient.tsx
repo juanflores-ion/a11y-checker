@@ -5,6 +5,7 @@ import { Fragment, useEffect, useRef, useState } from 'react';
 import { countedGhostControls } from '@/lib/aggregate';
 import { diffPages, pairUrls, type PageDiff } from '@/lib/compare';
 import {
+  BRAND_LABEL,
   BRANDS,
   DEFAULT_VIEWPORT,
   VERDICT_LABEL,
@@ -130,6 +131,8 @@ export function LiveScanClient({ mode, targets = [] }: { mode: Mode; targets?: S
   const [beforeText, setBeforeText] = useState('');
   const [afterText, setAfterText] = useState('');
   const [diffs, setDiffs] = useState<PageDiff[] | null>(null);
+  /** Page names for the pairs, positionally — a picked page knows what it is. */
+  const [diffTitles, setDiffTitles] = useState<string[]>([]);
 
   /**
    * Which tracked pages to compare. Ticking page types beats typing twenty
@@ -332,27 +335,37 @@ export function LiveScanClient({ mode, targets = [] }: { mode: Mode; targets?: S
   }
 
   /** The picked pages first, then any one-off URLs typed underneath. */
-  function comparePairs(): { pairs: Array<{ beforeUrl: string | null; afterUrl: string | null }>; error: string | null } {
+  function comparePairs(): {
+    pairs: Array<{ beforeUrl: string | null; afterUrl: string | null }>;
+    titles: string[];
+    error: string | null;
+  } {
     const chosen = pagesFor(targets, site).filter((p) => picked.has(p.key));
     const before = parseUrlLines(beforeText);
     const after = parseUrlLines(afterText);
-    if (before.invalid !== null) return { pairs: [], error: `Not a valid Before URL: “${before.invalid}”` };
-    if (after.invalid !== null) return { pairs: [], error: `Not a valid After URL: “${after.invalid}”` };
+    if (before.invalid !== null)
+      return { pairs: [], titles: [], error: `Not a valid Before URL: “${before.invalid}”` };
+    if (after.invalid !== null)
+      return { pairs: [], titles: [], error: `Not a valid After URL: “${after.invalid}”` };
     const pairs = [
       ...chosen.map((p) => ({ beforeUrl: p.beforeUrl, afterUrl: p.afterUrl })),
       ...pairUrls(before.urls, after.urls),
     ];
+    const titles = [
+      ...chosen.map((p) => `${BRAND_LABEL[site]} · ${p.label}`),
+      ...pairUrls(before.urls, after.urls).map(() => ''),
+    ];
     if (pairs.length === 0) {
-      return { pairs: [], error: 'Pick at least one page, or type a URL under “Other URLs”.' };
+      return { pairs: [], titles: [], error: 'Pick at least one page, or type a URL under “Other URLs”.' };
     }
     if (pairs.length > MAX_COMPARE_PAIRS) {
-      return { pairs: [], error: `That’s ${pairs.length} pairs — keep it to ${MAX_COMPARE_PAIRS} or fewer.` };
+      return { pairs: [], titles: [], error: `That’s ${pairs.length} pairs — keep it to ${MAX_COMPARE_PAIRS} or fewer.` };
     }
-    return { pairs, error: null };
+    return { pairs, titles, error: null };
   }
 
   async function runCompare() {
-    const { pairs, error: problem } = comparePairs();
+    const { pairs, titles, error: problem } = comparePairs();
     if (problem !== null) {
       setError(problem);
       return;
@@ -368,6 +381,7 @@ export function LiveScanClient({ mode, targets = [] }: { mode: Mode; targets?: S
     setDiffs(null);
     try {
       const byUrl = await scanInBatches(allUrls);
+      setDiffTitles(titles);
       setDiffs(
         pairs.map((p) =>
           diffPages(
@@ -553,7 +567,11 @@ export function LiveScanClient({ mode, targets = [] }: { mode: Mode; targets?: S
             }
           />
           {diffs.map((diff, i) => (
-            <CompareCard key={`${diff.beforeUrl}-${diff.afterUrl}-${i}`} diff={diff} />
+            <CompareCard
+              key={`${diff.beforeUrl}-${diff.afterUrl}-${i}`}
+              diff={diff}
+              title={diffTitles[i] || undefined}
+            />
           ))}
         </div>
       ) : null}
