@@ -39,7 +39,20 @@
 import { timingSafeEqual } from 'node:crypto';
 import http from 'node:http';
 
-import { chromium } from 'playwright';
+/**
+ * `playwright-core`, not `playwright`: the browser is supplied, never
+ * downloaded.
+ *
+ * The full package bundles its own Chromium download step, which this repo
+ * has never installed — so `npm run scan-server` failed to start on a clean
+ * checkout, which is how a scan server that could reach staging never got
+ * run. Core drives whatever binary `PLAYWRIGHT_CHROMIUM_PATH` names (see
+ * `launchOptions` in core.mjs) — Chrome or Edge on a Windows box on the VPN,
+ * the pinned Chromium in CI. Whichever it is, `browserProvenance` records the
+ * path and version on every run, so two scans taken with different browsers
+ * can never be mistaken for each other.
+ */
+import { chromium } from 'playwright-core';
 
 import { hostAllowed, parseAllowedHosts } from './allowlist.mjs';
 import { DEFAULT_PROFILE, PROFILES, PROFILE_NAMES, launchContext, launchOptions, scanPage } from './core.mjs';
