@@ -460,6 +460,43 @@ scanner is a setting on the page (**Scanner · change**):
   on your own machine, or a tunnel URL when a colleague is running it for you.
   Up to ten URLs at a time.
 
+### Hosting the scanner for everybody else
+
+Staging only answers inside the org network, so a before/after against it runs
+through a scanner on a machine that is on the VPN, exposed by a tunnel. Quick
+tunnels take a new random hostname on every start, which used to make this a
+hand-off: the host had to message QA a fresh URL and token each time.
+
+One command does the whole thing now:
+
+```bash
+SCAN_PUBLISH_SECRET=<same value as the deployment> \
+SCAN_ALLOWED_HOSTS=staging.forsureon.com \
+PLAYWRIGHT_CHROMIUM_PATH="/path/to/chrome" \
+npm run scan-server:share
+```
+
+It mints a fresh token, starts the scanner, opens the tunnel, and POSTs the
+address and token to `<dashboard>/api/scanner`. Anyone opening the Scan page
+with no scanner of their own gets both filled in, labelled with when they were
+published. Ctrl-C un-publishes. A new token every run means a value someone
+saved last week stops working the moment the scanner restarts.
+
+Two things the deployment needs, once:
+
+- `SCAN_PUBLISH_SECRET` — the value `/api/scanner` checks before accepting a
+  publish. Reading is open; writing is not, because whoever can write chooses
+  where every reader's browser sends its scans. A published address is also
+  checked against a host allowlist (`*.trycloudflare.com`, our own domains,
+  loopback), so a leaked secret still cannot point QA at an arbitrary host.
+- **A KV store** (Vercel → Storage → connect to the project). Serverless
+  functions are stateless, so without one the published value is forgotten
+  between requests; `/api/scanner` says so in a `warning` field rather than
+  failing quietly.
+
+QA who can run Node don't need any of this: `npm run scan-server` on their own
+machine, and the address is `http://localhost:4790` with no token at all.
+
 **Scan → Before / after** is the one QA wants once fixes reach staging, and it
 is where the page opens. Nobody types URLs for it: pick a site, tick the page
 types you want (all ten are ticked to begin with), and each one becomes a pair

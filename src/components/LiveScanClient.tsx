@@ -16,6 +16,7 @@ import {
   type PageResult,
   type ViewportName,
 } from '@/lib/model';
+import type { PublishedScanner } from '@/lib/scannerEndpoint';
 import { SITES, productionUrls } from '@/lib/sites';
 import { CompareCard } from './CompareCard';
 import type { ScanTarget } from './FullScanRunner';
@@ -145,6 +146,8 @@ export function LiveScanClient({ mode, targets = [] }: { mode: Mode; targets?: S
   const [progress, setProgress] = useState<{ done: number; active: number; total: number } | null>(null);
 
   const [scannedAt, setScannedAt] = useState<string | null>(null);
+  /** The scanner someone else published, when this browser had none of its own. */
+  const [published, setPublished] = useState<PublishedScanner | null>(null);
   /**
    * One profile for the whole scan, and in Compare both sides use it.
    *
@@ -169,7 +172,34 @@ export function LiveScanClient({ mode, targets = [] }: { mode: Mode; targets?: S
     }
     if (saved) setServerUrl(saved);
     if (savedToken) setToken(savedToken);
-    checkHealth(saved ?? HOSTED, savedToken ?? '');
+
+    /**
+     * Nothing saved on this machine? Take whatever scanner is published.
+     *
+     * This is the whole point of the published value: a QA opening the page
+     * for the first time gets a working scanner without anyone sending them a
+     * tunnel URL and a token. Someone who has set their own address keeps it —
+     * a published value never overwrites a deliberate choice, it only fills a
+     * blank.
+     */
+    if (saved) {
+      checkHealth(saved, savedToken ?? '');
+    } else {
+      fetch('/api/scanner', { cache: 'no-store' })
+        .then((r) => (r.ok ? r.json() : null))
+        .then((body: { published?: PublishedScanner | null } | null) => {
+          const p = body?.published;
+          if (!p?.address) {
+            checkHealth(HOSTED, savedToken ?? '');
+            return;
+          }
+          setServerUrl(p.address);
+          setToken(p.token ?? '');
+          setPublished(p);
+          checkHealth(p.address, p.token ?? '');
+        })
+        .catch(() => checkHealth(HOSTED, savedToken ?? ''));
+    }
     return () => abortRef.current?.abort();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -453,6 +483,7 @@ export function LiveScanClient({ mode, targets = [] }: { mode: Mode; targets?: S
                   serverUrl={serverUrl}
                   token={token}
                   health={health}
+                  published={published}
                   onServerUrlChange={saveServerUrl}
                   onTokenChange={saveToken}
                   onRecheck={() => checkHealth(serverUrl, token)}
@@ -569,6 +600,7 @@ function ServerStatus({
   serverUrl,
   token,
   health,
+  published,
   onServerUrlChange,
   onTokenChange,
   onRecheck,
@@ -576,6 +608,7 @@ function ServerStatus({
   serverUrl: string;
   token: string;
   health: Health;
+  published: PublishedScanner | null;
   onServerUrlChange: (url: string) => void;
   onTokenChange: (token: string) => void;
   onRecheck: () => void;
@@ -612,6 +645,21 @@ function ServerStatus({
         <span className="text-faint">· change</span>
       </summary>
       <div className="absolute right-0 top-full z-30 mt-2 w-96 space-y-3 rounded-lg border border-rule bg-card p-4 shadow-pop">
+        {published ? (
+          <p className="rounded-card border border-accent/25 bg-accent/[0.06] px-3 py-2 text-[11.5px] leading-relaxed text-muted">
+            Filled in from the scanner published{' '}
+            <time dateTime={published.publishedAt}>
+              {new Date(published.publishedAt).toLocaleString(undefined, {
+                day: 'numeric',
+                month: 'short',
+                hour: '2-digit',
+                minute: '2-digit',
+              })}
+            </time>
+            {published.note ? ` · ${published.note}` : ''}. Change anything below and this browser
+            keeps your version instead.
+          </p>
+        ) : null}
         <div>
           <Eyebrow>Which scanner</Eyebrow>
           <p className="mt-1 text-xs leading-relaxed text-muted">
