@@ -6,6 +6,7 @@ import type { MatrixCell } from '@/lib/pageMatrix';
 import { BRAND_LABEL, PAGE_LABEL, type Brand, type Verdict } from '@/lib/model';
 import { useRuns } from '../RunContext';
 import { StatusDot, type DotTone } from '../ui/StatusDot';
+import { SectionHead } from '../ui/SectionHead';
 import { Table, TBody, Td, Th, THead } from '../ui/Table';
 
 const VERDICT_DOT: Record<Verdict, DotTone> = { blocking: 'bad', 'needs-work': 'serious', clear: 'ok' };
@@ -25,12 +26,12 @@ export function PagesMatrixClient({
 
   return (
     <section aria-labelledby="by-page">
-      <div className="mb-2 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-        <h2 id="by-page" className="text-sm font-semibold text-ink">
-          {pageOrder.length} page types per site
-        </h2>
-        <p className="text-xs text-faint">Failing elements · rules firing · dot = the page’s verdict. Click a cell for the detail with sample markup.</p>
-      </div>
+      <SectionHead
+        chapter={false}
+        id="by-page"
+        title={`${pageOrder.length} page types per site`}
+        note="Failing elements · rules firing · a dot is the page’s verdict. Click a cell for the detail with sample markup."
+      />
       <Table label="Failing elements by page type">
         <THead>
           <tr>

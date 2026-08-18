@@ -12,6 +12,7 @@ import { useRuns } from '../RunContext';
 import { StatusDot, type DotTone } from '../ui/StatusDot';
 import { FIGURE_CLASS, Table, TBody, Td, Th, THead, GroupRow } from '../ui/Table';
 import { Tag } from '../ui/Tag';
+import { SectionHead } from '../ui/SectionHead';
 import { IssuePicture } from './IssuePicture';
 
 const SEVERITY_DOT: Record<Severity, DotTone> = {
@@ -71,16 +72,17 @@ export function IssuesTable({
 
   return (
     <section aria-labelledby="issues">
-      <div className="mb-2 flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
-        <h2 id="issues" className="text-sm font-semibold text-ink">
-          What’s wrong, and what would fix it{' '}
-          <span className="font-normal text-faint">
-            · {visible.length} issue{visible.length === 1 ? '' : 's'}
-            {parked.length ? ` · ${parked.length} owned elsewhere` : ''}, hardest-blocking first ·
-            blocking ones open, click any row to open or fold it
-          </span>
-        </h2>
-      </div>
+      <SectionHead
+        id="issues"
+        title="What’s wrong, and what would fix it"
+        note={
+          <>
+            {visible.length} issue{visible.length === 1 ? '' : 's'}
+            {parked.length ? `, ${parked.length} owned elsewhere` : ''}, hardest-blocking first.
+            Blocking ones are open; click any row to open or fold it.
+          </>
+        }
+      />
 
       <Table label="Issues" className="[&>table]:min-w-[46rem]">
         <THead>
@@ -108,7 +110,7 @@ export function IssuesTable({
           ))}
           {parked.length ? (
             <>
-              <GroupRow colSpan={4}>
+              <GroupRow colSpan={4} variant="note">
                 Measured, but owned elsewhere — styling and brand-palette decisions, tracked here,
                 not part of this workstream
               </GroupRow>

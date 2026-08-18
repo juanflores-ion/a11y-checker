@@ -30,7 +30,9 @@ export function OverviewClient({ snapshots }: { snapshots: OverviewSnapshots }) 
   ) as Record<Brand, Record<string, ResolvedMetric[]>>;
 
   return (
-    <div className="space-y-8">
+    // 56px between chapters — the rule each SectionHead draws sits on top of
+    // this gap, so a section break reads as one and a row break as the other.
+    <div className="space-y-14">
       <PageHeader
         title="Overview"
         description="Where Insureon and TechInsurance stand for an AI agent, from the selected production scan."

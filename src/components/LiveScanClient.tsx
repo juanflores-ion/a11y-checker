@@ -22,6 +22,7 @@ import type { ScanTarget } from './FullScanRunner';
 import { ComparePages, pagesFor } from './scan/ComparePages';
 import { Eyebrow } from './Primitives';
 import { ScanResultCard } from './ScanResultCard';
+import { SectionHead } from './ui/SectionHead';
 import { StatusDot } from './ui/StatusDot';
 import { NumCell, Table, TBody, Td, Th, THead, ToggleCell } from './ui/Table';
 
@@ -372,7 +373,7 @@ export function LiveScanClient({ mode, targets = [] }: { mode: Mode; targets?: S
   const run = mode === 'scan' ? runScan : runCompare;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-12">
       <section className="rounded-lg border border-rule bg-card shadow-card">
         <div className="grid gap-4 p-4 sm:grid-cols-[1fr_16rem]">
           {mode === 'scan' ? (
@@ -506,18 +507,20 @@ export function LiveScanClient({ mode, targets = [] }: { mode: Mode; targets?: S
 
       {mode === 'compare' && diffs && diffs.length > 0 ? (
         <div className="space-y-6">
-          <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-            <h2 className="text-sm font-semibold text-ink">
-              {diffs.length} pair{diffs.length === 1 ? '' : 's'} compared
-            </h2>
-            <button
-              type="button"
-              onClick={() => downloadJson({ scannedAt, diffs }, 'compare')}
-              className="text-xs font-medium text-accent hover:underline"
-            >
-              Download JSON
-            </button>
-          </div>
+          <SectionHead
+            chapter={false}
+            title={`${diffs.length} pair${diffs.length === 1 ? '' : 's'} compared`}
+            note="Both sides scanned in this session, at the same device profile, and diffed check by check."
+            aside={
+              <button
+                type="button"
+                onClick={() => downloadJson({ scannedAt, diffs }, 'compare')}
+                className="text-xs font-medium text-accent hover:underline"
+              >
+                Download JSON
+              </button>
+            }
+          />
           {diffs.map((diff, i) => (
             <CompareCard key={`${diff.beforeUrl}-${diff.afterUrl}-${i}`} diff={diff} />
           ))}
@@ -684,12 +687,17 @@ function ScanResults({ results, onDownload }: { results: LiveScanResult[]; onDow
   const [open, setOpen] = useState<string | null>(null);
   return (
     <section aria-labelledby="scan-results" aria-live="polite">
-      <div className="mb-2 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-        <h2 id="scan-results" className="text-sm font-semibold text-ink">
-          Results <span className="font-normal text-faint">· {results.length} page{results.length === 1 ? '' : 's'} · same checks as the scheduled runs · expand a row for the sample markup</span>
-        </h2>
-        <button type="button" onClick={onDownload} className="text-xs font-medium text-accent hover:underline">Download JSON</button>
-      </div>
+      <SectionHead
+        chapter={false}
+        id="scan-results"
+        title="Results"
+        note={`${results.length} page${results.length === 1 ? '' : 's'} · the same checks the scheduled runs use · expand a row for the sample markup.`}
+        aside={
+          <button type="button" onClick={onDownload} className="text-xs font-medium text-accent hover:underline">
+            Download JSON
+          </button>
+        }
+      />
       <Table label="Scan results">
         <THead>
           <tr>
