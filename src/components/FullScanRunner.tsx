@@ -136,7 +136,17 @@ export function FullScanRunner({ targets }: { targets: ScanTarget[] }) {
           const res = await fetch('/api/scan', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ urls: batch.map((t) => t.url), viewport }),
+            /**
+             * Brand and page key travel with each URL so the route can look up
+             * that target's identity reader — the thing that says which of the
+             * three Insureon homepages was served. Without them the route has
+             * only a URL, which is why runs taken here carried no identity at
+             * all until now.
+             */
+            body: JSON.stringify({
+              urls: batch.map((t) => ({ url: t.url, brand: t.brand, key: t.key })),
+              viewport,
+            }),
           });
           const body = await res.json().catch(() => null);
           if (!res.ok) throw new Error(body?.error ?? `Scan failed with ${res.status}`);

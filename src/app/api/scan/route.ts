@@ -107,38 +107,72 @@ function allowedHosts(): string[] {
   return parseAllowedHosts(process.env.SCAN_ALLOWED_HOSTS, tracked);
 }
 
-function parseUrls(input: unknown): { urls: string[]; error?: string } {
-  if (!Array.isArray(input)) return { urls: [], error: 'Body must be { urls: string[] }.' };
-  if (input.length === 0) return { urls: [], error: 'No URLs given.' };
+/**
+ * One URL to scan, and — when the caller knows it — which tracked target it
+ * is.
+ *
+ * The caller sends *names*, never code: the server looks the identity reader
+ * up in `targets.mjs` by brand and page key. A name nobody declared resolves
+ * to `undefined`, which is the honest "no identity declared" state rather
+ * than an error. That split is the whole security story here — the browser
+ * cannot hand this endpoint a function to run in the page.
+ */
+interface ScanEntry {
+  url: string;
+  brand?: string;
+  key?: string;
+}
+
+const BODY_SHAPE =
+  'Body must be { urls: (string | { url, brand?, key? })[] }.';
+
+function parseEntries(input: unknown): { entries: ScanEntry[]; error?: string } {
+  if (!Array.isArray(input)) return { entries: [], error: BODY_SHAPE };
+  if (input.length === 0) return { entries: [], error: 'No URLs given.' };
   if (input.length > MAX_URLS) {
-    return { urls: [], error: `Too many URLs — this endpoint scans ${MAX_URLS} at a time.` };
+    return { entries: [], error: `Too many URLs — this endpoint scans ${MAX_URLS} at a time.` };
   }
 
   const allowed = allowedHosts();
-  const urls: string[] = [];
-  for (const raw of input) {
-    if (typeof raw !== 'string') return { urls: [], error: 'Every URL must be a string.' };
+  const entries: ScanEntry[] = [];
+  for (const item of input) {
+    /**
+     * Two shapes, because Scan → Single URL and Before / after send bare
+     * strings for pages that are nobody's tracked target, and the full run
+     * sends the target it is scanning. Neither caller should have to care
+     * about the other's needs.
+     */
+    const raw = typeof item === 'string' ? item : (item as { url?: unknown })?.url;
+    if (typeof raw !== 'string') return { entries: [], error: BODY_SHAPE };
+
     let parsed: URL;
     try {
       parsed = new URL(raw);
     } catch {
-      return { urls: [], error: `Not a valid URL: “${raw}”` };
+      return { entries: [], error: `Not a valid URL: “${raw}”` };
     }
     if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
-      return { urls: [], error: `Only http and https are scannable: “${raw}”` };
+      return { entries: [], error: `Only http and https are scannable: “${raw}”` };
     }
     if (!hostAllowed(parsed.hostname, allowed)) {
       return {
-        urls: [],
+        entries: [],
         error:
           `${parsed.hostname} isn't on the allowlist. This endpoint only scans our own sites ` +
           `(${allowed.join(', ')}). Add a staging host with SCAN_ALLOWED_HOSTS, or point ` +
           `Scanner at one running inside your network.`,
       };
     }
-    urls.push(parsed.toString());
+
+    const brand = typeof item === 'string' ? undefined : (item as { brand?: unknown }).brand;
+    const key = typeof item === 'string' ? undefined : (item as { key?: unknown }).key;
+    entries.push({
+      url: parsed.toString(),
+      ...(typeof brand === 'string' ? { brand } : {}),
+      ...(typeof key === 'string' ? { key } : {}),
+    });
   }
-  return { urls };
+  return { entries };
 }
 
 export async function POST(request: Request) {
@@ -149,7 +183,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Body must be JSON.' }, { status: 400 });
   }
 
-  const { urls, error } = parseUrls(body.urls);
+  const { entries, error } = parseEntries(body.urls);
   if (error) return NextResponse.json({ error }, { status: 400 });
 
   const requestedViewport = body.viewport === undefined ? undefined : String(body.viewport);
@@ -174,11 +208,19 @@ export async function POST(request: Request) {
     chromiumPack,
     { browserProvenance, launchContext, scanPage, PROFILES, PROFILE_NAMES, DEFAULT_PROFILE },
     axe,
+    { identityFor },
   ] = await Promise.all([
     import('playwright-core'),
     import('@sparticuz/chromium').then((m) => m.default ?? m),
     import('../../../../scanner/core.mjs'),
     import('axe-core'),
+    /**
+     * The identity readers. Kept out of `core.mjs` on purpose — the engine
+     * measures agent readiness and must not learn what Sitecore is — so the
+     * route does the lookup and hands the reader down, exactly as the CLI
+     * does.
+     */
+    import('../../../../scanner/targets.mjs'),
   ]);
 
   /**
@@ -247,8 +289,15 @@ export async function POST(request: Request) {
     const results = [];
     // Sequential on purpose: concurrent Chromium pages in a function's memory
     // budget is how you turn a slow scan into a failed one.
-    for (const url of urls) {
-      results.push(await scanPage(context, url, { axeSource }));
+    for (const entry of entries) {
+      /**
+       * Undefined for anything that isn't a declared target, which is most
+       * URLs — `scanPage` then records no identity field at all, and a reader
+       * that cannot tell records `null`. Three states, never collapsed.
+       */
+      const identity =
+        entry.brand && entry.key ? identityFor(entry.brand, entry.key) : undefined;
+      results.push(await scanPage(context, entry.url, { axeSource, identity }));
     }
     const profile = PROFILES[viewport];
     // Asked while the browser is still open — the `finally` below closes it,

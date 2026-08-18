@@ -1,7 +1,7 @@
 {
   "meta": {
-    "startedAt": "2026-08-18T09:37:06.082Z",
-    "finishedAt": "2026-08-18T09:39:49.150Z",
+    "startedAt": "2026-08-18T10:17:10.068Z",
+    "finishedAt": "2026-08-18T10:19:54.295Z",
     "axeVersion": "4.13.0",
     "primaryViewport": "desktop",
     "viewports": {
@@ -377,7 +377,11 @@
             "inTree": 7
           },
           "httpStatus": 200,
-          "axeVersion": "4.13.0"
+          "axeVersion": "4.13.0",
+          "identity": {
+            "key": "homepage-variant",
+            "value": "Homepage-Hero-Columns"
+          }
         },
         "policy": {
           "url": "https://www.insureon.com/small-business-insurance/general-liability",
@@ -3367,9 +3371,9 @@
               "sample": [
                 {
                   "t": [
-                    "#react-select-14457-input"
+                    "#react-select-15851-input"
                   ],
-                  "h": "<input class=\"\" style=\"label:input;color:in...\" autocapitalize=\"none\" autocomplete=\"off\" autocorrect=\"off\" id=\"react-select-14457-i...\" spellcheck=\"false\" tabindex=\"0\" type=\"text\" aria-autocomplete=\"list\" aria-expanded=\"false\" aria-haspopup…"
+                  "h": "<input class=\"\" style=\"label:input;color:in...\" autocapitalize=\"none\" autocomplete=\"off\" autocorrect=\"off\" id=\"react-select-15851-i...\" spellcheck=\"false\" tabindex=\"0\" type=\"text\" aria-autocomplete=\"list\" aria-expanded=\"false\" aria-haspopup…"
                 }
               ]
             },
@@ -3380,9 +3384,9 @@
               "sample": [
                 {
                   "t": [
-                    "#react-select-14457-input"
+                    "#react-select-15851-input"
                   ],
-                  "h": "<input class=\"\" style=\"label:input;color:in...\" autocapitalize=\"none\" autocomplete=\"off\" autocorrect=\"off\" id=\"react-select-14457-i...\" spellcheck=\"false\" tabindex=\"0\" type=\"text\" aria-autocomplete=\"list\" aria-expanded=\"false\" aria-haspopup…"
+                  "h": "<input class=\"\" style=\"label:input;color:in...\" autocapitalize=\"none\" autocomplete=\"off\" autocorrect=\"off\" id=\"react-select-15851-i...\" spellcheck=\"false\" tabindex=\"0\" type=\"text\" aria-autocomplete=\"list\" aria-expanded=\"false\" aria-haspopup…"
                 }
               ]
             },
@@ -3481,7 +3485,7 @@
           "ghostControls": [
             {
               "selector": "div.css-1vf51wl-control",
-              "html": "<div class=\"css-1vf51wl-control\"><div class=\"css-xipmn9\"><div class=\"css-13xugr8-placeholder\" id=\"react-select-14457-placeholder\">What kind of work do you do?</div><div class=\"css-6sv2wd\" data-value=\"\"><input class=\"\" style=\"label:input;col…",
+              "html": "<div class=\"css-1vf51wl-control\"><div class=\"css-xipmn9\"><div class=\"css-13xugr8-placeholder\" id=\"react-select-15851-placeholder\">What kind of work do you do?</div><div class=\"css-6sv2wd\" data-value=\"\"><input class=\"\" style=\"label:input;col…",
               "tag": "div",
               "testId": null,
               "hasOnClickAttr": false,
@@ -3687,9 +3691,9 @@
               "sample": [
                 {
                   "t": [
-                    "#react-select-15009-input"
+                    "#react-select-14497-input"
                   ],
-                  "h": "<input class=\"\" style=\"label:input;color:in...\" autocapitalize=\"none\" autocomplete=\"off\" autocorrect=\"off\" id=\"react-select-15009-i...\" spellcheck=\"false\" tabindex=\"0\" type=\"text\" aria-autocomplete=\"list\" aria-expanded=\"false\" aria-haspopup…"
+                  "h": "<input class=\"\" style=\"label:input;color:in...\" autocapitalize=\"none\" autocomplete=\"off\" autocorrect=\"off\" id=\"react-select-14497-i...\" spellcheck=\"false\" tabindex=\"0\" type=\"text\" aria-autocomplete=\"list\" aria-expanded=\"false\" aria-haspopup…"
                 }
               ]
             },
@@ -4150,9 +4154,9 @@
               "sample": [
                 {
                   "t": [
-                    "#react-select-15010-input"
+                    "#react-select-15051-input"
                   ],
-                  "h": "<input class=\"\" style=\"label:input;color:in...\" autocapitalize=\"none\" autocomplete=\"off\" autocorrect=\"off\" id=\"react-select-15010-i...\" spellcheck=\"false\" tabindex=\"0\" type=\"text\" aria-autocomplete=\"list\" aria-expanded=\"false\" aria-haspopup…"
+                  "h": "<input class=\"\" style=\"label:input;color:in...\" autocapitalize=\"none\" autocomplete=\"off\" autocorrect=\"off\" id=\"react-select-15051-i...\" spellcheck=\"false\" tabindex=\"0\" type=\"text\" aria-autocomplete=\"list\" aria-expanded=\"false\" aria-haspopup…"
                 }
               ]
             },
@@ -4813,9 +4817,9 @@
               "sample": [
                 {
                   "t": [
-                    "#react-select-14459-input"
+                    "#react-select-15052-input"
                   ],
-                  "h": "<input class=\"\" style=\"label:input;color:in...\" autocapitalize=\"none\" autocomplete=\"off\" autocorrect=\"off\" id=\"react-select-14459-i...\" spellcheck=\"false\" tabindex=\"0\" type=\"text\" aria-autocomplete=\"list\" aria-expanded=\"false\" aria-haspopup…"
+                  "h": "<input class=\"\" style=\"label:input;color:in...\" autocapitalize=\"none\" autocomplete=\"off\" autocorrect=\"off\" id=\"react-select-15052-i...\" spellcheck=\"false\" tabindex=\"0\" type=\"text\" aria-autocomplete=\"list\" aria-expanded=\"false\" aria-haspopup…"
                 }
               ]
             },
@@ -4826,9 +4830,9 @@
               "sample": [
                 {
                   "t": [
-                    "#react-select-14459-input"
+                    "#react-select-15052-input"
                   ],
-                  "h": "<input class=\"\" style=\"label:input;color:in...\" autocapitalize=\"none\" autocomplete=\"off\" autocorrect=\"off\" id=\"react-select-14459-i...\" spellcheck=\"false\" tabindex=\"0\" type=\"text\" aria-autocomplete=\"list\" aria-expanded=\"false\" aria-haspopup…"
+                  "h": "<input class=\"\" style=\"label:input;color:in...\" autocapitalize=\"none\" autocomplete=\"off\" autocorrect=\"off\" id=\"react-select-15052-i...\" spellcheck=\"false\" tabindex=\"0\" type=\"text\" aria-autocomplete=\"list\" aria-expanded=\"false\" aria-haspopup…"
                 }
               ]
             },
@@ -4902,7 +4906,7 @@
           "ghostControls": [
             {
               "selector": "div.css-1vf51wl-control",
-              "html": "<div class=\"css-1vf51wl-control\"><div class=\"css-xipmn9\"><div class=\"css-13xugr8-placeholder\" id=\"react-select-14459-placeholder\">What kind of work do you do?</div><div class=\"css-6sv2wd\" data-value=\"\"><input class=\"\" style=\"label:input;col…",
+              "html": "<div class=\"css-1vf51wl-control\"><div class=\"css-xipmn9\"><div class=\"css-13xugr8-placeholder\" id=\"react-select-15052-placeholder\">What kind of work do you do?</div><div class=\"css-6sv2wd\" data-value=\"\"><input class=\"\" style=\"label:input;col…",
               "tag": "div",
               "testId": null,
               "hasOnClickAttr": false,
@@ -6000,7 +6004,11 @@
             "inTree": 70
           },
           "httpStatus": 200,
-          "axeVersion": "4.13.0"
+          "axeVersion": "4.13.0",
+          "identity": {
+            "key": "homepage-variant",
+            "value": "Homepage-Hero-V3"
+          }
         },
         "policy": {
           "url": "https://www.insureon.com/small-business-insurance/general-liability",
@@ -9195,9 +9203,9 @@
               "sample": [
                 {
                   "t": [
-                    "#react-select-15014-input"
+                    "#react-select-15853-input"
                   ],
-                  "h": "<input class=\"\" style=\"label:input;color:in...\" autocapitalize=\"none\" autocomplete=\"off\" autocorrect=\"off\" id=\"react-select-15014-i...\" spellcheck=\"false\" tabindex=\"0\" type=\"text\" aria-autocomplete=\"list\" aria-expanded=\"false\" aria-haspopup…"
+                  "h": "<input class=\"\" style=\"label:input;color:in...\" autocapitalize=\"none\" autocomplete=\"off\" autocorrect=\"off\" id=\"react-select-15853-i...\" spellcheck=\"false\" tabindex=\"0\" type=\"text\" aria-autocomplete=\"list\" aria-expanded=\"false\" aria-haspopup…"
                 }
               ]
             },
@@ -9208,9 +9216,9 @@
               "sample": [
                 {
                   "t": [
-                    "#react-select-15014-input"
+                    "#react-select-15853-input"
                   ],
-                  "h": "<input class=\"\" style=\"label:input;color:in...\" autocapitalize=\"none\" autocomplete=\"off\" autocorrect=\"off\" id=\"react-select-15014-i...\" spellcheck=\"false\" tabindex=\"0\" type=\"text\" aria-autocomplete=\"list\" aria-expanded=\"false\" aria-haspopup…"
+                  "h": "<input class=\"\" style=\"label:input;color:in...\" autocapitalize=\"none\" autocomplete=\"off\" autocorrect=\"off\" id=\"react-select-15853-i...\" spellcheck=\"false\" tabindex=\"0\" type=\"text\" aria-autocomplete=\"list\" aria-expanded=\"false\" aria-haspopup…"
                 }
               ]
             },
@@ -9308,7 +9316,7 @@
             },
             {
               "selector": "div.css-1vf51wl-control",
-              "html": "<div class=\"css-1vf51wl-control\"><div class=\"css-xipmn9\"><div class=\"css-13xugr8-placeholder\" id=\"react-select-15014-placeholder\">What kind of work do you do?</div><div class=\"css-6sv2wd\" data-value=\"\"><input class=\"\" style=\"label:input;col…",
+              "html": "<div class=\"css-1vf51wl-control\"><div class=\"css-xipmn9\"><div class=\"css-13xugr8-placeholder\" id=\"react-select-15853-placeholder\">What kind of work do you do?</div><div class=\"css-6sv2wd\" data-value=\"\"><input class=\"\" style=\"label:input;col…",
               "tag": "div",
               "testId": null,
               "hasOnClickAttr": false,
@@ -9491,9 +9499,9 @@
               "sample": [
                 {
                   "t": [
-                    "#react-select-15821-input"
+                    "#react-select-15054-input"
                   ],
-                  "h": "<input class=\"\" style=\"label:input;color:in...\" autocapitalize=\"none\" autocomplete=\"off\" autocorrect=\"off\" id=\"react-select-15821-i...\" spellcheck=\"false\" tabindex=\"0\" type=\"text\" aria-autocomplete=\"list\" aria-expanded=\"false\" aria-haspopup…"
+                  "h": "<input class=\"\" style=\"label:input;color:in...\" autocapitalize=\"none\" autocomplete=\"off\" autocorrect=\"off\" id=\"react-select-15054-i...\" spellcheck=\"false\" tabindex=\"0\" type=\"text\" aria-autocomplete=\"list\" aria-expanded=\"false\" aria-haspopup…"
                 }
               ]
             },
@@ -9942,9 +9950,9 @@
               "sample": [
                 {
                   "t": [
-                    "#react-select-14463-input"
+                    "#react-select-14498-input"
                   ],
-                  "h": "<input class=\"\" style=\"label:input;color:in...\" autocapitalize=\"none\" autocomplete=\"off\" autocorrect=\"off\" id=\"react-select-14463-i...\" spellcheck=\"false\" tabindex=\"0\" type=\"text\" aria-autocomplete=\"list\" aria-expanded=\"false\" aria-haspopup…"
+                  "h": "<input class=\"\" style=\"label:input;color:in...\" autocapitalize=\"none\" autocomplete=\"off\" autocorrect=\"off\" id=\"react-select-14498-i...\" spellcheck=\"false\" tabindex=\"0\" type=\"text\" aria-autocomplete=\"list\" aria-expanded=\"false\" aria-haspopup…"
                 }
               ]
             },
@@ -10625,9 +10633,9 @@
               "sample": [
                 {
                   "t": [
-                    "#react-select-15015-input"
+                    "#react-select-15855-input"
                   ],
-                  "h": "<input class=\"\" style=\"label:input;color:in...\" autocapitalize=\"none\" autocomplete=\"off\" autocorrect=\"off\" id=\"react-select-15015-i...\" spellcheck=\"false\" tabindex=\"0\" type=\"text\" aria-autocomplete=\"list\" aria-expanded=\"false\" aria-haspopup…"
+                  "h": "<input class=\"\" style=\"label:input;color:in...\" autocapitalize=\"none\" autocomplete=\"off\" autocorrect=\"off\" id=\"react-select-15855-i...\" spellcheck=\"false\" tabindex=\"0\" type=\"text\" aria-autocomplete=\"list\" aria-expanded=\"false\" aria-haspopup…"
                 }
               ]
             },
@@ -10638,9 +10646,9 @@
               "sample": [
                 {
                   "t": [
-                    "#react-select-15015-input"
+                    "#react-select-15855-input"
                   ],
-                  "h": "<input class=\"\" style=\"label:input;color:in...\" autocapitalize=\"none\" autocomplete=\"off\" autocorrect=\"off\" id=\"react-select-15015-i...\" spellcheck=\"false\" tabindex=\"0\" type=\"text\" aria-autocomplete=\"list\" aria-expanded=\"false\" aria-haspopup…"
+                  "h": "<input class=\"\" style=\"label:input;color:in...\" autocapitalize=\"none\" autocomplete=\"off\" autocorrect=\"off\" id=\"react-select-15855-i...\" spellcheck=\"false\" tabindex=\"0\" type=\"text\" aria-autocomplete=\"list\" aria-expanded=\"false\" aria-haspopup…"
                 }
               ]
             },
@@ -10732,7 +10740,7 @@
             },
             {
               "selector": "div.css-1vf51wl-control",
-              "html": "<div class=\"css-1vf51wl-control\"><div class=\"css-xipmn9\"><div class=\"css-13xugr8-placeholder\" id=\"react-select-15015-placeholder\">What kind of work do you do?</div><div class=\"css-6sv2wd\" data-value=\"\"><input class=\"\" style=\"label:input;col…",
+              "html": "<div class=\"css-1vf51wl-control\"><div class=\"css-xipmn9\"><div class=\"css-13xugr8-placeholder\" id=\"react-select-15855-placeholder\">What kind of work do you do?</div><div class=\"css-6sv2wd\" data-value=\"\"><input class=\"\" style=\"label:input;col…",
               "tag": "div",
               "testId": null,
               "hasOnClickAttr": false,
