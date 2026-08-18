@@ -1,7 +1,7 @@
 {
   "meta": {
-    "startedAt": "2026-08-13T15:49:11.833Z",
-    "finishedAt": "2026-08-13T15:52:07.770Z",
+    "startedAt": "2026-08-18T09:37:06.082Z",
+    "finishedAt": "2026-08-18T09:39:49.150Z",
     "axeVersion": "4.13.0",
     "primaryViewport": "desktop",
     "viewports": {
@@ -16,11 +16,10 @@
         "isMobile": true
       }
     },
-    "probeVersion": "3c83c03",
-    "browserVersion": "Chromium 149.0.7827.55",
-    "browserPath": "/home/groot/.cache/ms-playwright/chromium-1228/chrome-linux64/chrome",
-    "scannedBy": "cli",
-    "label": "new baseline: declared-relationship rule"
+    "probeVersion": "312205d",
+    "browserVersion": "Chromium 149.0.7827.0",
+    "browserPath": "/tmp/chromium",
+    "scannedBy": "hosted"
   },
   "byViewport": {
     "desktop": {
@@ -28,6 +27,19 @@
         "home": {
           "url": "https://www.insureon.com/",
           "violations": [
+            {
+              "id": "frame-title",
+              "impact": "serious",
+              "n": 1,
+              "sample": [
+                {
+                  "t": [
+                    "#ion-yt-3jFllJL98ZE"
+                  ],
+                  "h": "<iframe id=\"ion-yt-3jFllJL98ZE\" src=\"https://www.youtube.com/embed/3jFllJL98ZE?enablejsapi=1\" class=\"child_RJtR-\" frameborder=\"0\" allowfullscreen=\"\" loading=\"lazy\"></iframe>"
+                }
+              ]
+            },
             {
               "id": "label-title-only",
               "impact": "serious",
@@ -364,7 +376,8 @@
             "total": 63,
             "inTree": 7
           },
-          "httpStatus": 200
+          "httpStatus": 200,
+          "axeVersion": "4.13.0"
         },
         "policy": {
           "url": "https://www.insureon.com/small-business-insurance/general-liability",
@@ -710,7 +723,8 @@
             "total": 64,
             "inTree": 8
           },
-          "httpStatus": 200
+          "httpStatus": 200,
+          "axeVersion": "4.13.0"
         },
         "major": {
           "url": "https://www.insureon.com/retail-business-insurance",
@@ -1119,7 +1133,8 @@
             "total": 65,
             "inTree": 9
           },
-          "httpStatus": 200
+          "httpStatus": 200,
+          "axeVersion": "4.13.0"
         },
         "minor": {
           "url": "https://www.insureon.com/retail-business-insurance/clothing-stores",
@@ -1522,7 +1537,8 @@
             "total": 66,
             "inTree": 10
           },
-          "httpStatus": 200
+          "httpStatus": 200,
+          "axeVersion": "4.13.0"
         },
         "article": {
           "url": "https://www.insureon.com/blog/how-small-businesses-can-reduce-liabilities",
@@ -1805,7 +1821,8 @@
             "total": 65,
             "inTree": 9
           },
-          "httpStatus": 200
+          "httpStatus": 200,
+          "axeVersion": "4.13.0"
         },
         "resources": {
           "url": "https://www.insureon.com/resources",
@@ -2086,7 +2103,8 @@
             "total": 63,
             "inTree": 7
           },
-          "httpStatus": 200
+          "httpStatus": 200,
+          "axeVersion": "4.13.0"
         },
         "about": {
           "url": "https://www.insureon.com/about-us",
@@ -2302,7 +2320,8 @@
             "total": 63,
             "inTree": 7
           },
-          "httpStatus": 200
+          "httpStatus": 200,
+          "axeVersion": "4.13.0"
         },
         "contact": {
           "url": "https://www.insureon.com/contact-us",
@@ -2479,7 +2498,8 @@
             "total": 63,
             "inTree": 7
           },
-          "httpStatus": 200
+          "httpStatus": 200,
+          "axeVersion": "4.13.0"
         },
         "legal": {
           "url": "https://www.insureon.com/legal/privacy-policy",
@@ -2638,7 +2658,8 @@
             "total": 63,
             "inTree": 7
           },
-          "httpStatus": 200
+          "httpStatus": 200,
+          "axeVersion": "4.13.0"
         },
         "a11y-stmt": {
           "url": "https://www.insureon.com/legal/accessibility-statement",
@@ -2797,7 +2818,8 @@
             "total": 63,
             "inTree": 7
           },
-          "httpStatus": 200
+          "httpStatus": 200,
+          "axeVersion": "4.13.0"
         }
       },
       "techinsurance": {
@@ -3306,7 +3328,8 @@
             "total": 60,
             "inTree": 6
           },
-          "httpStatus": 200
+          "httpStatus": 200,
+          "axeVersion": "4.13.0"
         },
         "policy": {
           "url": "https://www.techinsurance.com/general-liability-insurance",
@@ -3344,9 +3367,9 @@
               "sample": [
                 {
                   "t": [
-                    "#react-select-9178-input"
+                    "#react-select-14457-input"
                   ],
-                  "h": "<input class=\"\" style=\"label:input;color:in...\" autocapitalize=\"none\" autocomplete=\"off\" autocorrect=\"off\" id=\"react-select-9178-in...\" spellcheck=\"false\" tabindex=\"0\" type=\"text\" aria-autocomplete=\"list\" aria-expanded=\"false\" aria-haspopup…"
+                  "h": "<input class=\"\" style=\"label:input;color:in...\" autocapitalize=\"none\" autocomplete=\"off\" autocorrect=\"off\" id=\"react-select-14457-i...\" spellcheck=\"false\" tabindex=\"0\" type=\"text\" aria-autocomplete=\"list\" aria-expanded=\"false\" aria-haspopup…"
                 }
               ]
             },
@@ -3357,9 +3380,9 @@
               "sample": [
                 {
                   "t": [
-                    "#react-select-9178-input"
+                    "#react-select-14457-input"
                   ],
-                  "h": "<input class=\"\" style=\"label:input;color:in...\" autocapitalize=\"none\" autocomplete=\"off\" autocorrect=\"off\" id=\"react-select-9178-in...\" spellcheck=\"false\" tabindex=\"0\" type=\"text\" aria-autocomplete=\"list\" aria-expanded=\"false\" aria-haspopup…"
+                  "h": "<input class=\"\" style=\"label:input;color:in...\" autocapitalize=\"none\" autocomplete=\"off\" autocorrect=\"off\" id=\"react-select-14457-i...\" spellcheck=\"false\" tabindex=\"0\" type=\"text\" aria-autocomplete=\"list\" aria-expanded=\"false\" aria-haspopup…"
                 }
               ]
             },
@@ -3458,7 +3481,7 @@
           "ghostControls": [
             {
               "selector": "div.css-1vf51wl-control",
-              "html": "<div class=\"css-1vf51wl-control\"><div class=\"css-xipmn9\"><div class=\"css-13xugr8-placeholder\" id=\"react-select-9178-placeholder\">What kind of work do you do?</div><div class=\"css-6sv2wd\" data-value=\"\"><input class=\"\" style=\"label:input;colo…",
+              "html": "<div class=\"css-1vf51wl-control\"><div class=\"css-xipmn9\"><div class=\"css-13xugr8-placeholder\" id=\"react-select-14457-placeholder\">What kind of work do you do?</div><div class=\"css-6sv2wd\" data-value=\"\"><input class=\"\" style=\"label:input;col…",
               "tag": "div",
               "testId": null,
               "hasOnClickAttr": false,
@@ -3619,10 +3642,11 @@
             "total": 61,
             "inTree": 7
           },
-          "httpStatus": 200
+          "httpStatus": 200,
+          "axeVersion": "4.13.0"
         },
         "major": {
-          "url": "https://www.techinsurance.com/it-consultant-insurance",
+          "url": "https://www.techinsurance.com/technology-business-insurance/it-consulting",
           "violations": [
             {
               "id": "color-contrast",
@@ -3663,9 +3687,9 @@
               "sample": [
                 {
                   "t": [
-                    "#react-select-10043-input"
+                    "#react-select-15009-input"
                   ],
-                  "h": "<input class=\"\" style=\"label:input;color:in...\" autocapitalize=\"none\" autocomplete=\"off\" autocorrect=\"off\" id=\"react-select-10043-i...\" spellcheck=\"false\" tabindex=\"0\" type=\"text\" aria-autocomplete=\"list\" aria-expanded=\"false\" aria-haspopup…"
+                  "h": "<input class=\"\" style=\"label:input;color:in...\" autocapitalize=\"none\" autocomplete=\"off\" autocorrect=\"off\" id=\"react-select-15009-i...\" spellcheck=\"false\" tabindex=\"0\" type=\"text\" aria-autocomplete=\"list\" aria-expanded=\"false\" aria-haspopup…"
                 }
               ]
             },
@@ -4081,7 +4105,8 @@
             "total": 63,
             "inTree": 9
           },
-          "httpStatus": 200
+          "httpStatus": 200,
+          "axeVersion": "4.13.0"
         },
         "minor": {
           "url": "https://www.techinsurance.com/technology-business-insurance/software-development",
@@ -4125,9 +4150,9 @@
               "sample": [
                 {
                   "t": [
-                    "#react-select-9179-input"
+                    "#react-select-15010-input"
                   ],
-                  "h": "<input class=\"\" style=\"label:input;color:in...\" autocapitalize=\"none\" autocomplete=\"off\" autocorrect=\"off\" id=\"react-select-9179-in...\" spellcheck=\"false\" tabindex=\"0\" type=\"text\" aria-autocomplete=\"list\" aria-expanded=\"false\" aria-haspopup…"
+                  "h": "<input class=\"\" style=\"label:input;color:in...\" autocapitalize=\"none\" autocomplete=\"off\" autocorrect=\"off\" id=\"react-select-15010-i...\" spellcheck=\"false\" tabindex=\"0\" type=\"text\" aria-autocomplete=\"list\" aria-expanded=\"false\" aria-haspopup…"
                 }
               ]
             },
@@ -4543,7 +4568,8 @@
             "total": 63,
             "inTree": 9
           },
-          "httpStatus": 200
+          "httpStatus": 200,
+          "axeVersion": "4.13.0"
         },
         "article": {
           "url": "https://www.techinsurance.com/resources/how-to-file-a-business-insurance-claim",
@@ -4755,7 +4781,8 @@
             "total": 62,
             "inTree": 8
           },
-          "httpStatus": 200
+          "httpStatus": 200,
+          "axeVersion": "4.13.0"
         },
         "resources": {
           "url": "https://www.techinsurance.com/resources",
@@ -4786,9 +4813,9 @@
               "sample": [
                 {
                   "t": [
-                    "#react-select-10044-input"
+                    "#react-select-14459-input"
                   ],
-                  "h": "<input class=\"\" style=\"label:input;color:in...\" autocapitalize=\"none\" autocomplete=\"off\" autocorrect=\"off\" id=\"react-select-10044-i...\" spellcheck=\"false\" tabindex=\"0\" type=\"text\" aria-autocomplete=\"list\" aria-expanded=\"false\" aria-haspopup…"
+                  "h": "<input class=\"\" style=\"label:input;color:in...\" autocapitalize=\"none\" autocomplete=\"off\" autocorrect=\"off\" id=\"react-select-14459-i...\" spellcheck=\"false\" tabindex=\"0\" type=\"text\" aria-autocomplete=\"list\" aria-expanded=\"false\" aria-haspopup…"
                 }
               ]
             },
@@ -4799,9 +4826,9 @@
               "sample": [
                 {
                   "t": [
-                    "#react-select-10044-input"
+                    "#react-select-14459-input"
                   ],
-                  "h": "<input class=\"\" style=\"label:input;color:in...\" autocapitalize=\"none\" autocomplete=\"off\" autocorrect=\"off\" id=\"react-select-10044-i...\" spellcheck=\"false\" tabindex=\"0\" type=\"text\" aria-autocomplete=\"list\" aria-expanded=\"false\" aria-haspopup…"
+                  "h": "<input class=\"\" style=\"label:input;color:in...\" autocapitalize=\"none\" autocomplete=\"off\" autocorrect=\"off\" id=\"react-select-14459-i...\" spellcheck=\"false\" tabindex=\"0\" type=\"text\" aria-autocomplete=\"list\" aria-expanded=\"false\" aria-haspopup…"
                 }
               ]
             },
@@ -4875,7 +4902,7 @@
           "ghostControls": [
             {
               "selector": "div.css-1vf51wl-control",
-              "html": "<div class=\"css-1vf51wl-control\"><div class=\"css-xipmn9\"><div class=\"css-13xugr8-placeholder\" id=\"react-select-10044-placeholder\">What kind of work do you do?</div><div class=\"css-6sv2wd\" data-value=\"\"><input class=\"\" style=\"label:input;col…",
+              "html": "<div class=\"css-1vf51wl-control\"><div class=\"css-xipmn9\"><div class=\"css-13xugr8-placeholder\" id=\"react-select-14459-placeholder\">What kind of work do you do?</div><div class=\"css-6sv2wd\" data-value=\"\"><input class=\"\" style=\"label:input;col…",
               "tag": "div",
               "testId": null,
               "hasOnClickAttr": false,
@@ -4976,7 +5003,8 @@
             "total": 60,
             "inTree": 6
           },
-          "httpStatus": 200
+          "httpStatus": 200,
+          "axeVersion": "4.13.0"
         },
         "about": {
           "url": "https://www.techinsurance.com/about-us",
@@ -5143,7 +5171,8 @@
             "total": 60,
             "inTree": 6
           },
-          "httpStatus": 200
+          "httpStatus": 200,
+          "axeVersion": "4.13.0"
         },
         "contact": {
           "url": "https://www.techinsurance.com/contact-us",
@@ -5415,7 +5444,8 @@
             "total": 60,
             "inTree": 6
           },
-          "httpStatus": 200
+          "httpStatus": 200,
+          "axeVersion": "4.13.0"
         },
         "legal": {
           "url": "https://www.techinsurance.com/legal/privacy-policy",
@@ -5546,7 +5576,8 @@
             "total": 60,
             "inTree": 6
           },
-          "httpStatus": 200
+          "httpStatus": 200,
+          "axeVersion": "4.13.0"
         },
         "a11y-stmt": {
           "url": "https://www.techinsurance.com/legal/accessibility-statement",
@@ -5677,7 +5708,8 @@
             "total": 60,
             "inTree": 6
           },
-          "httpStatus": 200
+          "httpStatus": 200,
+          "axeVersion": "4.13.0"
         }
       }
     },
@@ -5967,7 +5999,8 @@
             "total": 70,
             "inTree": 70
           },
-          "httpStatus": 200
+          "httpStatus": 200,
+          "axeVersion": "4.13.0"
         },
         "policy": {
           "url": "https://www.insureon.com/small-business-insurance/general-liability",
@@ -6379,7 +6412,8 @@
             "total": 71,
             "inTree": 71
           },
-          "httpStatus": 200
+          "httpStatus": 200,
+          "axeVersion": "4.13.0"
         },
         "major": {
           "url": "https://www.insureon.com/retail-business-insurance",
@@ -6766,7 +6800,8 @@
             "total": 72,
             "inTree": 72
           },
-          "httpStatus": 200
+          "httpStatus": 200,
+          "axeVersion": "4.13.0"
         },
         "minor": {
           "url": "https://www.insureon.com/retail-business-insurance/clothing-stores",
@@ -7190,7 +7225,8 @@
             "total": 73,
             "inTree": 73
           },
-          "httpStatus": 200
+          "httpStatus": 200,
+          "axeVersion": "4.13.0"
         },
         "article": {
           "url": "https://www.insureon.com/blog/how-small-businesses-can-reduce-liabilities",
@@ -7517,7 +7553,8 @@
             "total": 72,
             "inTree": 72
           },
-          "httpStatus": 200
+          "httpStatus": 200,
+          "axeVersion": "4.13.0"
         },
         "resources": {
           "url": "https://www.insureon.com/resources",
@@ -7801,7 +7838,8 @@
             "total": 70,
             "inTree": 70
           },
-          "httpStatus": 200
+          "httpStatus": 200,
+          "axeVersion": "4.13.0"
         },
         "about": {
           "url": "https://www.insureon.com/about-us",
@@ -8038,7 +8076,8 @@
             "total": 70,
             "inTree": 70
           },
-          "httpStatus": 200
+          "httpStatus": 200,
+          "axeVersion": "4.13.0"
         },
         "contact": {
           "url": "https://www.insureon.com/contact-us",
@@ -8236,7 +8275,8 @@
             "total": 70,
             "inTree": 70
           },
-          "httpStatus": 200
+          "httpStatus": 200,
+          "axeVersion": "4.13.0"
         },
         "legal": {
           "url": "https://www.insureon.com/legal/privacy-policy",
@@ -8416,7 +8456,8 @@
             "total": 70,
             "inTree": 70
           },
-          "httpStatus": 200
+          "httpStatus": 200,
+          "axeVersion": "4.13.0"
         },
         "a11y-stmt": {
           "url": "https://www.insureon.com/legal/accessibility-statement",
@@ -8596,7 +8637,8 @@
             "total": 70,
             "inTree": 70
           },
-          "httpStatus": 200
+          "httpStatus": 200,
+          "axeVersion": "4.13.0"
         }
       },
       "techinsurance": {
@@ -9095,7 +9137,8 @@
             "total": 66,
             "inTree": 66
           },
-          "httpStatus": 200
+          "httpStatus": 200,
+          "axeVersion": "4.13.0"
         },
         "policy": {
           "url": "https://www.techinsurance.com/general-liability-insurance",
@@ -9152,9 +9195,9 @@
               "sample": [
                 {
                   "t": [
-                    "#react-select-10046-input"
+                    "#react-select-15014-input"
                   ],
-                  "h": "<input class=\"\" style=\"label:input;color:in...\" autocapitalize=\"none\" autocomplete=\"off\" autocorrect=\"off\" id=\"react-select-10046-i...\" spellcheck=\"false\" tabindex=\"0\" type=\"text\" aria-autocomplete=\"list\" aria-expanded=\"false\" aria-haspopup…"
+                  "h": "<input class=\"\" style=\"label:input;color:in...\" autocapitalize=\"none\" autocomplete=\"off\" autocorrect=\"off\" id=\"react-select-15014-i...\" spellcheck=\"false\" tabindex=\"0\" type=\"text\" aria-autocomplete=\"list\" aria-expanded=\"false\" aria-haspopup…"
                 }
               ]
             },
@@ -9165,9 +9208,9 @@
               "sample": [
                 {
                   "t": [
-                    "#react-select-10046-input"
+                    "#react-select-15014-input"
                   ],
-                  "h": "<input class=\"\" style=\"label:input;color:in...\" autocapitalize=\"none\" autocomplete=\"off\" autocorrect=\"off\" id=\"react-select-10046-i...\" spellcheck=\"false\" tabindex=\"0\" type=\"text\" aria-autocomplete=\"list\" aria-expanded=\"false\" aria-haspopup…"
+                  "h": "<input class=\"\" style=\"label:input;color:in...\" autocapitalize=\"none\" autocomplete=\"off\" autocorrect=\"off\" id=\"react-select-15014-i...\" spellcheck=\"false\" tabindex=\"0\" type=\"text\" aria-autocomplete=\"list\" aria-expanded=\"false\" aria-haspopup…"
                 }
               ]
             },
@@ -9265,7 +9308,7 @@
             },
             {
               "selector": "div.css-1vf51wl-control",
-              "html": "<div class=\"css-1vf51wl-control\"><div class=\"css-xipmn9\"><div class=\"css-13xugr8-placeholder\" id=\"react-select-10046-placeholder\">What kind of work do you do?</div><div class=\"css-6sv2wd\" data-value=\"\"><input class=\"\" style=\"label:input;col…",
+              "html": "<div class=\"css-1vf51wl-control\"><div class=\"css-xipmn9\"><div class=\"css-13xugr8-placeholder\" id=\"react-select-15014-placeholder\">What kind of work do you do?</div><div class=\"css-6sv2wd\" data-value=\"\"><input class=\"\" style=\"label:input;col…",
               "tag": "div",
               "testId": null,
               "hasOnClickAttr": false,
@@ -9403,10 +9446,11 @@
             "total": 67,
             "inTree": 67
           },
-          "httpStatus": 200
+          "httpStatus": 200,
+          "axeVersion": "4.13.0"
         },
         "major": {
-          "url": "https://www.techinsurance.com/it-consultant-insurance",
+          "url": "https://www.techinsurance.com/technology-business-insurance/it-consulting",
           "violations": [
             {
               "id": "button-name",
@@ -9447,9 +9491,9 @@
               "sample": [
                 {
                   "t": [
-                    "#react-select-10048-input"
+                    "#react-select-15821-input"
                   ],
-                  "h": "<input class=\"\" style=\"label:input;color:in...\" autocapitalize=\"none\" autocomplete=\"off\" autocorrect=\"off\" id=\"react-select-10048-i...\" spellcheck=\"false\" tabindex=\"0\" type=\"text\" aria-autocomplete=\"list\" aria-expanded=\"false\" aria-haspopup…"
+                  "h": "<input class=\"\" style=\"label:input;color:in...\" autocapitalize=\"none\" autocomplete=\"off\" autocorrect=\"off\" id=\"react-select-15821-i...\" spellcheck=\"false\" tabindex=\"0\" type=\"text\" aria-autocomplete=\"list\" aria-expanded=\"false\" aria-haspopup…"
                 }
               ]
             },
@@ -9853,7 +9897,8 @@
             "total": 69,
             "inTree": 69
           },
-          "httpStatus": 200
+          "httpStatus": 200,
+          "axeVersion": "4.13.0"
         },
         "minor": {
           "url": "https://www.techinsurance.com/technology-business-insurance/software-development",
@@ -9897,9 +9942,9 @@
               "sample": [
                 {
                   "t": [
-                    "#react-select-10049-input"
+                    "#react-select-14463-input"
                   ],
-                  "h": "<input class=\"\" style=\"label:input;color:in...\" autocapitalize=\"none\" autocomplete=\"off\" autocorrect=\"off\" id=\"react-select-10049-i...\" spellcheck=\"false\" tabindex=\"0\" type=\"text\" aria-autocomplete=\"list\" aria-expanded=\"false\" aria-haspopup…"
+                  "h": "<input class=\"\" style=\"label:input;color:in...\" autocapitalize=\"none\" autocomplete=\"off\" autocorrect=\"off\" id=\"react-select-14463-i...\" spellcheck=\"false\" tabindex=\"0\" type=\"text\" aria-autocomplete=\"list\" aria-expanded=\"false\" aria-haspopup…"
                 }
               ]
             },
@@ -10303,7 +10348,8 @@
             "total": 69,
             "inTree": 69
           },
-          "httpStatus": 200
+          "httpStatus": 200,
+          "axeVersion": "4.13.0"
         },
         "article": {
           "url": "https://www.techinsurance.com/resources/how-to-file-a-business-insurance-claim",
@@ -10528,7 +10574,8 @@
             "total": 68,
             "inTree": 68
           },
-          "httpStatus": 200
+          "httpStatus": 200,
+          "axeVersion": "4.13.0"
         },
         "resources": {
           "url": "https://www.techinsurance.com/resources",
@@ -10578,9 +10625,9 @@
               "sample": [
                 {
                   "t": [
-                    "#react-select-9185-input"
+                    "#react-select-15015-input"
                   ],
-                  "h": "<input class=\"\" style=\"label:input;color:in...\" autocapitalize=\"none\" autocomplete=\"off\" autocorrect=\"off\" id=\"react-select-9185-in...\" spellcheck=\"false\" tabindex=\"0\" type=\"text\" aria-autocomplete=\"list\" aria-expanded=\"false\" aria-haspopup…"
+                  "h": "<input class=\"\" style=\"label:input;color:in...\" autocapitalize=\"none\" autocomplete=\"off\" autocorrect=\"off\" id=\"react-select-15015-i...\" spellcheck=\"false\" tabindex=\"0\" type=\"text\" aria-autocomplete=\"list\" aria-expanded=\"false\" aria-haspopup…"
                 }
               ]
             },
@@ -10591,9 +10638,9 @@
               "sample": [
                 {
                   "t": [
-                    "#react-select-9185-input"
+                    "#react-select-15015-input"
                   ],
-                  "h": "<input class=\"\" style=\"label:input;color:in...\" autocapitalize=\"none\" autocomplete=\"off\" autocorrect=\"off\" id=\"react-select-9185-in...\" spellcheck=\"false\" tabindex=\"0\" type=\"text\" aria-autocomplete=\"list\" aria-expanded=\"false\" aria-haspopup…"
+                  "h": "<input class=\"\" style=\"label:input;color:in...\" autocapitalize=\"none\" autocomplete=\"off\" autocorrect=\"off\" id=\"react-select-15015-i...\" spellcheck=\"false\" tabindex=\"0\" type=\"text\" aria-autocomplete=\"list\" aria-expanded=\"false\" aria-haspopup…"
                 }
               ]
             },
@@ -10685,7 +10732,7 @@
             },
             {
               "selector": "div.css-1vf51wl-control",
-              "html": "<div class=\"css-1vf51wl-control\"><div class=\"css-xipmn9\"><div class=\"css-13xugr8-placeholder\" id=\"react-select-9185-placeholder\">What kind of work do you do?</div><div class=\"css-6sv2wd\" data-value=\"\"><input class=\"\" style=\"label:input;colo…",
+              "html": "<div class=\"css-1vf51wl-control\"><div class=\"css-xipmn9\"><div class=\"css-13xugr8-placeholder\" id=\"react-select-15015-placeholder\">What kind of work do you do?</div><div class=\"css-6sv2wd\" data-value=\"\"><input class=\"\" style=\"label:input;col…",
               "tag": "div",
               "testId": null,
               "hasOnClickAttr": false,
@@ -10763,7 +10810,8 @@
             "total": 66,
             "inTree": 66
           },
-          "httpStatus": 200
+          "httpStatus": 200,
+          "axeVersion": "4.13.0"
         },
         "about": {
           "url": "https://www.techinsurance.com/about-us",
@@ -10944,7 +10992,8 @@
             "total": 66,
             "inTree": 66
           },
-          "httpStatus": 200
+          "httpStatus": 200,
+          "axeVersion": "4.13.0"
         },
         "contact": {
           "url": "https://www.techinsurance.com/contact-us",
@@ -11314,7 +11363,8 @@
             "total": 66,
             "inTree": 66
           },
-          "httpStatus": 200
+          "httpStatus": 200,
+          "axeVersion": "4.13.0"
         },
         "legal": {
           "url": "https://www.techinsurance.com/legal/privacy-policy",
@@ -11459,7 +11509,8 @@
             "total": 66,
             "inTree": 66
           },
-          "httpStatus": 200
+          "httpStatus": 200,
+          "axeVersion": "4.13.0"
         },
         "a11y-stmt": {
           "url": "https://www.techinsurance.com/legal/accessibility-statement",
@@ -11604,7 +11655,8 @@
             "total": 66,
             "inTree": 66
           },
-          "httpStatus": 200
+          "httpStatus": 200,
+          "axeVersion": "4.13.0"
         }
       }
     }

@@ -6,7 +6,6 @@ import {
   perPageProbeTotals,
   perPageRuleTotals,
   probeTotals,
-  rulesFailingByImpact,
   ruleTotals,
 } from '@/lib/aggregate';
 import { BRANDS, loadRuns, pageKeysUnion, runAtViewport, viewKey, type Brand } from '@/lib/loadRuns';
@@ -39,7 +38,6 @@ export default function RunsPage() {
         pageKeys: byBrand((b) => Object.keys(view[b] ?? {})),
         probeTotals: byBrand((b) => probeTotals(view, b)),
         probePerPage: byBrand((b) => perPageProbeTotals(view, b)),
-        impacts: byBrand((b) => rulesFailingByImpact(view, b)),
         hasProbes: BRANDS.some((b) => hasProbeData(view, b)),
       };
     }

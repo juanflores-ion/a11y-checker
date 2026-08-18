@@ -20,7 +20,6 @@ export interface RulesRunData {
   pageKeys: Record<Brand, string[]>;
   probeTotals: Record<Brand, Record<string, number>>;
   probePerPage: Record<Brand, Record<string, Record<string, number>>>;
-  impacts: Record<Brand, Record<Impact, number>>;
   hasProbes: boolean;
 }
 
@@ -61,10 +60,6 @@ export function RulesClient({
   if (!now) return <p className="text-sm text-muted">No scan data for this run.</p>;
 
   const cols = 1 + BRANDS.length;
-  const firing = BRANDS.map(
-    (b) =>
-      `${BRAND_SHORT[b]} ${now.impacts[b]?.critical ?? 0} critical · ${now.impacts[b]?.serious ?? 0} serious · ${now.impacts[b]?.moderate ?? 0} moderate`
-  ).join(' — ');
 
   return (
     <section aria-labelledby="by-check">
@@ -89,7 +84,7 @@ export function RulesClient({
         </THead>
         <TBody>
           <GroupRow colSpan={cols} variant="note">
-            Standard rulebook — axe-core {current?.axeVersion ?? 'version not recorded'} · rules firing: {firing}
+            Standard rulebook — axe-core
           </GroupRow>
           {ruleIds.map((id) => {
             const meta = ruleMeta(id);
@@ -152,7 +147,7 @@ export function RulesClient({
           })}
 
           <GroupRow colSpan={cols} variant="note">
-            Scanner checks — controls and links checked directly in the browser; no standard rule covers these · scanner {current?.probeVersion ?? 'version not recorded'}
+            Scanner checks — controls and links checked directly in the browser; no standard rule covers these
           </GroupRow>
           {!now.hasProbes ? (
             <tr>
