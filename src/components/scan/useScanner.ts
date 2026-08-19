@@ -98,6 +98,14 @@ function persist(key: string, value: string) {
   }
 }
 
+function forget(key: string) {
+  try {
+    window.localStorage.removeItem(key);
+  } catch {
+    // Nothing to do — the in-memory value is what this session uses anyway.
+  }
+}
+
 export function useScanner(): Scanner {
   const [serverUrl, setServerUrlState] = useState(HOSTED);
   const [token, setTokenState] = useState('');
@@ -105,7 +113,7 @@ export function useScanner(): Scanner {
   const [published, setPublished] = useState<PublishedScanner | null>(null);
   const abortRef = useRef<AbortController | null>(null);
 
-  const checkHealth = useCallback(async (url: string, tok: string) => {
+  const checkHealth = useCallback(async (url: string, tok: string): Promise<Health> => {
     setHealth('checking');
     try {
       const controller = new AbortController();
@@ -117,16 +125,19 @@ export function useScanner(): Scanner {
       clearTimeout(timeout);
       if (!res.ok) {
         setHealth('offline');
-        return;
+        return 'offline';
       }
       const body = (await res.json().catch(() => null)) as
         | { authRequired?: boolean; tokenAccepted?: boolean }
         | null;
       const tokenProblem =
         Boolean(body?.authRequired) && (!tok.trim() || body?.tokenAccepted === false);
-      setHealth(tokenProblem ? 'token' : 'online');
+      const resolved: Health = tokenProblem ? 'token' : 'online';
+      setHealth(resolved);
+      return resolved;
     } catch {
       setHealth('offline');
+      return 'offline';
     }
   }, []);
 
@@ -144,27 +155,52 @@ export function useScanner(): Scanner {
     if (savedToken) setTokenState(savedToken);
 
     /**
-     * Nothing saved here? Take whatever scanner is published. Read fresh every
-     * visit and never written to localStorage, so a browser follows the
-     * publisher to their next tunnel instead of holding a dead address.
+     * A saved address wins — but only while it answers.
+     *
+     * Each session's tunnel gets a fresh random hostname, so a browser that
+     * scanned last week holds an address that no longer exists. This branch
+     * used to stop there and report "Your scanner offline" forever, which is
+     * precisely the failure publishing exists to prevent: the dashboard knew
+     * the live address the whole time and never looked. Now a dead saved
+     * address is dropped and the published one takes over.
      */
     if (saved) {
-      checkHealth(saved, savedToken ?? '');
+      checkHealth(saved, savedToken ?? '').then((resolved) => {
+        if (resolved !== 'offline') return;
+        adoptPublished(saved);
+      });
     } else {
+      adoptPublished(null);
+    }
+
+    /**
+     * Take whatever scanner is published. Read fresh every visit and never
+     * written to localStorage, so a browser follows the publisher to their next
+     * tunnel instead of holding a dead address. `deadAddress` is the saved value
+     * being replaced, if any — it is forgotten so the next visit starts clean.
+     */
+    function adoptPublished(deadAddress: string | null) {
       fetch('/api/scanner', { cache: 'no-store' })
         .then((r) => (r.ok ? r.json() : null))
         .then((body: { published?: PublishedScanner | null } | null) => {
           const p = body?.published;
-          if (!p?.address) {
-            checkHealth(HOSTED, savedToken ?? '');
+          if (!p?.address || p.address === deadAddress) {
+            // Nothing better on offer; leave a dead saved address reported as dead.
+            if (!deadAddress) checkHealth(HOSTED, savedToken ?? '');
             return;
+          }
+          if (deadAddress) {
+            forget(STORAGE_KEY);
+            forget(TOKEN_STORAGE_KEY);
           }
           setServerUrlState(p.address);
           setTokenState(p.token ?? '');
           setPublished(p);
           checkHealth(p.address, p.token ?? '');
         })
-        .catch(() => checkHealth(HOSTED, savedToken ?? ''));
+        .catch(() => {
+          if (!deadAddress) checkHealth(HOSTED, savedToken ?? '');
+        });
     }
     return () => abortRef.current?.abort();
   }, [checkHealth]);

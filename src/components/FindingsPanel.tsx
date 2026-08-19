@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useId, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 
 import type { Finding, FindingSide } from '@/lib/findings';
 import { IMPACT_TEXT } from '@/lib/rules';
@@ -19,6 +20,15 @@ import { CodeSample, ImpactDot } from './Primitives';
  * labelled, modal, focus moved in and trapped, focus returned to the row that
  * opened it, Esc and scrim to close, its own scroll with the page behind it
  * locked. Anything less is the first thing a reviewer would find.
+ *
+ * **It renders through a portal onto `document.body`, and that is load-bearing.**
+ * Rendered in place it is still a child in its parent's layout: `CompareDetails`
+ * lays its blocks out with `space-y-5`, which sets `margin-top: 1.25rem` on every
+ * child but the first — including this one. A `position: fixed; inset: 0` element
+ * with a 20px top margin sits 20px down the viewport, and the sticky site header
+ * showed through the gap above it. A portal takes the panel out of every
+ * ancestor's layout, stacking context and containing block at once, so no utility
+ * class anywhere up the tree can move it again.
  */
 export function FindingsPanel({
   findings,
@@ -42,7 +52,44 @@ export function FindingsPanel({
   const [side, setSide] = useState<'before' | 'after'>('before');
 
   const open = index !== null && index >= 0 && index < findings.length;
-  const finding = open ? findings[index] : null;
+  const live = open ? findings[index] : null;
+  /**
+   * Kept so the panel still has something to draw while it slides out. Without
+   * it the contents vanish on the first frame of the exit and the animation
+   * plays over an empty box.
+   */
+  const lastRef = useRef<Finding | null>(null);
+  if (live) lastRef.current = live;
+  const finding = live ?? lastRef.current;
+
+  /** `mounted` = in the DOM. `shown` = in its open position. */
+  const [mounted, setMounted] = useState(false);
+  const [shown, setShown] = useState(false);
+
+  useEffect(() => {
+    if (open) {
+      setMounted(true);
+      /**
+       * Two frames, not one. React commits the mount and a single rAF callback
+       * inside the same frame, so the browser never paints the panel in its
+       * closed position and there is nothing to transition from — measured: the
+       * dialog's first observed state was already `translate-x-0`. Waiting for a
+       * second frame guarantees the closed state has been painted.
+       */
+      let inner = 0;
+      const outer = requestAnimationFrame(() => {
+        inner = requestAnimationFrame(() => setShown(true));
+      });
+      return () => {
+        cancelAnimationFrame(outer);
+        cancelAnimationFrame(inner);
+      };
+    }
+    setShown(false);
+    const still = reducedMotion() ? 0 : EXIT_MS;
+    const timer = setTimeout(() => setMounted(false), still);
+    return () => clearTimeout(timer);
+  }, [open]);
 
   /** A new finding is a new comparison; start it on the side that has the fix. */
   useEffect(() => {
@@ -50,7 +97,7 @@ export function FindingsPanel({
   }, [index]);
 
   useEffect(() => {
-    if (!open) return;
+    if (!mounted) return;
     openerRef.current = document.activeElement as HTMLElement | null;
     /**
      * The page behind must not scroll — the whole point is that it keeps its
@@ -70,7 +117,7 @@ export function FindingsPanel({
       body.style.paddingRight = previous.paddingRight;
       openerRef.current?.focus?.();
     };
-  }, [open]);
+  }, [mounted]);
 
   const step = useCallback(
     (delta: number) => {
@@ -87,7 +134,7 @@ export function FindingsPanel({
    * a handful of buttons, and a dependency here would be the only one.
    */
   useEffect(() => {
-    if (!open) return;
+    if (!mounted) return;
     function onKeyDown(event: KeyboardEvent) {
       if (event.key === 'Escape') {
         event.preventDefault();
@@ -117,23 +164,30 @@ export function FindingsPanel({
     }
     document.addEventListener('keydown', onKeyDown);
     return () => document.removeEventListener('keydown', onKeyDown);
-  }, [open, onClose]);
+  }, [mounted, onClose]);
 
-  if (!open || !finding) return null;
+  if (!mounted || !finding) return null;
 
   // Bound to a local so TypeScript narrows the union across the JSX below.
   const sides = finding.sides;
   const pair = sides.kind === 'pair' ? sides : null;
   const single = sides.kind === 'single' ? sides.only : null;
-  const shown: FindingSide | null = pair ? pair[side] : single;
+  const shownSide: FindingSide | null = pair ? pair[side] : single;
 
-  return (
-    <div className="fixed inset-0 z-50 flex justify-end">
+  const body = (
+    /*
+      `m-0` is not decoration: it defends the fixed overlay against a parent's
+      `space-y-*` margin, which is the bug that put the panel 20px down the page.
+      The portal already prevents it; the reset makes the intent local.
+    */
+    <div className="fixed inset-0 z-[60] m-0 flex justify-end">
       {/* Decorative: Esc and the labelled close button are the real controls. */}
       <div
         aria-hidden="true"
         onClick={onClose}
-        className="absolute inset-0 bg-paper/70 backdrop-blur-[2px]"
+        className={`absolute inset-0 bg-paper/80 backdrop-blur-sm transition-opacity duration-200 ease-out ${
+          shown ? 'opacity-100' : 'opacity-0'
+        }`}
       />
 
       <div
@@ -142,7 +196,9 @@ export function FindingsPanel({
         aria-modal="true"
         aria-labelledby={titleId}
         tabIndex={-1}
-        className="relative flex h-full w-full flex-col border-l border-rule bg-card shadow-pop outline-none sm:w-[560px]"
+        className={`relative flex h-full w-full flex-col border-l border-rule bg-card shadow-pop outline-none transition-transform duration-200 ease-out sm:w-[560px] ${
+          shown ? 'translate-x-0' : 'translate-x-full'
+        }`}
       >
         <header className="flex flex-col gap-3 border-b border-rule p-5">
           <div className="flex items-start gap-3">
@@ -184,7 +240,7 @@ export function FindingsPanel({
         </header>
 
         <div className="flex-1 overflow-y-auto p-5">
-          <Evidence side={shown} />
+          <Evidence side={shownSide} />
         </div>
 
         <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-rule px-5 py-3">
@@ -199,6 +255,20 @@ export function FindingsPanel({
       </div>
     </div>
   );
+
+  return createPortal(body, document.body);
+}
+
+/** Exit needs a timer, and that timer has to agree with the CSS. */
+const EXIT_MS = 200;
+
+/**
+ * `globals.css` already collapses every transition under `prefers-reduced-motion`,
+ * so the panel snaps rather than slides. The unmount timer has to agree, or the
+ * panel would linger for 200ms after it stopped being visible.
+ */
+function reducedMotion(): boolean {
+  return typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 }
 
 /**
