@@ -130,6 +130,40 @@ export function FullScanRunner({ targets }: { targets: ScanTarget[] }) {
           })
           .filter((t): t is ScanTarget => t !== null);
 
+  /**
+   * The variants the most recent run of this environment recorded, keyed
+   * `viewport/brand/page`.
+   *
+   * Insureon's homepage is one Sitecore item under a content test that serves
+   * three documents from one URL. Two staging runs an hour apart, nothing
+   * deployed, read 47 and 28 failing elements on it — the whole difference was
+   * which hero the test served. Landing on the same variant as the previous
+   * run is what makes the two runs comparable at all, so the run asks for it
+   * and retries when it gets something else.
+   */
+  async function previousIdentities(): Promise<Map<string, string>> {
+    const wanted = new Map<string, string>();
+    try {
+      const index = await fetch('/api/runs', { cache: 'no-store' }).then((r) => r.json());
+      const previous = (index?.runs ?? [])
+        .filter((r: { environment: string }) => r.environment === target)
+        .pop();
+      if (!previous) return wanted;
+      const full = await fetch(`/api/runs?id=${encodeURIComponent(previous.id)}`, { cache: 'no-store' }).then((r) => r.json());
+      for (const [vp, brands] of Object.entries(full?.byViewport ?? {})) {
+        for (const [brand, pages] of Object.entries(brands as Record<string, Record<string, PageResult>>)) {
+          for (const [key, page] of Object.entries(pages)) {
+            const value = page && 'identity' in page ? page.identity?.value : null;
+            if (value) wanted.set(`${vp}/${brand}/${key}`, value);
+          }
+        }
+      }
+    } catch {
+      // No index, no previous run, no network — the run simply records what it gets.
+    }
+    return wanted;
+  }
+
   async function run() {
     const total = scanTargets.length * viewports.length;
     setStatus('running');
@@ -155,6 +189,8 @@ export function FullScanRunner({ targets }: { targets: ScanTarget[] }) {
        * — these sites pick their markup from the user-agent server-side, so a
        * mismatched pair measures a page no visitor is ever served.
        */
+      const wanted = await previousIdentities();
+
       for (const viewport of viewports) {
         const byBrand: Record<string, Record<string, PageResult>> = {};
 
@@ -198,13 +234,43 @@ export function FullScanRunner({ targets }: { targets: ScanTarget[] }) {
             }
           }
           // Results come back in request order, so they pair positionally.
-          batch.forEach((target, n) => {
-            const result = body.results?.[n];
-            if (!result) return;
+          for (const [n, scanned] of batch.entries()) {
+            let result = body.results?.[n];
+            if (!result) continue;
+
+            /**
+             * Up to two more goes at a page that served a different document
+             * than last time. Not silent: `identityAttempts` records how many
+             * loads it took, and a page that never matches is kept as measured
+             * rather than dropped — the run says what it saw, always.
+             */
+            const want = wanted.get(`${viewport}/${scanned.brand}/${scanned.key}`);
+            let attempts = 1;
+            const servedVariant = (r: typeof result): string | null =>
+              r && !('error' in r) && 'identity' in r ? r.identity?.value ?? null : null;
+            while (want && servedVariant(result) && servedVariant(result) !== want && attempts < 3) {
+              const served = servedVariant(result);
+              setProgress((p) => ({
+                ...p,
+                current: `${scanned.url} — served ${served}, wanted ${want}, retrying`,
+              }));
+              const retry = await scanner.scan({
+                urls: [{ url: scanned.url, brand: scanned.brand, key: scanned.key }],
+                viewport,
+              });
+              const next = retry.results?.[0];
+              attempts += 1;
+              if (!next) break;
+              result = next;
+            }
+            if (attempts > 1 && !('error' in result)) {
+              result = { ...result, identityAttempts: attempts };
+            }
+
             axeVersion ??= result.axeVersion ?? null;
             if (result.error) failures += 1;
-            (byBrand[target.brand] ??= {})[target.key] = result;
-          });
+            (byBrand[scanned.brand] ??= {})[scanned.key] = result;
+          }
 
           done += batch.length;
           setProgress((p) => ({ ...p, done: Math.min(done, total), failures }));
