@@ -124,3 +124,57 @@ export function Notice({
     </div>
   );
 }
+
+/**
+ * A rightwards arrow, drawn rather than typed.
+ *
+ * `→` (U+2192) is absent from JetBrains Mono, and every before/after figure in
+ * this app sits in a `font-mono` run — so the glyph that carries the meaning of
+ * "this became that" was rendering as a tofu box on the compare card and the
+ * full-run footer. Drawing it keeps it identical in every font context.
+ */
+export function Arrow({ className = '' }: { className?: string }) {
+  return (
+    <svg
+      aria-hidden="true"
+      width="13"
+      height="9"
+      viewBox="0 0 14 10"
+      className={`inline-block shrink-0 align-[-0.05em] ${className}`}
+    >
+      <path
+        d="M1 5h11M8.5 1.5L12 5l-3.5 3.5"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        fill="none"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+/**
+ * The open/closed marker on a `<details>` summary. `▾` (U+25BE) is not in Inter
+ * either; this rotates instead, so the state is visible without a glyph.
+ */
+export function Caret({ className = '' }: { className?: string }) {
+  return (
+    <svg
+      aria-hidden="true"
+      width="10"
+      height="10"
+      viewBox="0 0 12 12"
+      className={`ml-1 inline-block shrink-0 align-[-0.05em] transition-transform group-open:rotate-90 ${className}`}
+    >
+      <path
+        d="M4.5 3L8 6l-3.5 3"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        fill="none"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}

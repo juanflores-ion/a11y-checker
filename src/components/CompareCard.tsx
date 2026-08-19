@@ -1,10 +1,8 @@
-import { makeDelta } from '@/lib/aggregate';
 import { isFailedPage, VIEWPORT_LABEL } from '@/lib/model';
 import { summariseDiff, type CompareLine, type CompareVerdict, type NotComparable, type PageDiff } from '@/lib/compare';
 import { ruleMeta } from '@/lib/rules';
-import { DeltaChip, Eyebrow, ImpactDot, Notice } from './Primitives';
-import { ScanResultCard } from './ScanResultCard';
-import { NumCell, Table, TBody, Td, Th, THead } from './ui/Table';
+import { CompareDetails } from './CompareDetails';
+import { Arrow, Caret, Eyebrow, ImpactDot, Notice } from './Primitives';
 
 const NOT_COMPARABLE_REASON: Record<NotComparable, string> = {
   'not-measured': 'a side was never measured',
@@ -41,15 +39,6 @@ export function CompareCard({ diff, title }: { diff: PageDiff; title?: string })
   /** A URL was given and nothing at all came back for it — not even an error. */
   const beforeAbsent = !beforeMissing && diff.before === null;
   const afterAbsent = !afterMissing && diff.after === null;
-
-  const comparable = !diff.notComparable;
-  /**
-   * A cross-profile pair shows no figures whatsoever — not even side by side
-   * with the delta suppressed, because two numbers with an arrow between them
-   * is a diff however it's captioned. The two scans are still readable on their
-   * own terms in the full detail below.
-   */
-  const showFigures = !diff.viewportMismatch && !diff.identityMismatch;
 
   const summary = summariseDiff(diff);
 
@@ -184,83 +173,10 @@ export function CompareCard({ diff, title }: { diff: PageDiff; title?: string })
 
       <details className="group">
         <summary className="cursor-pointer text-eyebrow font-medium text-accent [&::-webkit-details-marker]:hidden">
-          Details · every check, both sides, raw counts ▾
+          Details · every check, both sides, raw counts
+          <Caret />
         </summary>
-        <div className="mt-4 space-y-5">
-          {diff.rules.length > 0 ? (
-            <Table label="Rule-by-rule comparison">
-              <THead>
-                <tr>
-                  <Th>Check</Th>
-                  <Th align="right">Before</Th>
-                  <Th align="right">After</Th>
-                  <Th align="right">Change</Th>
-                </tr>
-              </THead>
-              <TBody>
-                {diff.rules.map((r) => {
-                  const meta = ruleMeta(r.id);
-                  return (
-                    <tr key={r.id}>
-                      <Td>
-                        <span className="flex items-center gap-2">
-                          <ImpactDot impact={meta.impact} />
-                          {meta.label}
-                        </span>
-                      </Td>
-                      <NumCell tone="neutral" text={String(r.before)} />
-                      <NumCell tone="neutral" text={String(r.after)} />
-                      <Td align="right">
-                        <DeltaChip delta={makeDelta(r.after, r.before, meta.exact, r.id)} />
-                      </Td>
-                    </tr>
-                  );
-                })}
-              </TBody>
-            </Table>
-          ) : null}
-
-          {/*
-            Demoted, not deleted. It over-reports on exactly the code that has
-            been fixed, so it cannot sit next to a verdict — but it is still a
-            lead worth having once you are reading detail.
-          */}
-          {showFigures ? (
-            <div className="flex flex-wrap items-baseline gap-x-5 gap-y-1.5">
-              <DeltaFigure
-                label="Phantom focusable"
-                before={diff.phantomBefore}
-                after={diff.phantomAfter}
-                comparable={comparable}
-                size="small"
-              />
-              <p className="max-w-measure text-xs leading-relaxed text-faint">
-                Counts every focusable control inside the closed mega-menu, including panels a
-                disclosure button correctly announces — so it over-reports on exactly the code
-                that has been fixed. A lead to check by hand, not a verdict.
-              </p>
-            </div>
-          ) : null}
-
-          <div className="grid gap-6 lg:grid-cols-2">
-            <div>
-              <Eyebrow className="mb-2">Before · {diff.beforeUrl || 'not given'}</Eyebrow>
-              {diff.before && !isFailedPage(diff.before) ? (
-                <ScanResultCard page={diff.before} compact />
-              ) : (
-                <p className="text-sm text-faint">Not measured.</p>
-              )}
-            </div>
-            <div>
-              <Eyebrow className="mb-2">After · {diff.afterUrl || 'not given'}</Eyebrow>
-              {diff.after && !isFailedPage(diff.after) ? (
-                <ScanResultCard page={diff.after} compact />
-              ) : (
-                <p className="text-sm text-faint">Not measured.</p>
-              )}
-            </div>
-          </div>
-        </div>
+        <CompareDetails diff={diff} />
       </details>
     </div>
   );
@@ -298,7 +214,7 @@ function MovedRow({ line }: { line: CompareLine }) {
       <span className="flex items-baseline gap-4 font-mono text-xs tnum">
         <span className="text-muted">
           <span className="font-medium text-ink">{line.before}</span>
-          <span className="px-1.5 text-faint">→</span>
+          <Arrow className="mx-1.5 text-faint" />
           <span className="font-medium text-ink">{line.after}</span>
         </span>
         <span className={`font-medium ${better ? 'text-good' : 'text-critical'}`}>
@@ -337,111 +253,3 @@ function hostOf(url: string): string {
   }
 }
 
-function UrlLabel({
-  label,
-  url,
-  viewport,
-}: {
-  label: string;
-  url: string;
-  viewport: string | null;
-}) {
-  return (
-    <div className="min-w-0">
-      <Eyebrow>{label}</Eyebrow>
-      <p className="mt-0.5 truncate font-mono text-xs text-muted">{url || '—'}</p>
-      {/*
-        Which profile a figure came from is part of what the figure means here:
-        these sites branch their markup on the device, server-side. Saying
-        nothing would leave "compared two different pages" indistinguishable
-        from "compared like with like".
-      */}
-      <p
-        className="mt-0.5 text-xs text-faint"
-        title={
-          viewport
-            ? 'The device profile this side was measured at. Both sides must match.'
-            : 'The caller did not state which device profile this side was measured at, so a cross-profile pair cannot be detected.'
-        }
-      >
-        {viewport ? viewportLabel(viewport) : 'profile not recorded'}
-      </p>
-    </div>
-  );
-}
-
-const FIGURE_SIZE: Record<'lead' | 'normal' | 'small', string> = {
-  lead: 'text-2xl',
-  normal: 'text-xl',
-  small: 'text-base',
-};
-
-/**
- * before → after for one metric, with the delta *only* when there is a real
- * one to state. A null side prints "not measured" and suppresses the delta
- * rather than treating absence as a zero to subtract from.
- */
-function DeltaFigure({
-  label,
-  before,
-  after,
-  comparable = true,
-  size = 'normal',
-}: {
-  label: string;
-  before: number | null;
-  after: number | null;
-  comparable?: boolean;
-  size?: 'lead' | 'normal' | 'small';
-}) {
-  const change = comparable && before !== null && after !== null ? after - before : null;
-  const improving = change !== null && change < 0;
-
-  return (
-    <div>
-      <Eyebrow>{label}</Eyebrow>
-      <div className="mt-1 flex items-baseline gap-2">
-        <Figure value={before} className="font-mono text-sm tnum text-faint" />
-        <span aria-hidden="true" className="text-faint">
-          →
-        </span>
-        <Figure
-          value={after}
-          className={`font-mono ${FIGURE_SIZE[size]} font-bold tnum text-ink`}
-        />
-        {change === null ? (
-          <span
-            className="font-mono text-xs text-faint"
-            title="Nothing valid to compare against, so no change is reported. That is absence, not a flat result."
-          >
-            no comparison
-          </span>
-        ) : change !== 0 ? (
-          <span
-            className={`font-mono text-xs tnum ${improving ? 'text-good' : 'text-critical'}`}
-          >
-            {improving ? '−' : '+'}
-            {Math.abs(change)}
-          </span>
-        ) : (
-          <span className="font-mono text-xs text-faint">no change</span>
-        )}
-      </div>
-    </div>
-  );
-}
-
-/** A measured figure, or the fact that there isn't one. Never a stand-in zero. */
-function Figure({ value, className }: { value: number | null; className: string }) {
-  if (value === null) {
-    return (
-      <span
-        className="font-mono text-sm text-faint"
-        title="This side was not measured — no scan, or a scanner with no such check. Absence, not zero."
-      >
-        not measured
-      </span>
-    );
-  }
-  return <span className={className}>{value.toLocaleString()}</span>;
-}
