@@ -1,7 +1,7 @@
 {
   "meta": {
-    "startedAt": "2026-08-19T15:34:22.154Z",
-    "finishedAt": "2026-08-19T15:37:33.562Z",
+    "startedAt": "2026-08-19T16:07:30.793Z",
+    "finishedAt": "2026-08-19T16:11:49.868Z",
     "environment": "production",
     "axeVersion": "4.13.0",
     "primaryViewport": "desktop",
@@ -21,7 +21,7 @@
     "browserVersion": "Chromium 151.0.7922.138",
     "browserPath": "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
     "scannedBy": "scan-server",
-    "label": "fresh baseline"
+    "label": "baseline with all homepage variants"
   },
   "byViewport": {
     "desktop": {
@@ -370,7 +370,638 @@
           "identity": {
             "key": "homepage-variant",
             "value": "Variant A"
-          }
+          },
+          "variants": {
+            "Variant B": {
+              "url": "https://www.insureon.com/",
+              "violations": [
+                {
+                  "id": "landmark-one-main",
+                  "impact": "moderate",
+                  "n": 1,
+                  "sample": [
+                    {
+                      "t": [
+                        "html"
+                      ],
+                      "h": "<html lang=\"en\">"
+                    }
+                  ]
+                },
+                {
+                  "id": "link-in-text-block",
+                  "impact": "serious",
+                  "n": 1,
+                  "sample": [
+                    {
+                      "t": [
+                        "a[href=\"/\"][rel=\"\"][target=\"\"]"
+                      ],
+                      "h": "<a href=\"/\" title=\"Insureon: Online Business Insurance Agency\" target=\"\" rel=\"\">Insureon</a>"
+                    }
+                  ]
+                },
+                {
+                  "id": "region",
+                  "impact": "moderate",
+                  "n": 26,
+                  "sample": [
+                    {
+                      "t": [
+                        ".headline_cu1i6"
+                      ],
+                      "h": "<h2 class=\"headline_cu1i6\"><p>Real policies. <br>\nReal rates. <br>\nNo surprises.</p></h2>"
+                    },
+                    {
+                      "t": [
+                        ".subhead_cu1i6"
+                      ],
+                      "h": "<div class=\"subhead_cu1i6\"><p>Review costs and confidently choose your coverage.</p></div>"
+                    }
+                  ]
+                }
+              ],
+              "namelessButtons": [],
+              "namelessLinks": [],
+              "emptyHref": [],
+              "hasMain": false,
+              "ghostControls": [
+                {
+                  "selector": "div.searchIcon_4HbXy",
+                  "html": "<div class=\"searchIcon_4HbXy\"><img src=\"/dist/cms-sitecore/static/media/icon-gnav-search.1e3fb7c177722568e5fdd8492a3daff5.svg\" alt=\"Search Icon\"></div>",
+                  "tag": "div",
+                  "testId": null,
+                  "hasOnClickAttr": false,
+                  "cursorPointer": true,
+                  "keyboardReachable": false,
+                  "confirmedListener": true,
+                  "listenerScript": "https://www.insureon.com/dist/cms-sitecore/static/js/main.f7e9a8eb.js",
+                  "listenerIsShared": false
+                }
+              ],
+              "clickableNoRole": 1,
+              "hiddenPanels": [],
+              "phantomMenu": null,
+              "unreachablePanels": [
+                {
+                  "selector": "div.megaMenu_Y6Awg",
+                  "why": [
+                    "display: none"
+                  ],
+                  "inNav": true,
+                  "links": 16,
+                  "buttons": 0,
+                  "focusable": 16,
+                  "hasTrigger": false,
+                  "triggerInTree": false,
+                  "announced": false,
+                  "triggerSelector": null,
+                  "sample": "<div class=\"megaMenu_Y6Awg megaMenu_2Umgj\"><div class=\"wrap_2Umgj\"><div class=\"row_2Umgj\"><div class=\"title_2Umgj\">BROWSE BY INDUSTRY</div><div class=\"columnWrap_2Umgj\"><div class=\"column_2Umgj\"><a href=\"/design-business-insurance\" title=\"B"
+                },
+                {
+                  "selector": "div.megaMenu_Y6Awg",
+                  "why": [
+                    "display: none"
+                  ],
+                  "inNav": true,
+                  "links": 12,
+                  "buttons": 0,
+                  "focusable": 12,
+                  "hasTrigger": false,
+                  "triggerInTree": false,
+                  "announced": false,
+                  "triggerSelector": null,
+                  "sample": "<div class=\"megaMenu_Y6Awg megaMenu_2Umgj\"><div class=\"wrap_2Umgj\"><div class=\"row_2Umgj\"><div class=\"title_2Umgj\">Browse by Insurance Policy</div><div class=\"columnWrap_2Umgj\"><div class=\"column_2Umgj\"><a href=\"/small-business-insurance/ge"
+                },
+                {
+                  "selector": "div.megaMenu_Y6Awg",
+                  "why": [
+                    "display: none"
+                  ],
+                  "inNav": true,
+                  "links": 12,
+                  "buttons": 0,
+                  "focusable": 12,
+                  "hasTrigger": false,
+                  "triggerInTree": false,
+                  "announced": false,
+                  "triggerSelector": null,
+                  "sample": "<div class=\"megaMenu_Y6Awg megaMenu_2Umgj\"><div class=\"wrap_2Umgj\"><div class=\"row_2Umgj\"><div class=\"title_2Umgj\">Learn more about insurance costs</div><div class=\"columnWrap_2Umgj\"><div class=\"column_2Umgj\"><a href=\"/small-business-insura"
+                },
+                {
+                  "selector": "div.megaMenu_Y6Awg",
+                  "why": [
+                    "display: none"
+                  ],
+                  "inNav": true,
+                  "links": 8,
+                  "buttons": 0,
+                  "focusable": 8,
+                  "hasTrigger": false,
+                  "triggerInTree": false,
+                  "announced": false,
+                  "triggerSelector": null,
+                  "sample": "<div class=\"megaMenu_Y6Awg megaMenu_2Umgj\"><div class=\"wrap_2Umgj\"><div class=\"row_2Umgj\"><div class=\"title_2Umgj\">Learn more about Business Insurance</div><div class=\"columnWrap_2Umgj\"><div class=\"column_2Umgj\"><a href=\"/blog\" title=\"Small"
+                },
+                {
+                  "selector": "div.megaMenu_Y6Awg",
+                  "why": [
+                    "display: none"
+                  ],
+                  "inNav": true,
+                  "links": 8,
+                  "buttons": 0,
+                  "focusable": 8,
+                  "hasTrigger": false,
+                  "triggerInTree": false,
+                  "announced": false,
+                  "triggerSelector": null,
+                  "sample": "<div class=\"megaMenu_Y6Awg megaMenu_2Umgj\"><div class=\"wrap_2Umgj\"><div class=\"row_2Umgj\"><div class=\"title_2Umgj\">Learn more about Insureon</div><div class=\"columnWrap_2Umgj\"><div class=\"column_2Umgj\"><a href=\"/about-us/why-choose-insureon"
+                },
+                {
+                  "selector": "div#5f814473-9412-4766-9f00-c84be2245a11-panel.panel_ReFIs",
+                  "why": [
+                    "content-visibility: hidden"
+                  ],
+                  "inNav": false,
+                  "links": 4,
+                  "buttons": 0,
+                  "focusable": 4,
+                  "hasTrigger": true,
+                  "triggerInTree": true,
+                  "announced": true,
+                  "triggerSelector": "button#5f814473-9412-4766-9f00-c84be2245a11-toggle.rowToggle_ReFIs",
+                  "sample": "<div id=\"5f814473-9412-4766-9f00-c84be2245a11-panel\" role=\"region\" aria-labelledby=\"5f814473-9412-4766-9f00-c84be2245a11-toggle\" class=\"panel_ReFIs\" hidden=\"until-found\" style=\"height: 0px;\"><div class=\"answer_ReFIs\"><p><a href=\"/small-busi"
+                }
+              ],
+              "unreachableTotals": {
+                "panels": 6,
+                "unannouncedPanels": 5,
+                "unannouncedFocusable": 56,
+                "unannouncedLinks": 56
+              },
+              "navLinks": {
+                "total": 63,
+                "inTree": 7
+              },
+              "httpStatus": 200,
+              "axeVersion": "4.13.0",
+              "identity": {
+                "key": "homepage-variant",
+                "value": "Variant B"
+              }
+            },
+            "Variant C": {
+              "url": "https://www.insureon.com/",
+              "violations": [
+                {
+                  "id": "landmark-one-main",
+                  "impact": "moderate",
+                  "n": 1,
+                  "sample": [
+                    {
+                      "t": [
+                        "html"
+                      ],
+                      "h": "<html lang=\"en\">"
+                    }
+                  ]
+                },
+                {
+                  "id": "link-in-text-block",
+                  "impact": "serious",
+                  "n": 1,
+                  "sample": [
+                    {
+                      "t": [
+                        "a[href=\"/\"][rel=\"\"][target=\"\"]"
+                      ],
+                      "h": "<a href=\"/\" title=\"Insureon: Online Business Insurance Agency\" target=\"\" rel=\"\">Insureon</a>"
+                    }
+                  ]
+                },
+                {
+                  "id": "region",
+                  "impact": "moderate",
+                  "n": 66,
+                  "sample": [
+                    {
+                      "t": [
+                        ".headline_3mkWq"
+                      ],
+                      "h": "<h2 class=\"headline_3mkWq\"><p>Find coverage that fits <span class=\"royal-purple\">your</span> business.</p></h2>"
+                    },
+                    {
+                      "t": [
+                        "#\\34 6ba8910-d2fc-4741-8687-f580971dfb4f-panel > .headingCol_3mkWq"
+                      ],
+                      "h": "<div class=\"headingCol_3mkWq\">"
+                    }
+                  ]
+                }
+              ],
+              "namelessButtons": [],
+              "namelessLinks": [],
+              "emptyHref": [],
+              "hasMain": false,
+              "ghostControls": [
+                {
+                  "selector": "div.searchIcon_4HbXy",
+                  "html": "<div class=\"searchIcon_4HbXy\"><img src=\"/dist/cms-sitecore/static/media/icon-gnav-search.1e3fb7c177722568e5fdd8492a3daff5.svg\" alt=\"Search Icon\"></div>",
+                  "tag": "div",
+                  "testId": null,
+                  "hasOnClickAttr": false,
+                  "cursorPointer": true,
+                  "keyboardReachable": false,
+                  "confirmedListener": true,
+                  "listenerScript": "https://www.insureon.com/dist/cms-sitecore/static/js/main.f7e9a8eb.js",
+                  "listenerIsShared": false
+                },
+                {
+                  "selector": "div.headingCol_3mkWq",
+                  "html": "<div class=\"headingCol_3mkWq\"><span class=\"heading_3mkWq\">Professional liability insurance</span><div class=\"body_3mkWq\">Also called errors and omissions (E&amp;O) insurance, this policy can help cover legal expenses if a business is sued f…",
+                  "tag": "div",
+                  "testId": null,
+                  "hasOnClickAttr": false,
+                  "cursorPointer": true,
+                  "keyboardReachable": false,
+                  "confirmedListener": false,
+                  "listenerScript": "https://www.insureon.com/cdn-cgi/scripts/7d0fa10a/cloudflare-static/rocket-loader.min.js",
+                  "listenerIsShared": true
+                },
+                {
+                  "selector": "span.bestForLabel_3mkWq",
+                  "html": "<span class=\"bestForLabel_3mkWq\">BEST FOR:</span>",
+                  "tag": "span",
+                  "testId": null,
+                  "hasOnClickAttr": false,
+                  "cursorPointer": true,
+                  "keyboardReachable": false,
+                  "confirmedListener": false,
+                  "listenerScript": "https://www.insureon.com/cdn-cgi/scripts/7d0fa10a/cloudflare-static/rocket-loader.min.js",
+                  "listenerIsShared": true
+                },
+                {
+                  "selector": "div.itemsCol_3mkWq",
+                  "html": "<div class=\"itemsCol_3mkWq\"><div class=\"bestForItems_3mkWq\"><p>Professional negligence lawsuits</p><p>Project scope disputes</p><p>Work mistakes or oversights</p></div><button type=\"button\" class=\"cta_3mkWq\" data-tag=\"policy-cards-v3-cta\" t…",
+                  "tag": "div",
+                  "testId": null,
+                  "hasOnClickAttr": false,
+                  "cursorPointer": true,
+                  "keyboardReachable": false,
+                  "confirmedListener": false,
+                  "listenerScript": "https://www.insureon.com/cdn-cgi/scripts/7d0fa10a/cloudflare-static/rocket-loader.min.js",
+                  "listenerIsShared": true
+                },
+                {
+                  "selector": "div.headingCol_3mkWq",
+                  "html": "<div class=\"headingCol_3mkWq\"><span class=\"heading_3mkWq\">Workers’ compensation insurance</span><div class=\"body_3mkWq\">Workers’ comp covers medical costs and lost wages for work-related injuries and illnesses. It is required in almost ever…",
+                  "tag": "div",
+                  "testId": null,
+                  "hasOnClickAttr": false,
+                  "cursorPointer": true,
+                  "keyboardReachable": false,
+                  "confirmedListener": false,
+                  "listenerScript": "https://www.insureon.com/cdn-cgi/scripts/7d0fa10a/cloudflare-static/rocket-loader.min.js",
+                  "listenerIsShared": true
+                },
+                {
+                  "selector": "span.bestForLabel_3mkWq",
+                  "html": "<span class=\"bestForLabel_3mkWq\">BEST FOR:</span>",
+                  "tag": "span",
+                  "testId": null,
+                  "hasOnClickAttr": false,
+                  "cursorPointer": true,
+                  "keyboardReachable": false,
+                  "confirmedListener": false,
+                  "listenerScript": "https://www.insureon.com/cdn-cgi/scripts/7d0fa10a/cloudflare-static/rocket-loader.min.js",
+                  "listenerIsShared": true
+                },
+                {
+                  "selector": "div.itemsCol_3mkWq",
+                  "html": "<div class=\"itemsCol_3mkWq\"><div class=\"bestForItems_3mkWq\"><p>Employee medical expenses</p><p>Disability benefits</p><p>Lawsuits from employee injuries</p></div><button type=\"button\" class=\"cta_3mkWq\" data-tag=\"policy-cards-v3-cta\" tabinde…",
+                  "tag": "div",
+                  "testId": null,
+                  "hasOnClickAttr": false,
+                  "cursorPointer": true,
+                  "keyboardReachable": false,
+                  "confirmedListener": false,
+                  "listenerScript": "https://www.insureon.com/cdn-cgi/scripts/7d0fa10a/cloudflare-static/rocket-loader.min.js",
+                  "listenerIsShared": true
+                },
+                {
+                  "selector": "div.headingCol_3mkWq",
+                  "html": "<div class=\"headingCol_3mkWq\"><span class=\"heading_3mkWq\">Errors and omissions insurance</span><div class=\"body_3mkWq\">Sometimes called professional liability insurance, errors and omissions (E&amp;O) helps cover legals costs if a client cl…",
+                  "tag": "div",
+                  "testId": null,
+                  "hasOnClickAttr": false,
+                  "cursorPointer": true,
+                  "keyboardReachable": false,
+                  "confirmedListener": false,
+                  "listenerScript": "https://www.insureon.com/cdn-cgi/scripts/7d0fa10a/cloudflare-static/rocket-loader.min.js",
+                  "listenerIsShared": true
+                },
+                {
+                  "selector": "span.bestForLabel_3mkWq",
+                  "html": "<span class=\"bestForLabel_3mkWq\">BEST FOR:</span>",
+                  "tag": "span",
+                  "testId": null,
+                  "hasOnClickAttr": false,
+                  "cursorPointer": true,
+                  "keyboardReachable": false,
+                  "confirmedListener": false,
+                  "listenerScript": "https://www.insureon.com/cdn-cgi/scripts/7d0fa10a/cloudflare-static/rocket-loader.min.js",
+                  "listenerIsShared": true
+                },
+                {
+                  "selector": "div.itemsCol_3mkWq",
+                  "html": "<div class=\"itemsCol_3mkWq\"><div class=\"bestForItems_3mkWq\"><p>Mistakes and oversights</p>\n<p>Breach of contract</p>\n<p>Missed deadlines</p></div><button type=\"button\" class=\"cta_3mkWq\" data-tag=\"policy-cards-v3-cta\" tabindex=\"-1\" aria-hidd…",
+                  "tag": "div",
+                  "testId": null,
+                  "hasOnClickAttr": false,
+                  "cursorPointer": true,
+                  "keyboardReachable": false,
+                  "confirmedListener": false,
+                  "listenerScript": "https://www.insureon.com/cdn-cgi/scripts/7d0fa10a/cloudflare-static/rocket-loader.min.js",
+                  "listenerIsShared": true
+                },
+                {
+                  "selector": "div.headingCol_3mkWq",
+                  "html": "<div class=\"headingCol_3mkWq\"><span class=\"heading_3mkWq\">Commercial property insurance</span><div class=\"body_3mkWq\">This coverage pays to repair or replace stolen, lost, or damaged business property. It covers your business’s physical loc…",
+                  "tag": "div",
+                  "testId": null,
+                  "hasOnClickAttr": false,
+                  "cursorPointer": true,
+                  "keyboardReachable": false,
+                  "confirmedListener": false,
+                  "listenerScript": "https://www.insureon.com/cdn-cgi/scripts/7d0fa10a/cloudflare-static/rocket-loader.min.js",
+                  "listenerIsShared": true
+                },
+                {
+                  "selector": "span.bestForLabel_3mkWq",
+                  "html": "<span class=\"bestForLabel_3mkWq\">BEST FOR:</span>",
+                  "tag": "span",
+                  "testId": null,
+                  "hasOnClickAttr": false,
+                  "cursorPointer": true,
+                  "keyboardReachable": false,
+                  "confirmedListener": false,
+                  "listenerScript": "https://www.insureon.com/cdn-cgi/scripts/7d0fa10a/cloudflare-static/rocket-loader.min.js",
+                  "listenerIsShared": true
+                },
+                {
+                  "selector": "div.itemsCol_3mkWq",
+                  "html": "<div class=\"itemsCol_3mkWq\"><div class=\"bestForItems_3mkWq\"><p>Fire</p><p>Theft and vandalism</p><p>Windstorms</p></div><button type=\"button\" class=\"cta_3mkWq\" data-tag=\"policy-cards-v3-cta\" tabindex=\"-1\" aria-hidden=\"true\"><span class=\"cta…",
+                  "tag": "div",
+                  "testId": null,
+                  "hasOnClickAttr": false,
+                  "cursorPointer": true,
+                  "keyboardReachable": false,
+                  "confirmedListener": false,
+                  "listenerScript": "https://www.insureon.com/cdn-cgi/scripts/7d0fa10a/cloudflare-static/rocket-loader.min.js",
+                  "listenerIsShared": true
+                },
+                {
+                  "selector": "div.headingCol_3mkWq",
+                  "html": "<div class=\"headingCol_3mkWq\"><span class=\"heading_3mkWq\">Business owner’s policy</span><div class=\"body_3mkWq\">A business owner’s policy (BOP) bundles general liability coverage with commercial property insurance. It typically costs less t…",
+                  "tag": "div",
+                  "testId": null,
+                  "hasOnClickAttr": false,
+                  "cursorPointer": true,
+                  "keyboardReachable": false,
+                  "confirmedListener": false,
+                  "listenerScript": "https://www.insureon.com/cdn-cgi/scripts/7d0fa10a/cloudflare-static/rocket-loader.min.js",
+                  "listenerIsShared": true
+                },
+                {
+                  "selector": "span.bestForLabel_3mkWq",
+                  "html": "<span class=\"bestForLabel_3mkWq\">BEST FOR:</span>",
+                  "tag": "span",
+                  "testId": null,
+                  "hasOnClickAttr": false,
+                  "cursorPointer": true,
+                  "keyboardReachable": false,
+                  "confirmedListener": false,
+                  "listenerScript": "https://www.insureon.com/cdn-cgi/scripts/7d0fa10a/cloudflare-static/rocket-loader.min.js",
+                  "listenerIsShared": true
+                },
+                {
+                  "selector": "div.itemsCol_3mkWq",
+                  "html": "<div class=\"itemsCol_3mkWq\"><div class=\"bestForItems_3mkWq\"><p>Customer injuries</p><p>Damaged business property</p><p>Business interruption incidents</p></div><button type=\"button\" class=\"cta_3mkWq\" data-tag=\"policy-cards-v3-cta\" tabindex=…",
+                  "tag": "div",
+                  "testId": null,
+                  "hasOnClickAttr": false,
+                  "cursorPointer": true,
+                  "keyboardReachable": false,
+                  "confirmedListener": false,
+                  "listenerScript": "https://www.insureon.com/cdn-cgi/scripts/7d0fa10a/cloudflare-static/rocket-loader.min.js",
+                  "listenerIsShared": true
+                }
+              ],
+              "clickableNoRole": 16,
+              "hiddenPanels": [],
+              "phantomMenu": null,
+              "unreachablePanels": [
+                {
+                  "selector": "div.megaMenu_Y6Awg",
+                  "why": [
+                    "display: none"
+                  ],
+                  "inNav": true,
+                  "links": 16,
+                  "buttons": 0,
+                  "focusable": 16,
+                  "hasTrigger": false,
+                  "triggerInTree": false,
+                  "announced": false,
+                  "triggerSelector": null,
+                  "sample": "<div class=\"megaMenu_Y6Awg megaMenu_2Umgj\"><div class=\"wrap_2Umgj\"><div class=\"row_2Umgj\"><div class=\"title_2Umgj\">BROWSE BY INDUSTRY</div><div class=\"columnWrap_2Umgj\"><div class=\"column_2Umgj\"><a href=\"/design-business-insurance\" title=\"B"
+                },
+                {
+                  "selector": "div.megaMenu_Y6Awg",
+                  "why": [
+                    "display: none"
+                  ],
+                  "inNav": true,
+                  "links": 12,
+                  "buttons": 0,
+                  "focusable": 12,
+                  "hasTrigger": false,
+                  "triggerInTree": false,
+                  "announced": false,
+                  "triggerSelector": null,
+                  "sample": "<div class=\"megaMenu_Y6Awg megaMenu_2Umgj\"><div class=\"wrap_2Umgj\"><div class=\"row_2Umgj\"><div class=\"title_2Umgj\">Browse by Insurance Policy</div><div class=\"columnWrap_2Umgj\"><div class=\"column_2Umgj\"><a href=\"/small-business-insurance/ge"
+                },
+                {
+                  "selector": "div.megaMenu_Y6Awg",
+                  "why": [
+                    "display: none"
+                  ],
+                  "inNav": true,
+                  "links": 12,
+                  "buttons": 0,
+                  "focusable": 12,
+                  "hasTrigger": false,
+                  "triggerInTree": false,
+                  "announced": false,
+                  "triggerSelector": null,
+                  "sample": "<div class=\"megaMenu_Y6Awg megaMenu_2Umgj\"><div class=\"wrap_2Umgj\"><div class=\"row_2Umgj\"><div class=\"title_2Umgj\">Learn more about insurance costs</div><div class=\"columnWrap_2Umgj\"><div class=\"column_2Umgj\"><a href=\"/small-business-insura"
+                },
+                {
+                  "selector": "div#573cb2ff-e49c-42c3-b46c-0b23a8775e63-panel.panel_3vkjr",
+                  "why": [
+                    "content-visibility: hidden"
+                  ],
+                  "inNav": false,
+                  "links": 9,
+                  "buttons": 0,
+                  "focusable": 9,
+                  "hasTrigger": true,
+                  "triggerInTree": true,
+                  "announced": true,
+                  "triggerSelector": "button#573cb2ff-e49c-42c3-b46c-0b23a8775e63-toggle.rowToggle_3vkjr",
+                  "sample": "<div id=\"573cb2ff-e49c-42c3-b46c-0b23a8775e63-panel\" role=\"region\" aria-labelledby=\"573cb2ff-e49c-42c3-b46c-0b23a8775e63-toggle\" class=\"panel_3vkjr\" hidden=\"until-found\"><div class=\"panelInner_3vkjr\"><div class=\"answer_3vkjr\"><p>Business in"
+                },
+                {
+                  "selector": "div#e89d1424-2b0e-4e81-b498-7c3badb47a02-panel.panel_3vkjr",
+                  "why": [
+                    "content-visibility: hidden"
+                  ],
+                  "inNav": false,
+                  "links": 9,
+                  "buttons": 0,
+                  "focusable": 9,
+                  "hasTrigger": true,
+                  "triggerInTree": true,
+                  "announced": true,
+                  "triggerSelector": "button#e89d1424-2b0e-4e81-b498-7c3badb47a02-toggle.rowToggle_3vkjr",
+                  "sample": "<div id=\"e89d1424-2b0e-4e81-b498-7c3badb47a02-panel\" role=\"region\" aria-labelledby=\"e89d1424-2b0e-4e81-b498-7c3badb47a02-toggle\" class=\"panel_3vkjr\" hidden=\"until-found\"><div class=\"panelInner_3vkjr\"><div class=\"answer_3vkjr\"><p>The right a"
+                },
+                {
+                  "selector": "div.megaMenu_Y6Awg",
+                  "why": [
+                    "display: none"
+                  ],
+                  "inNav": true,
+                  "links": 8,
+                  "buttons": 0,
+                  "focusable": 8,
+                  "hasTrigger": false,
+                  "triggerInTree": false,
+                  "announced": false,
+                  "triggerSelector": null,
+                  "sample": "<div class=\"megaMenu_Y6Awg megaMenu_2Umgj\"><div class=\"wrap_2Umgj\"><div class=\"row_2Umgj\"><div class=\"title_2Umgj\">Learn more about Business Insurance</div><div class=\"columnWrap_2Umgj\"><div class=\"column_2Umgj\"><a href=\"/blog\" title=\"Small"
+                },
+                {
+                  "selector": "div.megaMenu_Y6Awg",
+                  "why": [
+                    "display: none"
+                  ],
+                  "inNav": true,
+                  "links": 8,
+                  "buttons": 0,
+                  "focusable": 8,
+                  "hasTrigger": false,
+                  "triggerInTree": false,
+                  "announced": false,
+                  "triggerSelector": null,
+                  "sample": "<div class=\"megaMenu_Y6Awg megaMenu_2Umgj\"><div class=\"wrap_2Umgj\"><div class=\"row_2Umgj\"><div class=\"title_2Umgj\">Learn more about Insureon</div><div class=\"columnWrap_2Umgj\"><div class=\"column_2Umgj\"><a href=\"/about-us/why-choose-insureon"
+                },
+                {
+                  "selector": "div#7a398ff7-7c44-43f7-aa86-fae9129b6a88-panel.panel_3vkjr",
+                  "why": [
+                    "content-visibility: hidden"
+                  ],
+                  "inNav": false,
+                  "links": 6,
+                  "buttons": 0,
+                  "focusable": 6,
+                  "hasTrigger": true,
+                  "triggerInTree": true,
+                  "announced": true,
+                  "triggerSelector": "button#7a398ff7-7c44-43f7-aa86-fae9129b6a88-toggle.rowToggle_3vkjr",
+                  "sample": "<div id=\"7a398ff7-7c44-43f7-aa86-fae9129b6a88-panel\" role=\"region\" aria-labelledby=\"7a398ff7-7c44-43f7-aa86-fae9129b6a88-toggle\" class=\"panel_3vkjr\" hidden=\"until-found\"><div class=\"panelInner_3vkjr\"><div class=\"answer_3vkjr\"><p><a href=\"/i"
+                },
+                {
+                  "selector": "div#a6681f7e-4378-4d70-b4a0-92aa75f4b3d7-panel.panel_3vkjr",
+                  "why": [
+                    "content-visibility: hidden"
+                  ],
+                  "inNav": false,
+                  "links": 5,
+                  "buttons": 0,
+                  "focusable": 5,
+                  "hasTrigger": true,
+                  "triggerInTree": true,
+                  "announced": true,
+                  "triggerSelector": "button#a6681f7e-4378-4d70-b4a0-92aa75f4b3d7-toggle.rowToggle_3vkjr",
+                  "sample": "<div id=\"a6681f7e-4378-4d70-b4a0-92aa75f4b3d7-panel\" role=\"region\" aria-labelledby=\"a6681f7e-4378-4d70-b4a0-92aa75f4b3d7-toggle\" class=\"panel_3vkjr\" hidden=\"until-found\"><div class=\"panelInner_3vkjr\"><div class=\"answer_3vkjr\"><p>In several "
+                },
+                {
+                  "selector": "div#e6cf5362-7cc2-488b-886f-c03493fefa8f-panel.panel_3vkjr",
+                  "why": [
+                    "content-visibility: hidden"
+                  ],
+                  "inNav": false,
+                  "links": 5,
+                  "buttons": 0,
+                  "focusable": 5,
+                  "hasTrigger": true,
+                  "triggerInTree": true,
+                  "announced": true,
+                  "triggerSelector": "button#e6cf5362-7cc2-488b-886f-c03493fefa8f-toggle.rowToggle_3vkjr",
+                  "sample": "<div id=\"e6cf5362-7cc2-488b-886f-c03493fefa8f-panel\" role=\"region\" aria-labelledby=\"e6cf5362-7cc2-488b-886f-c03493fefa8f-toggle\" class=\"panel_3vkjr\" hidden=\"until-found\"><div class=\"panelInner_3vkjr\"><div class=\"answer_3vkjr\"><p>Yes. Even t"
+                },
+                {
+                  "selector": "div#80cb9cbf-e2f3-449d-a3d9-1f8d0d37c69d-panel.panel_3vkjr",
+                  "why": [
+                    "content-visibility: hidden"
+                  ],
+                  "inNav": false,
+                  "links": 5,
+                  "buttons": 0,
+                  "focusable": 5,
+                  "hasTrigger": true,
+                  "triggerInTree": true,
+                  "announced": true,
+                  "triggerSelector": "button#80cb9cbf-e2f3-449d-a3d9-1f8d0d37c69d-toggle.rowToggle_3vkjr",
+                  "sample": "<div id=\"80cb9cbf-e2f3-449d-a3d9-1f8d0d37c69d-panel\" role=\"region\" aria-labelledby=\"80cb9cbf-e2f3-449d-a3d9-1f8d0d37c69d-toggle\" class=\"panel_3vkjr\" hidden=\"until-found\"><div class=\"panelInner_3vkjr\"><div class=\"answer_3vkjr\"><p><a href=\"/b"
+                },
+                {
+                  "selector": "div#62132bc0-1fb7-4880-85ba-2e58383bfe04-panel.panel_3vkjr",
+                  "why": [
+                    "content-visibility: hidden"
+                  ],
+                  "inNav": false,
+                  "links": 3,
+                  "buttons": 0,
+                  "focusable": 3,
+                  "hasTrigger": true,
+                  "triggerInTree": true,
+                  "announced": true,
+                  "triggerSelector": "button#62132bc0-1fb7-4880-85ba-2e58383bfe04-toggle.rowToggle_3vkjr",
+                  "sample": "<div id=\"62132bc0-1fb7-4880-85ba-2e58383bfe04-panel\" role=\"region\" aria-labelledby=\"62132bc0-1fb7-4880-85ba-2e58383bfe04-toggle\" class=\"panel_3vkjr\" hidden=\"until-found\"><div class=\"panelInner_3vkjr\"><div class=\"answer_3vkjr\"><p>No single i"
+                }
+              ],
+              "unreachableTotals": {
+                "panels": 12,
+                "unannouncedPanels": 5,
+                "unannouncedFocusable": 56,
+                "unannouncedLinks": 56
+              },
+              "navLinks": {
+                "total": 63,
+                "inTree": 7
+              },
+              "httpStatus": 200,
+              "axeVersion": "4.13.0",
+              "identity": {
+                "key": "homepage-variant",
+                "value": "Variant C"
+              }
+            }
+          },
+          "identityAttempts": 3
         },
         "policy": {
           "url": "https://www.insureon.com/small-business-insurance/general-liability",
@@ -3360,9 +3991,9 @@
               "sample": [
                 {
                   "t": [
-                    "#react-select-17288-input"
+                    "#react-select-17959-input"
                   ],
-                  "h": "<input class=\"\" style=\"label:input;color:in...\" autocapitalize=\"none\" autocomplete=\"off\" autocorrect=\"off\" id=\"react-select-17288-i...\" spellcheck=\"false\" tabindex=\"0\" type=\"text\" aria-autocomplete=\"list\" aria-expanded=\"false\" aria-haspopup…"
+                  "h": "<input class=\"\" style=\"label:input;color:in...\" autocapitalize=\"none\" autocomplete=\"off\" autocorrect=\"off\" id=\"react-select-17959-i...\" spellcheck=\"false\" tabindex=\"0\" type=\"text\" aria-autocomplete=\"list\" aria-expanded=\"false\" aria-haspopup…"
                 }
               ]
             },
@@ -3373,9 +4004,9 @@
               "sample": [
                 {
                   "t": [
-                    "#react-select-17288-input"
+                    "#react-select-17959-input"
                   ],
-                  "h": "<input class=\"\" style=\"label:input;color:in...\" autocapitalize=\"none\" autocomplete=\"off\" autocorrect=\"off\" id=\"react-select-17288-i...\" spellcheck=\"false\" tabindex=\"0\" type=\"text\" aria-autocomplete=\"list\" aria-expanded=\"false\" aria-haspopup…"
+                  "h": "<input class=\"\" style=\"label:input;color:in...\" autocapitalize=\"none\" autocomplete=\"off\" autocorrect=\"off\" id=\"react-select-17959-i...\" spellcheck=\"false\" tabindex=\"0\" type=\"text\" aria-autocomplete=\"list\" aria-expanded=\"false\" aria-haspopup…"
                 }
               ]
             },
@@ -3474,7 +4105,7 @@
           "ghostControls": [
             {
               "selector": "div.css-1vf51wl-control",
-              "html": "<div class=\"css-1vf51wl-control\"><div class=\"css-xipmn9\"><div class=\"css-13xugr8-placeholder\" id=\"react-select-17288-placeholder\">What kind of work do you do?</div><div class=\"css-6sv2wd\" data-value=\"\"><input class=\"\" style=\"label:input;col…",
+              "html": "<div class=\"css-1vf51wl-control\"><div class=\"css-xipmn9\"><div class=\"css-13xugr8-placeholder\" id=\"react-select-17959-placeholder\">What kind of work do you do?</div><div class=\"css-6sv2wd\" data-value=\"\"><input class=\"\" style=\"label:input;col…",
               "tag": "div",
               "testId": null,
               "hasOnClickAttr": false,
@@ -3680,9 +4311,9 @@
               "sample": [
                 {
                   "t": [
-                    "#react-select-18341-input"
+                    "#react-select-17960-input"
                   ],
-                  "h": "<input class=\"\" style=\"label:input;color:in...\" autocapitalize=\"none\" autocomplete=\"off\" autocorrect=\"off\" id=\"react-select-18341-i...\" spellcheck=\"false\" tabindex=\"0\" type=\"text\" aria-autocomplete=\"list\" aria-expanded=\"false\" aria-haspopup…"
+                  "h": "<input class=\"\" style=\"label:input;color:in...\" autocapitalize=\"none\" autocomplete=\"off\" autocorrect=\"off\" id=\"react-select-17960-i...\" spellcheck=\"false\" tabindex=\"0\" type=\"text\" aria-autocomplete=\"list\" aria-expanded=\"false\" aria-haspopup…"
                 }
               ]
             },
@@ -4143,9 +4774,9 @@
               "sample": [
                 {
                   "t": [
-                    "#react-select-18342-input"
+                    "#react-select-19037-input"
                   ],
-                  "h": "<input class=\"\" style=\"label:input;color:in...\" autocapitalize=\"none\" autocomplete=\"off\" autocorrect=\"off\" id=\"react-select-18342-i...\" spellcheck=\"false\" tabindex=\"0\" type=\"text\" aria-autocomplete=\"list\" aria-expanded=\"false\" aria-haspopup…"
+                  "h": "<input class=\"\" style=\"label:input;color:in...\" autocapitalize=\"none\" autocomplete=\"off\" autocorrect=\"off\" id=\"react-select-19037-i...\" spellcheck=\"false\" tabindex=\"0\" type=\"text\" aria-autocomplete=\"list\" aria-expanded=\"false\" aria-haspopup…"
                 }
               ]
             },
@@ -4806,9 +5437,9 @@
               "sample": [
                 {
                   "t": [
-                    "#react-select-18338-input"
+                    "#react-select-18648-input"
                   ],
-                  "h": "<input class=\"\" style=\"label:input;color:in...\" autocapitalize=\"none\" autocomplete=\"off\" autocorrect=\"off\" id=\"react-select-18338-i...\" spellcheck=\"false\" tabindex=\"0\" type=\"text\" aria-autocomplete=\"list\" aria-expanded=\"false\" aria-haspopup…"
+                  "h": "<input class=\"\" style=\"label:input;color:in...\" autocapitalize=\"none\" autocomplete=\"off\" autocorrect=\"off\" id=\"react-select-18648-i...\" spellcheck=\"false\" tabindex=\"0\" type=\"text\" aria-autocomplete=\"list\" aria-expanded=\"false\" aria-haspopup…"
                 }
               ]
             },
@@ -4819,9 +5450,9 @@
               "sample": [
                 {
                   "t": [
-                    "#react-select-18338-input"
+                    "#react-select-18648-input"
                   ],
-                  "h": "<input class=\"\" style=\"label:input;color:in...\" autocapitalize=\"none\" autocomplete=\"off\" autocorrect=\"off\" id=\"react-select-18338-i...\" spellcheck=\"false\" tabindex=\"0\" type=\"text\" aria-autocomplete=\"list\" aria-expanded=\"false\" aria-haspopup…"
+                  "h": "<input class=\"\" style=\"label:input;color:in...\" autocapitalize=\"none\" autocomplete=\"off\" autocorrect=\"off\" id=\"react-select-18648-i...\" spellcheck=\"false\" tabindex=\"0\" type=\"text\" aria-autocomplete=\"list\" aria-expanded=\"false\" aria-haspopup…"
                 }
               ]
             },
@@ -4895,7 +5526,7 @@
           "ghostControls": [
             {
               "selector": "div.css-1vf51wl-control",
-              "html": "<div class=\"css-1vf51wl-control\"><div class=\"css-xipmn9\"><div class=\"css-13xugr8-placeholder\" id=\"react-select-18338-placeholder\">What kind of work do you do?</div><div class=\"css-6sv2wd\" data-value=\"\"><input class=\"\" style=\"label:input;col…",
+              "html": "<div class=\"css-1vf51wl-control\"><div class=\"css-xipmn9\"><div class=\"css-13xugr8-placeholder\" id=\"react-select-18648-placeholder\">What kind of work do you do?</div><div class=\"css-6sv2wd\" data-value=\"\"><input class=\"\" style=\"label:input;col…",
               "tag": "div",
               "testId": null,
               "hasOnClickAttr": false,
@@ -6073,7 +6704,211 @@
           "identity": {
             "key": "homepage-variant",
             "value": "Variant A"
-          }
+          },
+          "variants": {
+            "Variant B": {
+              "url": "https://www.insureon.com/",
+              "violations": [
+                {
+                  "id": "landmark-one-main",
+                  "impact": "moderate",
+                  "n": 1,
+                  "sample": [
+                    {
+                      "t": [
+                        "html"
+                      ],
+                      "h": "<html lang=\"en\">"
+                    }
+                  ]
+                },
+                {
+                  "id": "link-in-text-block",
+                  "impact": "serious",
+                  "n": 1,
+                  "sample": [
+                    {
+                      "t": [
+                        ".info_ezXpO > a[href=\"/\"][rel=\"\"][target=\"\"]"
+                      ],
+                      "h": "<a href=\"/\" title=\"Insureon: Online Business Insurance Agency\" target=\"\" rel=\"\">Insureon</a>"
+                    }
+                  ]
+                },
+                {
+                  "id": "region",
+                  "impact": "moderate",
+                  "n": 30,
+                  "sample": [
+                    {
+                      "t": [
+                        ".headline_cu1i6"
+                      ],
+                      "h": "<h2 class=\"headline_cu1i6\"><p>Real policies. <br>\nReal rates. <br>\nNo surprises.</p></h2>"
+                    },
+                    {
+                      "t": [
+                        ".subhead_cu1i6"
+                      ],
+                      "h": "<div class=\"subhead_cu1i6\"><p>Review costs and confidently choose your coverage.</p></div>"
+                    }
+                  ]
+                }
+              ],
+              "namelessButtons": [],
+              "namelessLinks": [],
+              "emptyHref": [],
+              "hasMain": false,
+              "ghostControls": [
+                {
+                  "selector": "div.menu_+4UjM",
+                  "html": "<div data-test-id=\"nav-hamburger-icon\" class=\"menu_+4UjM\"></div>",
+                  "tag": "div",
+                  "testId": "nav-hamburger-icon",
+                  "hasOnClickAttr": false,
+                  "cursorPointer": true,
+                  "keyboardReachable": false,
+                  "confirmedListener": false,
+                  "listenerScript": "https://www.insureon.com/dist/cms-sitecore/static/js/main.f7e9a8eb.js",
+                  "listenerIsShared": true
+                },
+                {
+                  "selector": "div.backButton_cM91S",
+                  "html": "<div class=\"backButton_cM91S\"></div>",
+                  "tag": "div",
+                  "testId": null,
+                  "hasOnClickAttr": false,
+                  "cursorPointer": true,
+                  "keyboardReachable": false,
+                  "confirmedListener": false,
+                  "listenerScript": "https://www.insureon.com/dist/cms-sitecore/static/js/main.f7e9a8eb.js",
+                  "listenerIsShared": true
+                },
+                {
+                  "selector": "div.backButton_cM91S",
+                  "html": "<div class=\"backButton_cM91S\"></div>",
+                  "tag": "div",
+                  "testId": null,
+                  "hasOnClickAttr": false,
+                  "cursorPointer": true,
+                  "keyboardReachable": false,
+                  "confirmedListener": false,
+                  "listenerScript": "https://www.insureon.com/dist/cms-sitecore/static/js/main.f7e9a8eb.js",
+                  "listenerIsShared": true
+                },
+                {
+                  "selector": "div.backButton_cM91S",
+                  "html": "<div class=\"backButton_cM91S\"></div>",
+                  "tag": "div",
+                  "testId": null,
+                  "hasOnClickAttr": false,
+                  "cursorPointer": true,
+                  "keyboardReachable": false,
+                  "confirmedListener": false,
+                  "listenerScript": "https://www.insureon.com/dist/cms-sitecore/static/js/main.f7e9a8eb.js",
+                  "listenerIsShared": true
+                },
+                {
+                  "selector": "div.backButton_cM91S",
+                  "html": "<div class=\"backButton_cM91S\"></div>",
+                  "tag": "div",
+                  "testId": null,
+                  "hasOnClickAttr": false,
+                  "cursorPointer": true,
+                  "keyboardReachable": false,
+                  "confirmedListener": false,
+                  "listenerScript": "https://www.insureon.com/dist/cms-sitecore/static/js/main.f7e9a8eb.js",
+                  "listenerIsShared": true
+                },
+                {
+                  "selector": "div.backButton_cM91S",
+                  "html": "<div class=\"backButton_cM91S\"></div>",
+                  "tag": "div",
+                  "testId": null,
+                  "hasOnClickAttr": false,
+                  "cursorPointer": true,
+                  "keyboardReachable": false,
+                  "confirmedListener": false,
+                  "listenerScript": "https://www.insureon.com/dist/cms-sitecore/static/js/main.f7e9a8eb.js",
+                  "listenerIsShared": true
+                }
+              ],
+              "clickableNoRole": 7,
+              "hiddenPanels": [
+                {
+                  "selector": "div.container_cM91S",
+                  "why": [
+                    "collapsed to zero size"
+                  ],
+                  "transform": null,
+                  "display": "block",
+                  "visibility": "visible",
+                  "opacity": "1",
+                  "maxHeight": "none",
+                  "ariaHidden": null,
+                  "inert": false,
+                  "pointerEvents": "none",
+                  "exposedInTree": true,
+                  "links": 68,
+                  "buttons": 0,
+                  "focusable": 68,
+                  "tabbable": 68,
+                  "hasKeyboardTrigger": false,
+                  "triggerHasAriaExpanded": false,
+                  "sample": "<div class=\"container_cM91S container_Y6Awg\"><div class=\"overlay_cM91S\"></div><div class=\"megaMenu_cM91S megaMenu_OaKbj\"><ul class=\"navList_cM91S\" style=\"width: 100%;\"><li class=\"listItem_cM91S hasSubMenu_cM91S\"><a href=\"/small-business-ins"
+                }
+              ],
+              "phantomMenu": {
+                "transform": null,
+                "display": "block",
+                "visibility": "visible",
+                "ariaHidden": null,
+                "inert": false,
+                "pointerEvents": "none",
+                "exposedInTree": true,
+                "links": 68,
+                "buttons": 0,
+                "focusable": 68,
+                "tabbable": 68,
+                "hasKeyboardTrigger": false,
+                "triggerHasAriaExpanded": false
+              },
+              "unreachablePanels": [
+                {
+                  "selector": "div#5f814473-9412-4766-9f00-c84be2245a11-panel.panel_ReFIs",
+                  "why": [
+                    "content-visibility: hidden"
+                  ],
+                  "inNav": false,
+                  "links": 4,
+                  "buttons": 0,
+                  "focusable": 4,
+                  "hasTrigger": true,
+                  "triggerInTree": true,
+                  "announced": true,
+                  "triggerSelector": "button#5f814473-9412-4766-9f00-c84be2245a11-toggle.rowToggle_ReFIs",
+                  "sample": "<div id=\"5f814473-9412-4766-9f00-c84be2245a11-panel\" role=\"region\" aria-labelledby=\"5f814473-9412-4766-9f00-c84be2245a11-toggle\" class=\"panel_ReFIs\" hidden=\"until-found\" style=\"height: 0px;\"><div class=\"answer_ReFIs\"><p><a href=\"/small-busi"
+                }
+              ],
+              "unreachableTotals": {
+                "panels": 1,
+                "unannouncedPanels": 0,
+                "unannouncedFocusable": 0,
+                "unannouncedLinks": 0
+              },
+              "navLinks": {
+                "total": 70,
+                "inTree": 70
+              },
+              "httpStatus": 200,
+              "axeVersion": "4.13.0",
+              "identity": {
+                "key": "homepage-variant",
+                "value": "Variant B"
+              }
+            }
+          },
+          "identityAttempts": 8
         },
         "policy": {
           "url": "https://www.insureon.com/small-business-insurance/general-liability",
@@ -9268,9 +10103,9 @@
               "sample": [
                 {
                   "t": [
-                    "#react-select-17292-input"
+                    "#react-select-19045-input"
                   ],
-                  "h": "<input class=\"\" style=\"label:input;color:in...\" autocapitalize=\"none\" autocomplete=\"off\" autocorrect=\"off\" id=\"react-select-17292-i...\" spellcheck=\"false\" tabindex=\"0\" type=\"text\" aria-autocomplete=\"list\" aria-expanded=\"false\" aria-haspopup…"
+                  "h": "<input class=\"\" style=\"label:input;color:in...\" autocapitalize=\"none\" autocomplete=\"off\" autocorrect=\"off\" id=\"react-select-19045-i...\" spellcheck=\"false\" tabindex=\"0\" type=\"text\" aria-autocomplete=\"list\" aria-expanded=\"false\" aria-haspopup…"
                 }
               ]
             },
@@ -9281,9 +10116,9 @@
               "sample": [
                 {
                   "t": [
-                    "#react-select-17292-input"
+                    "#react-select-19045-input"
                   ],
-                  "h": "<input class=\"\" style=\"label:input;color:in...\" autocapitalize=\"none\" autocomplete=\"off\" autocorrect=\"off\" id=\"react-select-17292-i...\" spellcheck=\"false\" tabindex=\"0\" type=\"text\" aria-autocomplete=\"list\" aria-expanded=\"false\" aria-haspopup…"
+                  "h": "<input class=\"\" style=\"label:input;color:in...\" autocapitalize=\"none\" autocomplete=\"off\" autocorrect=\"off\" id=\"react-select-19045-i...\" spellcheck=\"false\" tabindex=\"0\" type=\"text\" aria-autocomplete=\"list\" aria-expanded=\"false\" aria-haspopup…"
                 }
               ]
             },
@@ -9381,7 +10216,7 @@
             },
             {
               "selector": "div.css-1vf51wl-control",
-              "html": "<div class=\"css-1vf51wl-control\"><div class=\"css-xipmn9\"><div class=\"css-13xugr8-placeholder\" id=\"react-select-17292-placeholder\">What kind of work do you do?</div><div class=\"css-6sv2wd\" data-value=\"\"><input class=\"\" style=\"label:input;col…",
+              "html": "<div class=\"css-1vf51wl-control\"><div class=\"css-xipmn9\"><div class=\"css-13xugr8-placeholder\" id=\"react-select-19045-placeholder\">What kind of work do you do?</div><div class=\"css-6sv2wd\" data-value=\"\"><input class=\"\" style=\"label:input;col…",
               "tag": "div",
               "testId": null,
               "hasOnClickAttr": false,
@@ -9564,9 +10399,9 @@
               "sample": [
                 {
                   "t": [
-                    "#react-select-18343-input"
+                    "#react-select-19046-input"
                   ],
-                  "h": "<input class=\"\" style=\"label:input;color:in...\" autocapitalize=\"none\" autocomplete=\"off\" autocorrect=\"off\" id=\"react-select-18343-i...\" spellcheck=\"false\" tabindex=\"0\" type=\"text\" aria-autocomplete=\"list\" aria-expanded=\"false\" aria-haspopup…"
+                  "h": "<input class=\"\" style=\"label:input;color:in...\" autocapitalize=\"none\" autocomplete=\"off\" autocorrect=\"off\" id=\"react-select-19046-i...\" spellcheck=\"false\" tabindex=\"0\" type=\"text\" aria-autocomplete=\"list\" aria-expanded=\"false\" aria-haspopup…"
                 }
               ]
             },
@@ -10015,9 +10850,9 @@
               "sample": [
                 {
                   "t": [
-                    "#react-select-18344-input"
+                    "#react-select-17963-input"
                   ],
-                  "h": "<input class=\"\" style=\"label:input;color:in...\" autocapitalize=\"none\" autocomplete=\"off\" autocorrect=\"off\" id=\"react-select-18344-i...\" spellcheck=\"false\" tabindex=\"0\" type=\"text\" aria-autocomplete=\"list\" aria-expanded=\"false\" aria-haspopup…"
+                  "h": "<input class=\"\" style=\"label:input;color:in...\" autocapitalize=\"none\" autocomplete=\"off\" autocorrect=\"off\" id=\"react-select-17963-i...\" spellcheck=\"false\" tabindex=\"0\" type=\"text\" aria-autocomplete=\"list\" aria-expanded=\"false\" aria-haspopup…"
                 }
               ]
             },
@@ -10698,9 +11533,9 @@
               "sample": [
                 {
                   "t": [
-                    "#react-select-17294-input"
+                    "#react-select-18654-input"
                   ],
-                  "h": "<input class=\"\" style=\"label:input;color:in...\" autocapitalize=\"none\" autocomplete=\"off\" autocorrect=\"off\" id=\"react-select-17294-i...\" spellcheck=\"false\" tabindex=\"0\" type=\"text\" aria-autocomplete=\"list\" aria-expanded=\"false\" aria-haspopup…"
+                  "h": "<input class=\"\" style=\"label:input;color:in...\" autocapitalize=\"none\" autocomplete=\"off\" autocorrect=\"off\" id=\"react-select-18654-i...\" spellcheck=\"false\" tabindex=\"0\" type=\"text\" aria-autocomplete=\"list\" aria-expanded=\"false\" aria-haspopup…"
                 }
               ]
             },
@@ -10711,9 +11546,9 @@
               "sample": [
                 {
                   "t": [
-                    "#react-select-17294-input"
+                    "#react-select-18654-input"
                   ],
-                  "h": "<input class=\"\" style=\"label:input;color:in...\" autocapitalize=\"none\" autocomplete=\"off\" autocorrect=\"off\" id=\"react-select-17294-i...\" spellcheck=\"false\" tabindex=\"0\" type=\"text\" aria-autocomplete=\"list\" aria-expanded=\"false\" aria-haspopup…"
+                  "h": "<input class=\"\" style=\"label:input;color:in...\" autocapitalize=\"none\" autocomplete=\"off\" autocorrect=\"off\" id=\"react-select-18654-i...\" spellcheck=\"false\" tabindex=\"0\" type=\"text\" aria-autocomplete=\"list\" aria-expanded=\"false\" aria-haspopup…"
                 }
               ]
             },
@@ -10805,7 +11640,7 @@
             },
             {
               "selector": "div.css-1vf51wl-control",
-              "html": "<div class=\"css-1vf51wl-control\"><div class=\"css-xipmn9\"><div class=\"css-13xugr8-placeholder\" id=\"react-select-17294-placeholder\">What kind of work do you do?</div><div class=\"css-6sv2wd\" data-value=\"\"><input class=\"\" style=\"label:input;col…",
+              "html": "<div class=\"css-1vf51wl-control\"><div class=\"css-xipmn9\"><div class=\"css-13xugr8-placeholder\" id=\"react-select-18654-placeholder\">What kind of work do you do?</div><div class=\"css-6sv2wd\" data-value=\"\"><input class=\"\" style=\"label:input;col…",
               "tag": "div",
               "testId": null,
               "hasOnClickAttr": false,

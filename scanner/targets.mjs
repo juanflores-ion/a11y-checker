@@ -111,6 +111,14 @@ const IDENTITIES = {
   insureon: {
     home: {
       key: 'homepage-variant',
+      /**
+       * Every document this URL is known to serve. A full run collects all of
+       * them rather than picking one: they are materially different pages —
+       * measured at roughly 28, 47 and 70 failing elements — so "the
+       * homepage's score" is three numbers, and choosing one of them silently
+       * is a selection nobody can see.
+       */
+      variants: ['Variant A', 'Variant B', 'Variant C'],
       why:
         'One Sitecore item under a content test serves three different homepages from ' +
         'this URL, and the content team names them Variant A, B and C. Each one ships a ' +
@@ -172,7 +180,15 @@ export function targetList() {
           brand,
           key,
           url: pages[key],
-          ...(identity ? { identity: { key: identity.key, why: identity.why } } : {}),
+          ...(identity
+            ? {
+                identity: {
+                  key: identity.key,
+                  why: identity.why,
+                  ...(identity.variants ? { variants: identity.variants } : {}),
+                },
+              }
+            : {}),
         });
       }
     }

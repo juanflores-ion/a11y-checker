@@ -8,6 +8,8 @@ export const TARGETS: Record<string, Record<string, string>>;
 export interface TargetIdentity {
   key: string;
   why: string;
+  /** Every document this URL is known to serve, when they are enumerable. */
+  variants?: string[];
   read: () => string | null;
 }
 
@@ -19,5 +21,5 @@ export function targetList(): Array<{
   brand: string;
   key: string;
   url: string;
-  identity?: { key: string; why: string };
+  identity?: { key: string; why: string; variants?: string[] };
 }>;
