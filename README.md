@@ -471,6 +471,10 @@ across environments, so the gap is not even a constant you could subtract.
 
 So a fix is measured against an earlier run of *the same* environment:
 
+0. **A baseline is a pair.** Record production *and* staging in the same
+   sitting. Production is what the dashboard shows; staging is what a later
+   deploy gets compared against. One without the other leaves you unable to
+   answer either "where are we" or "did the fix work".
 1. **Record a staging baseline before deploying.** Scan → Full run → set
    **Measure** to *Staging*, point **Scanner** at one inside the network, run
    it, drop the file in `data/runs/` and commit. The URLs are the tracked
