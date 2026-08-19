@@ -30,7 +30,7 @@ export function PagesMatrixClient({
         chapter={false}
         id="by-page"
         title={`${pageOrder.length} page types per site`}
-        note="Failing elements · rules firing · a dot is the page’s verdict. Click a cell for the detail with sample markup."
+        note="Failing elements · rules firing · a dot is the page’s verdict. Click a cell for the detail with sample markup. A variant tag means the URL serves more than one document, so its numbers move between runs on their own."
       />
       <Table label="Failing elements by page type">
         <THead>
@@ -100,6 +100,20 @@ function Cell({
       <StatusDot tone={VERDICT_DOT[cell.verdict]} />
       <span className={cell.verdict === 'blocking' ? 'font-medium text-critical' : 'text-ink'}>{cell.nodes}</span>
       <span className="text-[11px] text-faint">{cell.rules} rule{cell.rules === 1 ? '' : 's'}</span>
+      {/*
+        This URL serves more than one document, so the figure beside it is
+        only meaningful with the variant attached. Shown, not footnoted: two
+        staging runs an hour apart read 47 and 28 on this page with nothing
+        deployed, purely because the content test served a different hero.
+      */}
+      {cell.identity ? (
+        <span
+          title={`${cell.identity.key}: ${cell.identity.value ?? 'could not be identified'} — this URL serves more than one document, so its figures move between runs on their own.`}
+          className="rounded-[5px] border border-serious/35 bg-serious/[0.08] px-1.5 py-0.5 font-mono text-[10px] text-serious"
+        >
+          {cell.identity.value ?? 'variant unknown'}
+        </span>
+      ) : null}
     </Link>
   );
 }

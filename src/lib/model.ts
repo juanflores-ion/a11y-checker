@@ -222,6 +222,13 @@ export interface ScannedPage {
    * never move a defect count.
    */
   identity?: PageIdentity;
+  /**
+   * How many loads this page took before it served the variant the previous
+   * run recorded. Absent means one — the normal case. Present means the run
+   * asked again, and the number is here rather than implied, because
+   * re-loading until you like the answer is a selection you have to declare.
+   */
+  identityAttempts?: number;
 }
 
 export interface PageIdentity {
