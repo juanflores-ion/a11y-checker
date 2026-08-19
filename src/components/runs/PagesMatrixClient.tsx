@@ -114,6 +114,19 @@ function Cell({
           {cell.identity.value ?? 'variant unknown'}
         </span>
       ) : null}
+      {/*
+        The same URL's other documents, measured in the same run. Beside the
+        figure, never summed into it — this page contributes once to any total,
+        whatever the content test served.
+      */}
+      {cell.variants?.length ? (
+        <span
+          title="The same URL served these too, in this run. Only the figure on the left feeds the totals."
+          className="font-mono text-[10px] text-faint"
+        >
+          also {cell.variants.map((v) => `${v.name.replace('Variant ', '')} ${v.nodes}`).join(' · ')}
+        </span>
+      ) : null}
     </Link>
   );
 }

@@ -68,3 +68,32 @@ test('matrixCell: a page with no violations field counts nothing', () => {
   const page = { ...base, violations: undefined } as unknown as ScannedPage;
   assert.deepEqual(matrixCell(page), { kind: 'scanned', nodes: 0, rules: 0, verdict: 'clear' });
 });
+
+test('a page with several documents contributes one figure, and names the rest', () => {
+  const cell = matrixCell({
+    url: 'https://www.insureon.com/',
+    violations: [{ id: 'region', impact: 'moderate', n: 47 }],
+    namelessButtons: [], namelessLinks: [], emptyHref: [], hasMain: true, phantomMenu: null,
+    identity: { key: 'homepage-variant', value: 'Variant A' },
+    variants: {
+      'Variant B': {
+        url: 'https://www.insureon.com/', violations: [{ id: 'region', impact: 'moderate', n: 28 }],
+        namelessButtons: [], namelessLinks: [], emptyHref: [], hasMain: true, phantomMenu: null,
+      },
+      'Variant C': {
+        url: 'https://www.insureon.com/', violations: [{ id: 'region', impact: 'moderate', n: 70 }],
+        namelessButtons: [], namelessLinks: [], emptyHref: [], hasMain: true, phantomMenu: null,
+      },
+    },
+  } as never);
+
+  assert.equal(cell.kind, 'scanned');
+  if (cell.kind !== 'scanned') return;
+  // the page of record alone — 47, never 47+28+70
+  assert.equal(cell.nodes, 47);
+  assert.equal(cell.identity?.value, 'Variant A');
+  assert.deepEqual(cell.variants, [
+    { name: 'Variant B', nodes: 28 },
+    { name: 'Variant C', nodes: 70 },
+  ]);
+});

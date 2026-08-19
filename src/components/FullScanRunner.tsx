@@ -19,6 +19,8 @@ export interface ScanTarget {
   brand: string;
   key: string;
   url: string;
+  /** Present when this URL serves more than one document. */
+  identity?: { key: string; why: string; variants?: string[] };
 }
 
 /**
@@ -31,6 +33,16 @@ export interface ScanTarget {
  * measured against an earlier *staging* run. That needs staging runs to exist.
  */
 type Target = 'production' | 'staging';
+
+/**
+ * How many loads one multi-document URL may take before the run moves on.
+ *
+ * Variants come at random, so collecting three takes five or six loads on
+ * average and occasionally many more. Eight keeps a full run inside a few
+ * minutes and keeps the tail bounded; whatever was seen by then is recorded,
+ * along with the count of attempts.
+ */
+const MAX_VARIANT_LOADS = 8;
 
 type Status = 'idle' | 'running' | 'done' | 'failed';
 
@@ -239,30 +251,53 @@ export function FullScanRunner({ targets }: { targets: ScanTarget[] }) {
             if (!result) continue;
 
             /**
-             * Up to two more goes at a page that served a different document
-             * than last time. Not silent: `identityAttempts` records how many
-             * loads it took, and a page that never matches is kept as measured
-             * rather than dropped — the run says what it saw, always.
+             * A URL that serves several documents gets scanned until it has
+             * shown all of them, or until the cap.
+             *
+             * Insureon's homepage is three materially different pages behind
+             * one address — about 28, 47 and 70 failing elements — so a single
+             * load measures whichever one the content test felt like serving.
+             * Collecting them all removes the choice: the page of record keeps
+             * feeding the totals (the previous run's variant where there is
+             * one, so runs stay comparable; otherwise the first seen), and the
+             * others are kept beside it. Variants arrive at random, so this is
+             * capped and records how many loads it took — a run says what it
+             * did, including when it gave up.
              */
+            const declared = scanned.identity?.variants;
             const want = wanted.get(`${viewport}/${scanned.brand}/${scanned.key}`);
-            let attempts = 1;
-            const servedVariant = (r: typeof result): string | null =>
+            const variantOf = (r: typeof result): string | null =>
               r && !('error' in r) && 'identity' in r ? r.identity?.value ?? null : null;
-            while (want && servedVariant(result) && servedVariant(result) !== want && attempts < 3) {
-              const served = servedVariant(result);
-              setProgress((p) => ({
-                ...p,
-                current: `${scanned.url} — served ${served}, wanted ${want}, retrying`,
-              }));
-              const retry = await scanner.scan({
-                urls: [{ url: scanned.url, brand: scanned.brand, key: scanned.key }],
-                viewport,
-              });
-              const next = retry.results?.[0];
-              attempts += 1;
-              if (!next) break;
-              result = next;
+
+            let attempts = 1;
+            if (declared && declared.length > 1 && variantOf(result)) {
+              const seen = new Map<string, typeof result>([[variantOf(result)!, result]]);
+              while (seen.size < declared.length && attempts < MAX_VARIANT_LOADS) {
+                setProgress((p) => ({
+                  ...p,
+                  current: `${scanned.url} — ${seen.size} of ${declared.length} variants seen`,
+                }));
+                const again = await scanner.scan({
+                  urls: [{ url: scanned.url, brand: scanned.brand, key: scanned.key }],
+                  viewport,
+                });
+                attempts += 1;
+                const next = again.results?.[0];
+                const v = variantOf(next);
+                if (next && v && !seen.has(v)) seen.set(v, next);
+              }
+              const ofRecord = want && seen.has(want) ? want : [...seen.keys()][0];
+              const primary = seen.get(ofRecord)!;
+              const others = Object.fromEntries([...seen].filter(([v]) => v !== ofRecord));
+              result = { ...primary, ...(Object.keys(others).length ? { variants: others } : {}) } as typeof result;
             }
+
+            /**
+             * How many loads this page took. Recorded whenever it was more
+             * than one — including when the cap was hit and a variant never
+             * appeared — because a run has to say what it did, not only what
+             * it found.
+             */
             if (attempts > 1 && !('error' in result)) {
               result = { ...result, identityAttempts: attempts };
             }

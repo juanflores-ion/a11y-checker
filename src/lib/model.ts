@@ -229,6 +229,16 @@ export interface ScannedPage {
    * re-loading until you like the answer is a selection you have to declare.
    */
   identityAttempts?: number;
+  /**
+   * The other documents this URL served, keyed by variant name.
+   *
+   * Deliberately *beside* the page rather than as extra pages: the dashboard
+   * aggregates on page key, so three homepages stored as three pages would
+   * count the home page three times in a site total. The page this field
+   * hangs off is the page of record — it alone feeds every figure — and these
+   * are reference copies for anyone asking how the variants differ.
+   */
+  variants?: Record<string, ScannedPage>;
 }
 
 export interface PageIdentity {
