@@ -26,6 +26,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     display: formatRunTime(r),
     short: formatRunShort(r),
     viewports: r.viewports,
+    environment: r.environment,
   }));
 
   return (

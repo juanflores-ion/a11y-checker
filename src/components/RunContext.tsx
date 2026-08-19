@@ -2,6 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 
+import type { Environment } from '@/lib/environment';
 import {
   BRANDS,
   DEFAULT_VIEWPORT,
@@ -32,6 +33,13 @@ export interface RunSummary {
   short: string;
   /** Which device profiles this run measured. Pre-profile runs are mobile-only. */
   viewports: ViewportName[];
+  /**
+   * Production or staging, derived from the URLs the run recorded. Shown in
+   * the picker because the two are not interchangeable: cd-preview serves
+   * different content from www, so a staging run read as production would put
+   * content differences on the dashboard as if they were site changes.
+   */
+  environment: Environment;
 }
 
 interface RunSelection {

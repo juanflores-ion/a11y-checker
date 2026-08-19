@@ -10,7 +10,10 @@ import {
   type ViewportName,
   type ViewportSpec,
 } from '@/lib/model';
+import { stagingTwin } from '@/lib/sites';
 import { Eyebrow } from './Primitives';
+import { endpoints, useScanner } from './scan/useScanner';
+import { ServerStatus } from './scan/ServerStatus';
 
 export interface ScanTarget {
   brand: string;
@@ -18,8 +21,16 @@ export interface ScanTarget {
   url: string;
 }
 
-/** How many URLs go in one request. Must not exceed the API route's own cap. */
-const BATCH_SIZE = 3;
+/**
+ * Which deployment this run measures.
+ *
+ * Production is the default and what the scheduled run records. Staging is
+ * the same paths on each site's preview origin — and the reason this control
+ * exists: a before/after between production and staging cannot separate a fix
+ * from a difference between the two environments, so a staging fix has to be
+ * measured against an earlier *staging* run. That needs staging runs to exist.
+ */
+type Target = 'production' | 'staging';
 
 type Status = 'idle' | 'running' | 'done' | 'failed';
 
@@ -86,6 +97,8 @@ function readProvenance(body: { provenance?: Partial<RunProvenance>; scannedBy?:
  * diff for free.
  */
 export function FullScanRunner({ targets }: { targets: ScanTarget[] }) {
+  const scanner = useScanner();
+  const [target, setTarget] = useState<Target>('production');
   const [status, setStatus] = useState<Status>('idle');
   const [viewports, setViewports] = useState<ViewportName[]>([...VIEWPORT_NAMES]);
   const [progress, setProgress] = useState<Progress>({
@@ -101,8 +114,24 @@ export function FullScanRunner({ targets }: { targets: ScanTarget[] }) {
   const [engine, setEngine] = useState<RunProvenance | null>(null);
   const [engineChanged, setEngineChanged] = useState(false);
 
+  /**
+   * Staging is the same path on the site's preview origin. A target with no
+   * staging origin configured is dropped rather than scanned against
+   * production by accident — a run that quietly mixed the two would be
+   * exactly the thing this control exists to prevent.
+   */
+  const scanTargets: ScanTarget[] =
+    target === 'production'
+      ? targets
+      : targets
+          .map((t) => {
+            const url = stagingTwin(t.brand as never, t.url);
+            return url ? { ...t, url } : null;
+          })
+          .filter((t): t is ScanTarget => t !== null);
+
   async function run() {
-    const total = targets.length * viewports.length;
+    const total = scanTargets.length * viewports.length;
     setStatus('running');
     setError(null);
     setRunFile(null);
@@ -129,27 +158,21 @@ export function FullScanRunner({ targets }: { targets: ScanTarget[] }) {
       for (const viewport of viewports) {
         const byBrand: Record<string, Record<string, PageResult>> = {};
 
-        for (let i = 0; i < targets.length; i += BATCH_SIZE) {
-          const batch = targets.slice(i, i + BATCH_SIZE);
+        const batchSize = endpoints(scanner.serverUrl).maxUrls;
+        for (let i = 0; i < scanTargets.length; i += batchSize) {
+          const batch = scanTargets.slice(i, i + batchSize);
           setProgress((p) => ({ ...p, current: batch[0].url, currentViewport: viewport }));
 
-          const res = await fetch('/api/scan', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            /**
-             * Brand and page key travel with each URL so the route can look up
-             * that target's identity reader — the thing that says which of the
-             * three Insureon homepages was served. Without them the route has
-             * only a URL, which is why runs taken here carried no identity at
-             * all until now.
-             */
-            body: JSON.stringify({
-              urls: batch.map((t) => ({ url: t.url, brand: t.brand, key: t.key })),
-              viewport,
-            }),
+          /**
+           * Brand and page key travel with each URL so the scanner can look up
+           * that target's identity reader — the thing that says which of the
+           * three Insureon homepages was served. Without them it has only a
+           * URL, which is why runs taken here carried no identity at all.
+           */
+          const body = await scanner.scan({
+            urls: batch.map((t) => ({ url: t.url, brand: t.brand, key: t.key })),
+            viewport,
           });
-          const body = await res.json().catch(() => null);
-          if (!res.ok) throw new Error(body?.error ?? `Scan failed with ${res.status}`);
 
           if (body.viewportSpec) viewportSpecs[viewport] = body.viewportSpec;
 
@@ -199,6 +222,12 @@ export function FullScanRunner({ targets }: { targets: ScanTarget[] }) {
         meta: {
           startedAt,
           finishedAt: new Date().toISOString(),
+          /**
+           * Recorded for the reader; the app derives the same value from the
+           * URLs at load time and trusts that one, because a declared field
+           * can drift from what was actually scanned.
+           */
+          environment: target,
           axeVersion,
           primaryViewport,
           viewports: viewportSpecs,
@@ -260,12 +289,57 @@ export function FullScanRunner({ targets }: { targets: ScanTarget[] }) {
   return (
     <section className="rounded-lg border border-rule bg-card p-4 shadow-card">
       <p className="text-sm text-ink">
-        Scans every tracked page on both sites, {BATCH_SIZE} at a time, and hands back a run file.{' '}
+        Scans every tracked page on both sites, {endpoints(scanner.serverUrl).maxUrls} at a time,
+        and hands back a run file.{' '}
         <span className="text-muted">
           Drop it in <code className="font-mono text-xs">data/runs/</code> and commit it. Takes a
           couple of minutes — keep this tab open.
         </span>
       </p>
+
+      <div className="mt-4 flex flex-wrap items-start justify-between gap-4 border-b border-rule pb-4">
+        <fieldset>
+          <legend className="text-xs font-medium text-muted">Measure</legend>
+          <div className="mt-2 flex gap-1" role="group" aria-label="Which deployment to scan">
+            {(['production', 'staging'] as const).map((t) => (
+              <button
+                key={t}
+                type="button"
+                aria-pressed={target === t}
+                disabled={status === 'running'}
+                onClick={() => setTarget(t)}
+                className={`rounded-[7px] border px-3 py-1 text-xs transition-colors disabled:opacity-55 ${
+                  target === t
+                    ? 'border-accent/50 bg-accent/10 text-ink'
+                    : 'border-rule bg-paper text-muted hover:border-accent/40 hover:text-ink'
+                }`}
+              >
+                {t === 'production' ? 'Production' : 'Staging'}
+              </button>
+            ))}
+          </div>
+          <p className="mt-1.5 text-[11.5px] text-faint">
+            {target === 'production'
+              ? `${scanTargets.length} pages on the live sites.`
+              : `${scanTargets.length} pages on the preview origins — needs a scanner inside the network.`}
+          </p>
+        </fieldset>
+
+        <div className="text-xs text-muted">
+          Scanner
+          <div className="mt-1">
+            <ServerStatus
+              serverUrl={scanner.serverUrl}
+              token={scanner.token}
+              health={scanner.health}
+              published={scanner.published}
+              onServerUrlChange={scanner.setServerUrl}
+              onTokenChange={scanner.setToken}
+              onRecheck={scanner.recheck}
+            />
+          </div>
+        </div>
+      </div>
 
       <fieldset className="mt-4">
         <legend className="text-xs font-medium text-muted">Device profiles</legend>

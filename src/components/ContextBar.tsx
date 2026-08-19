@@ -3,6 +3,7 @@
 import { usePathname } from 'next/navigation';
 
 import { BRAND_LABEL, BRANDS, VIEWPORT_LABEL, type ViewportName } from '@/lib/model';
+import { ENVIRONMENT_LABEL, type Environment } from '@/lib/environment';
 import { useRuns, type SiteSelection } from './RunContext';
 
 const selectClass =
@@ -15,8 +16,9 @@ const selectClass =
  * is supposed to say briefly which measurement is on screen. So the label
  * shows where you choose a run, and hovers on the plain-text case.
  */
-function runText(run: { display: string; label?: string }) {
-  return run.label ? `${run.display} — ${run.label}` : run.display;
+function runText(run: { display: string; label?: string; environment?: Environment }) {
+  const env = run.environment && run.environment !== 'production' ? `${ENVIRONMENT_LABEL[run.environment]} · ` : '';
+  return run.label ? `${env}${run.display} — ${run.label}` : `${env}${run.display}`;
 }
 
 /**
@@ -80,6 +82,11 @@ export function ContextBar() {
             </select>
           ) : (
             <span className="truncate font-mono text-xs text-ink" title={current.label ?? undefined}>
+              {current.environment && current.environment !== 'production' ? (
+                <span className="mr-1.5 rounded-[5px] border border-serious/40 bg-serious/10 px-1.5 py-0.5 text-[10.5px] font-medium text-serious">
+                  {ENVIRONMENT_LABEL[current.environment]}
+                </span>
+              ) : null}
               {current.display}
             </span>
           )}

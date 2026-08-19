@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
+import { environmentOfRun } from './environment';
 import { VIEWPORT_NAMES, type BrandResults, type Run, type RunFile, type ViewportName } from './model';
 
 export * from './model';
@@ -53,6 +54,7 @@ function normalise(file: string, parsed: RunFile): Run {
     byViewport,
     viewports,
     primaryViewport,
+    environment: environmentOfRun(byViewport),
   };
 }
 
