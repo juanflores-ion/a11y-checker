@@ -102,10 +102,20 @@ export function RunProvider({
   children: React.ReactNode;
 }) {
   const latest = runs.length ? runs[runs.length - 1].id : '';
-  const previous = runs.length > 1 ? runs[runs.length - 2].id : null;
 
   const [currentId, setCurrentIdState] = useState(latest);
-  const [compareId, setCompareIdState] = useState<string | null>(previous);
+  /**
+   * No baseline-to-baseline deltas in the dashboard.
+   *
+   * The views used to show "since the previous run" chips driven by a second
+   * run picked in the context bar. Two problems ended it: with staging runs on
+   * file that picker would happily pair production against staging and print
+   * content differences as movement, and the dashboard's job is to say where
+   * the sites stand now, not to carry history. Comparing two runs is a
+   * deliberate act with its own screen — Scan → Compare runs — where the
+   * environment and instrument guards live.
+   */
+  const [compareId, setCompareIdState] = useState<string | null>(null);
   const [viewport, setViewportState] = useState<ViewportName>(DEFAULT_VIEWPORT);
   const [site, setSiteState] = useState<SiteSelection>(BRANDS[0]);
 

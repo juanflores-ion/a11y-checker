@@ -23,7 +23,7 @@ function runText(run: { display: string; label?: string; environment?: Environme
 
 /**
  * The one strip that says what every figure below it belongs to: which run,
- * which device profile, and what it is being compared against. It appears on
+ * which device profile, and which site. It appears on
  * every page that shows measured data and nowhere else — Scan measures whatever
  * you type, and How it works has no figures to select.
  *
@@ -37,13 +37,10 @@ export function ContextBar() {
     runs,
     current,
     currentId,
-    compareId,
     setCurrentId,
-    setCompareId,
     viewport,
     setViewport,
     availableViewports,
-    compareMissingViewport,
     site,
     setSite,
   } = useRuns();
@@ -130,32 +127,6 @@ export function ContextBar() {
           </select>
         </Field>
 
-        {runs.length >= 2 ? (
-          <Field label="Compare to">
-            <select
-              aria-label="Compare to"
-              className={selectClass}
-              value={compareId ?? 'none'}
-              onChange={(e) => setCompareId(e.target.value === 'none' ? null : e.target.value)}
-            >
-              <option value="none">—</option>
-              {[...runs]
-                .reverse()
-                .filter((r) => r.id !== currentId)
-                .map((r) => (
-                  <option key={r.id} value={r.id}>
-                    {runText(r)}
-                  </option>
-                ))}
-            </select>
-          </Field>
-        ) : null}
-
-        {compareMissingViewport ? (
-          <span role="status" className="text-critical">
-            No deltas — that run never measured {VIEWPORT_LABEL[viewport].toLowerCase()}
-          </span>
-        ) : null}
 
         <span className="group relative ml-auto flex items-center">
           <button
