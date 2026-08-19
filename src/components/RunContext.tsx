@@ -101,7 +101,17 @@ export function RunProvider({
   runs: RunSummary[];
   children: React.ReactNode;
 }) {
-  const latest = runs.length ? runs[runs.length - 1].id : '';
+  /**
+   * The dashboard opens on the latest *production* run.
+   *
+   * "Latest run" was fine while production was the only kind. The moment a
+   * staging baseline landed it became wrong: staging was newer, so Overview
+   * silently started reporting cd-preview's figures as where the sites stand
+   * — 3 of 8 instead of 4 of 8 on the first pair recorded. Staging runs exist
+   * to be compared against a later staging run, never to be the headline.
+   */
+  const production = runs.filter((r) => r.environment === 'production');
+  const latest = (production.length ? production : runs).slice(-1)[0]?.id ?? '';
 
   const [currentId, setCurrentIdState] = useState(latest);
   /**
