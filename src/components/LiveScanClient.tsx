@@ -18,6 +18,17 @@ import {
   type ViewportName,
 } from '@/lib/model';
 import type { PublishedScanner } from '@/lib/scannerEndpoint';
+import { ServerStatus } from './scan/ServerStatus';
+import {
+  authHeaders,
+  describeFetchError,
+  endpoints,
+  HOSTED,
+  ScanRequestError,
+  useScanner,
+  type Health,
+  type LiveScanResult,
+} from './scan/useScanner';
 import { SITES, productionUrls } from '@/lib/sites';
 import { CompareCard } from './CompareCard';
 import type { ScanTarget } from './FullScanRunner';
@@ -37,37 +48,8 @@ import { NumCell, Table, TBody, Td, Th, THead, ToggleCell } from './ui/Table';
  * A tunnelled scanner is started with a token; the token travels with every
  * request as a bearer header and is kept next to the address.
  */
-const HOSTED = '';
-const MAX_URLS_HOSTED = 3;
-const MAX_URLS_LOCAL = 10;
 const MAX_COMPARE_PAIRS = 12;
-const STORAGE_KEY = 'agent-readiness:scan-server';
-const TOKEN_STORAGE_KEY = 'agent-readiness:scan-token';
 
-/** Where a scan request goes, given the configured server address. */
-function endpoints(serverUrl: string) {
-  const base = serverUrl.trim().replace(/\/+$/, '');
-  return base
-    ? { health: `${base}/health`, scan: `${base}/scan`, hosted: false, maxUrls: MAX_URLS_LOCAL }
-    : { health: '/api/scan', scan: '/api/scan', hosted: true, maxUrls: MAX_URLS_HOSTED };
-}
-
-type LiveScanResult = PageResult & { axeVersion?: string | null };
-/** `token`: the scanner answered, but wants a token we don't have or rejected the one we sent. */
-type Health = 'unknown' | 'checking' | 'online' | 'offline' | 'token';
-
-/** The scanner answered with an error of its own — the network is fine, so it is not "offline". */
-class ScanRequestError extends Error {
-  status: number;
-  constructor(message: string, status: number) {
-    super(message);
-    this.status = status;
-  }
-}
-
-function authHeaders(serverUrl: string, token: string): Record<string, string> {
-  return !endpoints(serverUrl).hosted && token.trim() ? { Authorization: `Bearer ${token.trim()}` } : {};
-}
 type Mode = 'scan' | 'compare';
 
 const SCAN_EXAMPLES = productionUrls();
@@ -110,18 +92,9 @@ function parseUrlLines(text: string): { urls: string[]; invalid: string | null }
   return { urls, invalid: null };
 }
 
-function describeFetchError(err: unknown, serverUrl: string): string {
-  if (err instanceof DOMException && err.name === 'AbortError') {
-    return 'Timed out waiting for the scan server.';
-  }
-  const message = err instanceof Error ? err.message : String(err);
-  return message || `Couldn’t reach the scan server at ${serverUrl}. Is it running?`;
-}
-
 export function LiveScanClient({ mode, targets = [] }: { mode: Mode; targets?: ScanTarget[] }) {
-  const [serverUrl, setServerUrl] = useState(HOSTED);
-  const [token, setToken] = useState('');
-  const [health, setHealth] = useState<Health>('unknown');
+  const scanner = useScanner();
+  const { serverUrl, token, health } = scanner;
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -149,127 +122,28 @@ export function LiveScanClient({ mode, targets = [] }: { mode: Mode; targets?: S
   const [progress, setProgress] = useState<{ done: number; active: number; total: number } | null>(null);
 
   const [scannedAt, setScannedAt] = useState<string | null>(null);
-  /** The scanner someone else published, when this browser had none of its own. */
-  const [published, setPublished] = useState<PublishedScanner | null>(null);
   /**
    * One profile for the whole scan, and in Compare both sides use it.
    *
-   * These sites branch their markup on the device server-side, so a before/after
-   * taken at two profiles would diff two different pages — the desktop nav alone
-   * accounts for ~56 links — and every row of that diff would be noise dressed
-   * up as a result.
+   * These sites branch their markup on the device server-side, so a
+   * before/after taken at two profiles would diff two different pages — the
+   * desktop nav alone accounts for ~56 links — and every row of that diff
+   * would be noise dressed up as a result.
    */
   const [viewport, setViewport] = useState<ViewportName>(DEFAULT_VIEWPORT);
+  /** The scanner someone else published, when this browser had none of its own. */
   const abortRef = useRef<AbortController | null>(null);
+  const published = scanner.published;
 
-  // `localStorage` and `fetch` don't exist while this page is prerendered for
-  // the static export — both wait for a real client mount.
-  useEffect(() => {
-    let saved: string | null = null;
-    let savedToken: string | null = null;
-    try {
-      saved = window.localStorage.getItem(STORAGE_KEY);
-      savedToken = window.localStorage.getItem(TOKEN_STORAGE_KEY);
-    } catch {
-      // No persisted value — fall back to the default silently.
-    }
-    if (saved) setServerUrl(saved);
-    if (savedToken) setToken(savedToken);
-
-    /**
-     * Nothing saved on this machine? Take whatever scanner is published.
-     *
-     * This is the whole point of the published value: a QA opening the page
-     * for the first time gets a working scanner without anyone sending them a
-     * tunnel URL and a token. Someone who has set their own address keeps it —
-     * a published value never overwrites a deliberate choice, it only fills a
-     * blank.
-     */
-    if (saved) {
-      checkHealth(saved, savedToken ?? '');
-    } else {
-      fetch('/api/scanner', { cache: 'no-store' })
-        .then((r) => (r.ok ? r.json() : null))
-        .then((body: { published?: PublishedScanner | null } | null) => {
-          const p = body?.published;
-          if (!p?.address) {
-            checkHealth(HOSTED, savedToken ?? '');
-            return;
-          }
-          setServerUrl(p.address);
-          setToken(p.token ?? '');
-          setPublished(p);
-          checkHealth(p.address, p.token ?? '');
-        })
-        .catch(() => checkHealth(HOSTED, savedToken ?? ''));
-    }
-    return () => abortRef.current?.abort();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  async function checkHealth(url: string, tok: string) {
-    setHealth('checking');
-    try {
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 4000);
-      const res = await fetch(endpoints(url).health, {
-        headers: authHeaders(url, tok),
-        signal: controller.signal,
-      });
-      clearTimeout(timeout);
-      if (!res.ok) {
-        setHealth('offline');
-        return;
-      }
-      const body = (await res.json().catch(() => null)) as
-        | { authRequired?: boolean; tokenAccepted?: boolean }
-        | null;
-      const tokenProblem = Boolean(body?.authRequired) && (!tok.trim() || body?.tokenAccepted === false);
-      setHealth(tokenProblem ? 'token' : 'online');
-    } catch {
-      setHealth('offline');
-    }
-  }
-
-  function persist(key: string, value: string) {
-    try {
-      window.localStorage.setItem(key, value);
-    } catch {
-      // Value still works for this session even if it can't be persisted.
-    }
-  }
-
-  function saveServerUrl(next: string) {
-    setServerUrl(next);
-    persist(STORAGE_KEY, next);
-  }
-
-  function saveToken(next: string) {
-    setToken(next);
-    persist(TOKEN_STORAGE_KEY, next);
-  }
-
-  async function callScanServer(urls: string[]): Promise<LiveScanResult[]> {
-    const controller = new AbortController();
-    abortRef.current = controller;
-    const timeout = setTimeout(() => controller.abort(), 3 * 60 * 1000);
-    try {
-      const res = await fetch(endpoints(serverUrl).scan, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...authHeaders(serverUrl, token) },
-        body: JSON.stringify({ urls, viewport }),
-        signal: controller.signal,
-      });
-      const body = await res.json().catch(() => null);
-      // It answered, so it is reachable: a 401 means the token, anything else
-      // is a complaint about the request, not an outage.
-      setHealth(res.status === 401 ? 'token' : 'online');
-      if (!res.ok) throw new ScanRequestError(body?.error ?? `Scan server returned ${res.status}`, res.status);
-      setScannedAt((body.finishedAt as string) ?? new Date().toISOString());
-      return body.results as LiveScanResult[];
-    } finally {
-      clearTimeout(timeout);
-    }
+  /**
+   * One request to the scanner, whichever scanner the page is pointed at.
+   * `scannedAt` comes off the response so the results can say when they were
+   * taken rather than when they were rendered.
+   */
+  async function callScanServer(urls: unknown[]): Promise<LiveScanResult[]> {
+    const body = await scanner.scan({ urls, viewport });
+    setScannedAt((body.finishedAt as string) ?? new Date().toISOString());
+    return body.results;
   }
 
   async function runScan() {
@@ -299,7 +173,6 @@ export function LiveScanClient({ mode, targets = [] }: { mode: Mode; targets?: S
       setResults(await callScanServer(urls));
     } catch (err) {
       setError(describeFetchError(err, serverUrl));
-      if (!(err instanceof ScanRequestError)) setHealth('offline');
     } finally {
       setBusy(false);
     }
@@ -397,7 +270,6 @@ export function LiveScanClient({ mode, targets = [] }: { mode: Mode; targets?: S
       );
     } catch (err) {
       setError(describeFetchError(err, serverUrl));
-      if (!(err instanceof ScanRequestError)) setHealth('offline');
     } finally {
       setBusy(false);
       setProgress(null);
@@ -498,9 +370,9 @@ export function LiveScanClient({ mode, targets = [] }: { mode: Mode; targets?: S
                   token={token}
                   health={health}
                   published={published}
-                  onServerUrlChange={saveServerUrl}
-                  onTokenChange={saveToken}
-                  onRecheck={() => checkHealth(serverUrl, token)}
+                  onServerUrlChange={scanner.setServerUrl}
+                  onTokenChange={scanner.setToken}
+                  onRecheck={scanner.recheck}
                 />
               </div>
             </div>
@@ -614,138 +486,6 @@ function ExampleChips({
   );
 }
 
-function ServerStatus({
-  serverUrl,
-  token,
-  health,
-  published,
-  onServerUrlChange,
-  onTokenChange,
-  onRecheck,
-}: {
-  serverUrl: string;
-  token: string;
-  health: Health;
-  published: PublishedScanner | null;
-  onServerUrlChange: (url: string) => void;
-  onTokenChange: (token: string) => void;
-  onRecheck: () => void;
-}) {
-  const dotClass =
-    health === 'online'
-      ? 'bg-good'
-      : health === 'offline'
-      ? 'bg-critical'
-      : health === 'token'
-      ? 'bg-serious'
-      : 'bg-faint';
-  const hosted = !serverUrl.trim();
-  const labelText =
-    health === 'online'
-      ? hosted
-        ? 'Scanner ready'
-        : 'Your scanner ready'
-      : health === 'offline'
-      ? hosted
-        ? 'Scanner unavailable'
-        : 'Your scanner offline'
-      : health === 'token'
-      ? 'Scanner needs a token'
-      : health === 'checking'
-      ? 'Checking…'
-      : 'Scanner';
-
-  return (
-    <details className="group relative">
-      <summary className="inline-flex cursor-pointer items-center gap-1.5 text-xs text-muted hover:text-ink [&::-webkit-details-marker]:hidden">
-        <span aria-hidden="true" className={`h-1.5 w-1.5 rounded-full ${dotClass}`} />
-        {labelText}
-        <span className="text-faint">· change</span>
-      </summary>
-      <div className="absolute right-0 top-full z-30 mt-2 w-96 space-y-3 rounded-lg border border-rule bg-card p-4 shadow-pop">
-        {published ? (
-          <p className="rounded-card border border-accent/25 bg-accent/[0.06] px-3 py-2 text-[11.5px] leading-relaxed text-muted">
-            Filled in from the scanner published{' '}
-            <time dateTime={published.publishedAt}>
-              {new Date(published.publishedAt).toLocaleString(undefined, {
-                day: 'numeric',
-                month: 'short',
-                hour: '2-digit',
-                minute: '2-digit',
-              })}
-            </time>
-            {published.note ? ` · ${published.note}` : ''}. Change anything below and this browser
-            keeps your version instead.
-          </p>
-        ) : null}
-        <div>
-          <Eyebrow>Which scanner</Eyebrow>
-          <p className="mt-1 text-xs leading-relaxed text-muted">
-            {hosted
-              ? 'Running on this site — nothing to install. Limited to our own public domains and a few URLs per scan.'
-              : 'Running inside the network — on this machine, or on a colleague’s through a tunnel URL. This is how staging gets scanned. If it was started with a token, enter it below.'}
-          </p>
-        </div>
-
-        <label className="block">
-          <span className="text-eyebrow font-medium text-muted">
-            Scanner address <span className="text-faint">· blank uses this site</span>
-          </span>
-          <input
-            type="text"
-            value={serverUrl}
-            placeholder="http://localhost:4790 or a tunnel URL"
-            onChange={(e) => onServerUrlChange(e.target.value)}
-            className="mt-1 w-full rounded-card border border-rule bg-paper px-2.5 py-1.5 font-mono text-xs transition-shadow"
-          />
-        </label>
-
-        {!hosted ? (
-          <label className="block">
-            <span className="text-eyebrow font-medium text-muted">
-              Token <span className="text-faint">· only if the scanner asks for one</span>
-            </span>
-            <input
-              type="password"
-              value={token}
-              autoComplete="off"
-              onChange={(e) => onTokenChange(e.target.value)}
-              className="mt-1 w-full rounded-card border border-rule bg-paper px-2.5 py-1.5 font-mono text-xs transition-shadow"
-            />
-          </label>
-        ) : null}
-
-        <button
-          type="button"
-          onClick={onRecheck}
-          className="text-sm font-medium text-accent hover:underline"
-        >
-          Check again
-        </button>
-
-        {health === 'token' ? (
-          <p className="text-xs leading-relaxed text-muted">
-            This scanner was started with a token. Paste the one whoever started it gave you, then check again.
-          </p>
-        ) : null}
-
-        {health === 'offline' ? (
-          <p className="text-xs leading-relaxed text-muted">
-            {hosted ? (
-              'This site’s scanner didn’t respond. Try again, or point this at a scanner inside your network:'
-            ) : (
-              <>Nothing is answering there. On the machine that should be running it:</>
-            )}
-            <code className="mt-1.5 block rounded-card border border-rule bg-paper px-2 py-1.5 font-mono text-[11px] text-ink">
-              npm run scan-server
-            </code>
-            <span className="mt-1.5 block">To share it through a tunnel, see “Reach staging through a tunnel” in the README.</span>
-          </p>
-        ) : null}
-      </div>
-    </details>
-  );
-}
 
 /* ------------------------------------------------------------------ */
 

@@ -207,6 +207,7 @@ function runOf(
     byViewport: { desktop: brands },
     viewports: ['desktop'],
     primaryViewport: 'desktop',
+    environment: 'production' as const,
   };
 }
 

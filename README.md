@@ -460,6 +460,32 @@ scanner is a setting on the page (**Scanner · change**):
   on your own machine, or a tunnel URL when a colleague is running it for you.
   Up to ten URLs at a time.
 
+### Staging runs, and comparing two of them
+
+A before/after between production and staging cannot tell a fix from a
+difference between the two deployments. On 18 Aug 2026, with nothing
+deployed, such a comparison of Insureon's home page reported `label 2 → 0`
+and `label-title-only 2 → 0` as **resolved** — cd-preview simply serves
+different content. Two other pages in the same export were byte-identical
+across environments, so the gap is not even a constant you could subtract.
+
+So a fix is measured against an earlier run of *the same* environment:
+
+1. **Record a staging baseline before deploying.** Scan → Full run → set
+   **Measure** to *Staging*, point **Scanner** at one inside the network, run
+   it, drop the file in `data/runs/` and commit. The URLs are the tracked
+   targets' paths on each site's `staging` origin (`src/lib/sites.ts`).
+2. **Deploy.**
+3. **Record another staging run**, then Scan → **Compare runs**, pick the two,
+   and read the per-page table.
+
+Every run carries its environment, and the app derives it from the URLs the
+run actually recorded rather than from a declared field — a claim in `meta`
+can drift from what was scanned, and this value decides whether two runs may
+be compared at all. **Compare runs refuses a production/staging pair**, the
+same way a pair measured at two device profiles or two homepage variants is
+refused.
+
 ### Hosting the scanner for everybody else
 
 Staging only answers inside the org network, so a before/after against it runs

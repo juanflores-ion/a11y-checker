@@ -33,7 +33,8 @@
  *
  * Endpoints:
  *   GET  /health         -> { ok, busy, axeVersion, authRequired, tokenAccepted }
- *   POST /scan           <- { urls: string[] }   (+ Authorization in shared mode)
+ *   POST /scan           <- { urls: (string | {url, brand?, key?})[] }
+ *                           (+ Authorization in shared mode)
  *                         -> { startedAt, finishedAt, results: PageResult[] }
  */
 import { timingSafeEqual } from 'node:crypto';
@@ -55,7 +56,8 @@ import http from 'node:http';
 import { chromium } from 'playwright-core';
 
 import { hostAllowed, parseAllowedHosts } from './allowlist.mjs';
-import { DEFAULT_PROFILE, PROFILES, PROFILE_NAMES, launchContext, launchOptions, scanPage } from './core.mjs';
+import { identityFor } from './targets.mjs';
+import { DEFAULT_PROFILE, PROFILES, PROFILE_NAMES, browserProvenance, launchContext, launchOptions, scanPage } from './core.mjs';
 
 const PORT = Number(process.env.PORT ?? 4790);
 const HOST = process.env.HOST ?? '127.0.0.1';
@@ -140,18 +142,32 @@ async function readJsonBody(req) {
   return JSON.parse(raw);
 }
 
-/** http(s) only, well-formed, deduplicated, capped. Throws a message-ready Error. */
+/**
+ * http(s) only, well-formed, deduplicated, capped. Throws a message-ready Error.
+ *
+ * Two shapes, matching the hosted route: a bare string for any URL, or
+ * `{ url, brand, key }` when the caller knows which tracked target it is. The
+ * names let this server look up that target's identity reader — which of the
+ * three Insureon homepages was served — exactly as the CLI does. Sending the
+ * reader itself over the wire is not on offer: the caller names a target, the
+ * server owns the code.
+ *
+ * The full run started sending the object form and this server answered 400,
+ * which is how a staging baseline failed forty page loads before the first
+ * one ran.
+ */
 function normaliseUrls(input) {
   if (!Array.isArray(input) || input.length === 0) {
-    throw new Error('"urls" must be a non-empty array of strings');
+    throw new Error('"urls" must be a non-empty array');
   }
   if (input.length > MAX_URLS_PER_REQUEST) {
     throw new Error(`Provide at most ${MAX_URLS_PER_REQUEST} URLs per scan (got ${input.length})`);
   }
 
-  const seen = new Set();
-  for (const raw of input) {
-    const s = String(raw ?? '').trim();
+  const seen = new Map();
+  for (const item of input) {
+    const isObject = item && typeof item === 'object';
+    const s = String((isObject ? item.url : item) ?? '').trim();
     let parsed;
     try {
       parsed = new URL(s);
@@ -167,9 +183,11 @@ function normaliseUrls(input) {
           'Whoever runs it can add a host with SCAN_ALLOWED_HOSTS.'
       );
     }
-    seen.add(parsed.toString());
+    const brand = isObject && typeof item.brand === 'string' ? item.brand : undefined;
+    const key = isObject && typeof item.key === 'string' ? item.key : undefined;
+    seen.set(parsed.toString(), { url: parsed.toString(), brand, key });
   }
-  return [...seen];
+  return [...seen.values()];
 }
 
 async function handleScan(req, res) {
@@ -199,32 +217,65 @@ async function handleScan(req, res) {
   busy = true;
   const startedAt = new Date();
   let browser;
+  const launchOpts = launchOptions();
   try {
-    browser = await chromium.launch(launchOptions());
+    browser = await chromium.launch(launchOpts);
     const context = await launchContext(browser, viewport);
 
     // Sequential, not Promise.all: one Chromium page at a time keeps this
     // predictable on an ordinary laptop and keeps timing comparable to the
     // scheduled scan, which does the same.
     const results = [];
-    for (const url of urls) {
-      const r = await scanPage(context, url);
+    for (const target of urls) {
+      /**
+       * Undefined for anything that isn't a declared target, which is most
+       * URLs — `scanPage` then records no identity field at all, and a reader
+       * that cannot tell records null. Three states, never collapsed.
+       */
+      const identity =
+        target.brand && target.key ? identityFor(target.brand, target.key) : undefined;
+      const r = await scanPage(context, target.url, { identity });
       if (!r.error && r.axeVersion) lastAxeVersion = r.axeVersion;
       results.push(r);
     }
 
     await context.close();
-    sendJson(res, 200, {
+    /**
+     * Which engine produced these numbers — asked while the browser is still
+     * open, because a closed one cannot be asked its version. Without this the
+     * hosted route stamped runs and this one did not, so a run recorded
+     * through a tunnel could not say what measured it.
+     */
+    const provenance = browserProvenance(browser, launchOpts);
+    const payload = {
       startedAt: startedAt.toISOString(),
       finishedAt: new Date().toISOString(),
       results,
+      provenance,
+      scannedBy: 'scan-server',
       viewport,
       viewportSpec: {
         width: PROFILES[viewport].width,
         height: PROFILES[viewport].height,
         isMobile: PROFILES[viewport].isMobile,
       },
-    });
+    };
+    /**
+     * Shut down and release the flag BEFORE answering.
+     *
+     * The other order looks harmless and is not: closing Chromium takes a
+     * second or two, and a caller that sends its next batch the moment this
+     * response lands arrives inside that window and gets 429 "a scan is
+     * already running". A human clicking Run never noticed; the full run,
+     * which fires batches back to back, stalled after the first one every
+     * time.
+     */
+    if (browser) {
+      await browser.close();
+      browser = null;
+    }
+    busy = false;
+    sendJson(res, 200, payload);
   } catch (err) {
     sendJson(res, 500, { error: String(err.message ?? err) });
   } finally {

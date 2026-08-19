@@ -6,9 +6,10 @@ import { Suspense } from 'react';
 import { FullScanRunner, type ScanTarget } from '../FullScanRunner';
 import { LiveScanClient } from '../LiveScanClient';
 import { PageHeader } from '../ui/PageHeader';
+import { RecordedCompare } from './RecordedCompare';
 import { Tabs } from '../ui/Tabs';
 
-export type ScanMode = 'single' | 'compare' | 'full';
+export type ScanMode = 'single' | 'compare' | 'full' | 'runs';
 
 /**
  * Before / after is the mode this page exists for once fixes reach staging, so
@@ -16,7 +17,7 @@ export type ScanMode = 'single' | 'compare' | 'full';
  * resolves to it, so links written before it became the default keep working.
  */
 function parseMode(raw: string | null): ScanMode {
-  return raw === 'single' || raw === 'full' ? raw : 'compare';
+  return raw === 'single' || raw === 'full' || raw === 'runs' ? raw : 'compare';
 }
 
 /**
@@ -47,19 +48,22 @@ function ScanShell({ mode, targets }: { mode: ScanMode; targets: ScanTarget[] })
     <>
       <PageHeader
         title="Scan"
-        description="Point the scanner at any URL — production, staging, a preview build. Nothing is saved to the run history."
+        description="Point the scanner at any URL — production, staging, a preview build — or compare two runs already on file."
         aside={
           <Tabs
             ariaLabel="Scan modes"
             items={[
               { href: '/scan', label: 'Before / after', active: mode === 'compare' },
+              { href: '/scan?mode=runs', label: 'Compare runs', active: mode === 'runs' },
               { href: '/scan?mode=single', label: 'Single URL', active: mode === 'single' },
               { href: '/scan?mode=full', label: `Full run · ${targets.length} pages`, active: mode === 'full' },
             ]}
           />
         }
       />
-      {mode === 'full' ? (
+      {mode === 'runs' ? (
+        <RecordedCompare />
+      ) : mode === 'full' ? (
         <FullScanRunner targets={targets} />
       ) : (
         <LiveScanClient mode={mode === 'compare' ? 'compare' : 'scan'} targets={targets} />

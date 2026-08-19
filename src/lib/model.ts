@@ -3,6 +3,8 @@
  * Deliberately free of `node:fs` so client components can import from here
  * without dragging the filesystem into the browser bundle.
  */
+import type { Environment } from './environment';
+
 export const BRANDS = ['insureon', 'techinsurance'] as const;
 export type Brand = (typeof BRANDS)[number];
 
@@ -354,6 +356,13 @@ export interface Run {
   /** Which profiles this run actually measured, in canonical order. */
   viewports: ViewportName[];
   primaryViewport: ViewportName;
+  /**
+   * Production or staging, derived from the URLs the run recorded — never
+   * from a declared field, because this is what decides whether two runs may
+   * be compared. See `lib/environment.ts` for why that distinction earned its
+   * own module.
+   */
+  environment: Environment;
 }
 
 /**
