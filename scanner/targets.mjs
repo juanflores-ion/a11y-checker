@@ -113,30 +113,28 @@ const IDENTITIES = {
       key: 'homepage-variant',
       why:
         'One Sitecore item under a content test serves three different homepages from ' +
-        'this URL. The rendered hero component names which one, and it is the only ' +
-        'thing in the delivered page that does: there is no variant cookie, no ' +
-        'dataLayer field and no meta tag. Measured 13 Aug 2026 — Homepage-Hero-Columns ' +
-        'is the legacy page, Homepage-Hero-V2 and Homepage-Hero-V3 are the two ' +
-        'refreshed ones, and the hero matched the visible headline on 6 of 6 loads.',
+        'this URL, and the content team names them Variant A, B and C. Each one ships a ' +
+        'distinct <title>, which is the signal used here — it is the name the people who ' +
+        'run the test use, it survives a component rename, and it is in the delivered ' +
+        'document rather than in framework internals. Measured 13 Aug 2026: the same URL ' +
+        'returned 971, 893 and 1191 DOM nodes across eight loads with a fresh profile ' +
+        'each time, so a figure from this page means nothing without knowing which ' +
+        'document produced it.',
       read: () => {
-        // JSS embeds the layout it rendered from. Not `__NEXT_DATA__` — looking
-        // for that one and finding nothing is what produced a confident "the
-        // page carries no variant information", which was wrong.
-        const el = document.getElementById('__JSS_STATE__');
-        if (!el) return null;
-        let route;
-        try {
-          const state = JSON.parse(el.textContent);
-          route = state?.sitecore?.route ?? state?.props?.pageProps?.layoutData?.sitecore?.route;
-        } catch {
-          return null; // present but unparseable is "cannot tell", not "no variant"
-        }
-        if (!route || !route.placeholders) return null;
-        const hero = Object.values(route.placeholders)
-          .flat()
-          .map((rendering) => rendering && rendering.componentName)
-          .find((name) => typeof name === 'string' && name.startsWith('Homepage-Hero-'));
-        return hero ?? null;
+        /**
+         * Titles as the content team lists them. An unrecognised title reads
+         * as "could not tell" rather than as a guess: a fourth variant, or an
+         * edited title, must show up as unknown so somebody updates this map —
+         * quietly bucketing it into the nearest letter is how a run would
+         * claim to have measured a document it never identified.
+         */
+        const BY_TITLE = {
+          'Buy Business Insurance: Instant Online Quotes | Insureon': 'Variant A',
+          'Buy Business Insurance Online: Instant Quotes | Insureon': 'Variant B',
+          'Buy Business Insurance Online: Get Instant Quotes | Insureon': 'Variant C',
+        };
+        const title = (document.title || '').trim();
+        return BY_TITLE[title] ?? null;
       },
     },
   },
