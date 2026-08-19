@@ -391,7 +391,9 @@ export function FullScanRunner({ targets }: { targets: ScanTarget[] }) {
     <section className="rounded-lg border border-rule bg-card p-4 shadow-card">
       <p className="text-sm text-ink">
         Scans every tracked page on both sites, {endpoints(scanner.serverUrl).maxUrls} at a time,
-        and hands back a run file.{' '}
+        and hands back a run file. <strong className="text-ink">A baseline is one run per
+        environment</strong> — take production, then switch Measure to Staging and take that
+        one too, so a later deploy has something of its own to be compared against.{' '}
         <span className="text-muted">
           Drop it in <code className="font-mono text-xs">data/runs/</code> and commit it. Takes a
           couple of minutes — keep this tab open.
