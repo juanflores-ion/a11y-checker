@@ -11,7 +11,7 @@ import {
   type ViewportSpec,
 } from '@/lib/model';
 import { stagingTwin } from '@/lib/sites';
-import { Eyebrow } from './Primitives';
+import { Arrow, Eyebrow } from './Primitives';
 import { endpoints, useScanner } from './scan/useScanner';
 import { ServerStatus } from './scan/ServerStatus';
 
@@ -566,8 +566,8 @@ export function FullScanRunner({ targets }: { targets: ScanTarget[] }) {
             >
               Download run file
             </button>
-            <code className="font-mono text-xs text-muted">
-              → data/runs/ → commit → push
+            <code className="inline-flex items-center gap-1.5 font-mono text-xs text-muted">
+              <Arrow /> data/runs/ <Arrow /> commit <Arrow /> push
             </code>
           </div>
         </div>
