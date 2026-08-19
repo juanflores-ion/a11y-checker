@@ -15,7 +15,7 @@ import {
   type ViewportName,
 } from '@/lib/model';
 import { CompareCard } from '../CompareCard';
-import { Eyebrow } from '../Primitives';
+
 import { SectionHead } from '../ui/SectionHead';
 
 interface RunIndexEntry {
@@ -51,6 +51,12 @@ export function RecordedCompare() {
   const [beforeId, setBeforeId] = useState('');
   const [afterId, setAfterId] = useState('');
   const [viewport, setViewport] = useState<ViewportName | ''>('');
+  /**
+   * One site at a time. Both brands together is twenty rows of two unrelated
+   * websites, and the page name alone ("Home", "Policy") repeats down the list
+   * with nothing to tell the two apart.
+   */
+  const [site, setSite] = useState<Brand>(BRANDS[0]);
   const [runs, setRuns] = useState<{ before: FullRun; after: FullRun } | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -107,7 +113,7 @@ export function RecordedCompare() {
     }
   }
 
-  const rows = runs && chosenViewport ? buildRows(runs.before, runs.after, chosenViewport) : [];
+  const rows = runs && chosenViewport ? buildRows(runs.before, runs.after, chosenViewport, site) : [];
 
   return (
     <div className="space-y-8">
@@ -121,6 +127,20 @@ export function RecordedCompare() {
           />
           <RunPicker label="After" value={afterId} options={index ?? []} onChange={setAfterId} />
           <div className="flex items-end gap-3">
+            <label className="text-xs text-muted">
+              Site
+              <select
+                value={site}
+                onChange={(e) => setSite(e.target.value as Brand)}
+                className="mt-1 block w-full appearance-none rounded-[7px] border border-rule bg-card py-1.5 pl-2 pr-6 font-mono text-xs text-ink hover:border-accent"
+              >
+                {BRANDS.map((b) => (
+                  <option key={b} value={b}>
+                    {BRAND_LABEL[b]}
+                  </option>
+                ))}
+              </select>
+            </label>
             {shared.length > 1 ? (
               <label className="text-xs text-muted">
                 Device
@@ -192,7 +212,7 @@ export function RecordedCompare() {
         <section>
           <SectionHead
             chapter={false}
-            title={`${rows.length} page${rows.length === 1 ? '' : 's'} compared`}
+            title={`${BRAND_LABEL[site]} · ${rows.length} page${rows.length === 1 ? '' : 's'} compared`}
             note={`${ENVIRONMENT_LABEL[runs!.before.environment]} · ${stamp(runs!.before)} against ${stamp(runs!.after)} · ${VIEWPORT_LABEL[chosenViewport!]}. Click a row for the full comparison.`}
           />
           <div className="overflow-hidden rounded-lg border border-rule bg-card shadow-card">
@@ -245,7 +265,8 @@ export function RecordedCompare() {
         </section>
       ) : runs ? (
         <p className="text-sm text-muted">
-          Neither run measured a page at {VIEWPORT_LABEL[chosenViewport ?? 'desktop']}.
+          Neither run measured a {BRAND_LABEL[site]} page at{' '}
+          {VIEWPORT_LABEL[chosenViewport ?? 'desktop']}.
         </p>
       ) : null}
     </div>
@@ -303,43 +324,41 @@ interface Row {
   verdictWord: string;
 }
 
-/** One row per brand + page type that both runs measured at this viewport. */
-function buildRows(before: FullRun, after: FullRun, viewport: ViewportName): Row[] {
+/** One row per page type of the chosen site that both runs measured at this viewport. */
+function buildRows(before: FullRun, after: FullRun, viewport: ViewportName, site: Brand): Row[] {
   const rows: Row[] = [];
   const b = before.byViewport[viewport];
   const a = after.byViewport[viewport];
   if (!b || !a) return rows;
 
-  for (const brand of BRANDS as readonly Brand[]) {
-    const bPages: Record<string, PageResult> = b[brand] ?? {};
-    const aPages: Record<string, PageResult> = a[brand] ?? {};
-    const keys = [...new Set([...Object.keys(bPages), ...Object.keys(aPages)])];
-    for (const key of keys) {
-      const bp = bPages[key] ?? null;
-      const ap = aPages[key] ?? null;
-      if (!bp && !ap) continue;
-      const diff = diffPages(bp?.url ?? '', ap?.url ?? '', bp, ap, {
-        before: viewport,
-        after: viewport,
-      });
-      const summary = summariseDiff(diff);
-      rows.push({
-        key: `${brand}-${key}`,
-        title: `${BRAND_LABEL[brand]} · ${PAGE_LABEL[key] ?? key}`,
-        diff,
-        before: diff.totalBefore === null ? 'n/m' : String(diff.totalBefore),
-        after: diff.totalAfter === null ? 'n/m' : String(diff.totalAfter),
-        change: diff.totalChange,
-        verdictWord:
-          summary.verdict === 'better'
-            ? 'better'
-            : summary.verdict === 'worse'
-            ? 'worse'
-            : summary.verdict === 'same'
-            ? ''
-            : 'not comparable',
-      });
-    }
+  const bPages: Record<string, PageResult> = b[site] ?? {};
+  const aPages: Record<string, PageResult> = a[site] ?? {};
+  const keys = [...new Set([...Object.keys(bPages), ...Object.keys(aPages)])];
+  for (const key of keys) {
+    const bp = bPages[key] ?? null;
+    const ap = aPages[key] ?? null;
+    if (!bp && !ap) continue;
+    const diff = diffPages(bp?.url ?? '', ap?.url ?? '', bp, ap, {
+      before: viewport,
+      after: viewport,
+    });
+    const summary = summariseDiff(diff);
+    rows.push({
+      key: `${site}-${key}`,
+      title: PAGE_LABEL[key] ?? key,
+      diff,
+      before: diff.totalBefore === null ? 'n/m' : String(diff.totalBefore),
+      after: diff.totalAfter === null ? 'n/m' : String(diff.totalAfter),
+      change: diff.totalChange,
+      verdictWord:
+        summary.verdict === 'better'
+          ? 'better'
+          : summary.verdict === 'worse'
+          ? 'worse'
+          : summary.verdict === 'same'
+          ? ''
+          : 'not comparable',
+    });
   }
   // Biggest movement first; pages that did not move sink to the bottom.
   rows.sort((x, y) => Math.abs(y.change ?? 0) - Math.abs(x.change ?? 0));
