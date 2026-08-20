@@ -16,10 +16,8 @@
  * tab instead. Both this file and that one call the same `scanPage` in
  * core.mjs, so the numbers are directly comparable either way.
  */
-import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 
 import { chromium } from 'playwright';
 
@@ -71,66 +69,6 @@ Agent-accessibility scanner
 For an arbitrary URL not in the fixed target list, use the live scan server
 instead: node scanner/server.mjs
 `;
-
-/* ------------------------------------------------------------------ */
-/* Provenance                                                          */
-/* ------------------------------------------------------------------ */
-
-const SCANNER_DIR = path.dirname(fileURLToPath(import.meta.url));
-
-/**
- * Which probe code produced these numbers.
- *
- * The short SHA of the last commit that touched `scanner/` — literally what
- * `git log -1 --format=%h -- scanner/` prints. Two runs carrying the same value
- * were measured by the same engine; two runs carrying different values were
- * not, and a line drawn between them joins measurements taken with different
- * instruments.
- *
- * It exists because both published runs were produced by probe code that no
- * longer exists — `a2cd211` rewrote five hand-written predicates underneath
- * them — and nothing in either file says so. Recording this does not repair
- * those runs. It makes the discontinuity visible, so the first run that carries
- * a probeVersion can be marked as a new baseline instead of read as a
- * regression.
- *
- * Three ways it can fail, and what each writes:
- *
- * - **No git, or not a checkout** (a container, an unpacked tarball): `null`.
- *   Never omitted. An *absent* field means the run predates provenance
- *   entirely, which is true of the three files already in `data/runs`; `null`
- *   means this run asked and could not answer. Those are different facts and
- *   whatever marks the discontinuity has to be able to tell them apart.
- * - **The working tree differs from that commit**: the SHA is suffixed
- *   `+dirty`. A bare SHA there would name code that is not the code that ran,
- *   and a confident wrong answer is worse than no answer — it is the same
- *   failure as a scan that did not happen rendering as a good result.
- * - **SCANNER_PROBE_VERSION** overrides both, for a deployment that has no
- *   `.git` but can compute the value at build time from the same command.
- *
- * The git calls are scoped with `-C` to this file's own directory rather than
- * to `process.cwd()`, so the answer does not change with where the CLI was
- * invoked from.
- */
-function probeVersion() {
-  const pinned = process.env.SCANNER_PROBE_VERSION?.trim();
-  if (pinned) return pinned;
-  try {
-    const git = (args) =>
-      execFileSync('git', ['-C', SCANNER_DIR, ...args], {
-        encoding: 'utf8',
-        stdio: ['ignore', 'pipe', 'ignore'],
-      }).trim();
-    const sha = git(['log', '-1', '--format=%h', '--', '.']);
-    if (!sha) return null;
-    // Untracked files count: a probe added but not committed is still code
-    // that ran and is not in the commit this claims to be.
-    const dirty = git(['status', '--porcelain', '--', '.']);
-    return dirty ? `${sha}+dirty` : sha;
-  } catch {
-    return null;
-  }
-}
 
 /* ------------------------------------------------------------------ */
 /* Run                                                                 */

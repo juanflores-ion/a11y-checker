@@ -57,7 +57,7 @@ import { chromium } from 'playwright-core';
 
 import { hostAllowed, parseAllowedHosts } from './allowlist.mjs';
 import { identityFor } from './targets.mjs';
-import { DEFAULT_PROFILE, PROFILES, PROFILE_NAMES, browserProvenance, launchContext, launchOptions, scanPage } from './core.mjs';
+import { DEFAULT_PROFILE, PROFILES, PROFILE_NAMES, browserProvenance, launchContext, launchOptions, probeVersion, scanPage } from './core.mjs';
 
 const PORT = Number(process.env.PORT ?? 4790);
 const HOST = process.env.HOST ?? '127.0.0.1';
@@ -245,8 +245,21 @@ async function handleScan(req, res) {
      * open, because a closed one cannot be asked its version. Without this the
      * hosted route stamped runs and this one did not, so a run recorded
      * through a tunnel could not say what measured it.
+     *
+     * `probeVersion` was the half of that still missing. The browser keys
+     * landed here; the probe SHA did not, so every run taken through a tunnel
+     * — which is every run on file — read "scanner not recorded" while the
+     * same scan through the hosted route recorded it. Same three keys as
+     * `src/app/api/scan/route.ts` now, and the same contract: every key
+     * present on every response, `null` where it could not be established.
+     * Absent stays reserved for a response that predates the block.
      */
-    const provenance = browserProvenance(browser, launchOpts);
+    const engine = browserProvenance(browser, launchOpts);
+    const provenance = {
+      probeVersion: probeVersion(),
+      browserVersion: engine.browserVersion ?? null,
+      browserPath: engine.browserPath ?? null,
+    };
     const payload = {
       startedAt: startedAt.toISOString(),
       finishedAt: new Date().toISOString(),
