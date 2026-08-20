@@ -140,22 +140,33 @@ export function RecordedCompare() {
               ))}
             </select>
           </label>
-          {shared.length > 1 ? (
-            <label className="text-xs text-muted">
-              Device
-              <select
-                value={chosenViewport}
-                onChange={(e) => setViewport(e.target.value as ViewportName)}
-                className="mt-1 block appearance-none rounded-[7px] border border-rule bg-card py-1.5 pl-2.5 pr-7 font-mono text-xs text-ink hover:border-accent"
-              >
-                {shared.map((v) => (
+          {/*
+            Always here, never conditional. It used to appear only once both
+            runs were picked and only if they shared more than one profile,
+            which reads as a control that comes and goes: you look for Device,
+            it is not there, and nothing says why. It is disabled until there is
+            a pair to read the shared profiles from, and says so.
+          */}
+          <label className="text-xs text-muted">
+            Device
+            <select
+              value={chosenViewport ?? ''}
+              disabled={shared.length === 0}
+              title={shared.length === 0 ? 'Pick both runs first' : undefined}
+              onChange={(e) => setViewport(e.target.value as ViewportName)}
+              className="mt-1 block appearance-none rounded-[7px] border border-rule bg-card py-1.5 pl-2.5 pr-7 font-mono text-xs text-ink hover:border-accent disabled:cursor-not-allowed disabled:opacity-55"
+            >
+              {shared.length === 0 ? (
+                <option value="">Pick both runs first</option>
+              ) : (
+                shared.map((v) => (
                   <option key={v} value={v}>
                     {VIEWPORT_LABEL[v]}
                   </option>
-                ))}
-              </select>
-            </label>
-          ) : null}
+                ))
+              )}
+            </select>
+          </label>
         </div>
 
         <div className="mt-4 grid gap-4 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
