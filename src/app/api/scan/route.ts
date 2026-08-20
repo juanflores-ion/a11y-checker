@@ -130,7 +130,7 @@ function parseEntries(input: unknown): { entries: ScanEntry[]; error?: string } 
   if (!Array.isArray(input)) return { entries: [], error: BODY_SHAPE };
   if (input.length === 0) return { entries: [], error: 'No URLs given.' };
   if (input.length > MAX_URLS) {
-    return { entries: [], error: `Too many URLs — this endpoint scans ${MAX_URLS} at a time.` };
+    return { entries: [], error: `Too many URLs. This endpoint scans ${MAX_URLS} at a time.` };
   }
 
   const allowed = allowedHosts();

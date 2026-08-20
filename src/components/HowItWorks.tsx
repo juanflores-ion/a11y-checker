@@ -1,7 +1,6 @@
 import { NON_DEFECT_METRICS, PAGE_DEFECTS } from '@/lib/model';
 import type { HowItWorksFigures } from '@/lib/howItWorks';
 
-import { BaselinePair } from './how/BaselinePair';
 import { Chapter } from './how/Chapter';
 import { DefectMatrix } from './how/DefectMatrix';
 import { EnvironmentRefusal } from './how/EnvironmentRefusal';
@@ -43,7 +42,6 @@ export function HowItWorks({ figures }: { figures: HowItWorksFigures | null }) {
           <ExactLists />
           <Environments figures={figures} />
           <Variants figures={figures} />
-          <Baseline figures={figures} />
           <Stamp figures={figures} />
           <Limits />
         </div>
@@ -123,7 +121,7 @@ function Hero() {
       </p>
       <p className="mt-3 text-base leading-relaxed text-muted">
         This tool measures how much of our sites survives that translation. Everything below is read
-        from real runs — no figure on this page is an illustration.
+        from real runs. No figure on this page is an illustration.
       </p>
     </header>
   );
@@ -184,15 +182,15 @@ function TheList({ figures }: { figures: HowItWorksFigures | null }) {
             <TreeLine role="banner" />
             <TreeLine depth={1} role="link" name="Insureon" />
             <TreeLine depth={1} role="link" name="Small business insurance" />
-            <TreeLine depth={1} role="???" tone="bad" note="no name — the menu icon" />
+            <TreeLine depth={1} role="???" tone="bad" note="no name, the menu icon" />
             <TreeLine role="heading" name="Insurance for your business" />
             <TreeLine role="text" name="Cover that fits what you do…" />
             <TreeLine role="button" name="Get quotes" tone="good" />
-            <TreeLine role="???" tone="bad" note="no name — the round icon" />
+            <TreeLine role="???" tone="bad" note="no name, the round icon" />
           </div>
           <p className="mt-3 text-sm leading-relaxed text-muted">
             The button came through. The two icons arrived as{' '}
-            <span className="font-mono text-critical">???</span> — something is there, but not what
+            <span className="font-mono text-critical">???</span>. Something is there, but not what
             it does.
           </p>
         </Panel>
@@ -216,7 +214,7 @@ function TwoDevices({ figures }: { figures: HowItWorksFigures | null }) {
   return (
     <Chapter
       id="two-devices"
-      lead="Our sites send a phone a genuinely different page from a laptop — not the same page at two widths. Agents get the laptop one."
+      lead="Our sites send a phone a genuinely different page from a laptop, not the same page at two widths. Agents get the laptop one."
     >
       <div className="rounded-lg border border-rule bg-card p-5 shadow-card">
         <div className="grid items-center gap-4 sm:grid-cols-[1fr_auto_1fr]">
@@ -278,7 +276,7 @@ function TwoDevices({ figures }: { figures: HowItWorksFigures | null }) {
 const STEPS = [
   {
     title: 'Open a real browser',
-    body: 'A real Chrome running the page’s JavaScript — once as a laptop, once as a phone.',
+    body: 'A real Chrome running the page’s JavaScript, once as a laptop and once as a phone.',
   },
   {
     title: 'Load it, then check it',
@@ -294,7 +292,7 @@ const STEPS = [
   },
   {
     title: 'Write down the counts',
-    body: 'One file per run. This dashboard only reads those files — it never scans anything itself.',
+    body: 'One file per run. This dashboard only reads those files. It never scans anything itself.',
   },
 ];
 
@@ -310,7 +308,7 @@ function HowScanned() {
   return (
     <Chapter
       id="how-scanned"
-      lead="Five steps, about five seconds a page. It never clicks, hovers, scrolls or types — so the page is measured exactly as delivered, and two runs always measure the same thing."
+      lead="Five steps, about five seconds a page. It never clicks, hovers, scrolls or types, so the page is measured exactly as delivered and two runs always measure the same thing."
     >
       <ol className="overflow-hidden rounded-lg border border-rule bg-card shadow-card">
         {STEPS.map((step, i) => (
@@ -351,8 +349,9 @@ function WhatCounts() {
         states rather than one — and the third card, a fully open menu, went: it
         is the trivial case and the matrix covers it.
       */}
-      <Panel label="The same closed menu, two ways">
-        <div className="grid gap-4 lg:grid-cols-2">
+      <section className="mt-8">
+        <Eyebrow>The same closed menu, two ways</Eyebrow>
+        <div className="mt-3 grid gap-4 lg:grid-cols-2">
           <div>
             <div className="rounded-card border border-good/30 bg-paper p-3">
               <TreeLine role="button" name="Products" note="collapsed" tone="good" />
@@ -361,35 +360,35 @@ function WhatCounts() {
               </div>
             </div>
             <p className="mt-2.5 text-sm leading-relaxed text-muted">
-              <strong className="font-medium text-good">Hidden.</strong> The links are out of the
-              list, but the button announces them. An agent knows to open it.
+              The role is <span className="font-mono text-xs text-good">button</span>, so the list
+              still carries something that points at the three links.
             </p>
           </div>
           <div>
             <div className="rounded-card border border-critical/30 bg-paper p-3">
               <TreeLine role="text" name="Products" note="not a button" tone="bad" />
               <div className="py-[3px] pl-[14px] font-mono text-xs text-faint">
-                (3 links, hidden — nothing mentions them)
+                (3 links, hidden, nothing mentions them)
               </div>
             </div>
             <p className="mt-2.5 text-sm leading-relaxed text-muted">
-              <strong className="font-medium text-critical">Unfindable.</strong> The links exist, but
-              nothing in the list points to them. They open on hover, and an agent has no pointer.
+              The role is <span className="font-mono text-xs text-critical">text</span>. It opens on
+              hover, so nothing in the list mentions the links at all.
             </p>
           </div>
         </div>
-      </Panel>
+      </section>
 
       <div className="mt-5 max-w-measure space-y-3 text-sm leading-relaxed text-muted">
         <p>
           One thing never reaches the list at all: a{' '}
-          <strong className="font-medium text-ink">ghost control</strong> — something that responds
+          <strong className="font-medium text-ink">ghost control</strong>, something that responds
           to a click but was never marked as a button. No standard rulebook can see it. Ours counts
           it.
         </p>
         <p>
-          Most of the defects lived in a handful of shared building blocks — the navigation, the link
-          and image primitives, the expandable panels — so they were fixed at the source. That is why
+          Most of the defects lived in a handful of shared building blocks: the navigation, the link
+          and image primitives, the expandable panels. They were fixed at the source. That is why
           the counts fall on every page at once rather than one page at a time.
         </p>
       </div>
@@ -424,7 +423,7 @@ function ExactLists() {
       lead="Both lists are printed from the scanner’s own definitions, so this page cannot drift from what it measures."
     >
       <div className="grid gap-4 lg:grid-cols-2 lg:items-start">
-        <Panel label="Counted as defects — a correct page has all of these at zero" tone="bad">
+        <Panel label="Counted as defects. A correct page has all of these at zero" tone="bad">
           <ul className="space-y-2">
             {PAGE_DEFECTS.map((d) => (
               <li key={d.key} className="border-b border-rule pb-2 last:border-0 last:pb-0">
@@ -435,7 +434,7 @@ function ExactLists() {
           </ul>
         </Panel>
 
-        <Panel label="Expected to be non-zero — descriptions, not scores" tone="good">
+        <Panel label="Expected to be non-zero. Descriptions, not scores" tone="good">
           <ul className="space-y-2">
             {NON_DEFECT_METRICS.map((m) => (
               <li key={m.key} className="border-b border-rule pb-2 last:border-0 last:pb-0">
@@ -466,11 +465,6 @@ function Environments({ figures }: { figures: HowItWorksFigures | null }) {
 
       <div className="mt-5 max-w-measure space-y-3 text-sm leading-relaxed text-muted">
         <p>
-          Production is the site the public gets. Staging is where a fix lands first. They serve
-          different content — different copy, different components, sometimes a different homepage
-          entirely — so the difference between them is not a measure of anything anybody changed.
-        </p>
-        <p>
           <strong className="font-medium text-ink">The comparison that does work</strong> is two runs
           of the same deployment: staging before the fix against staging after it. Only the deploy
           changed in between, so only the deploy can explain the movement. That is what{' '}
@@ -497,7 +491,7 @@ function Variants({ figures }: { figures: HowItWorksFigures | null }) {
       <div className="mt-5 max-w-measure space-y-3 text-sm leading-relaxed text-muted">
         <p>
           The scanner asks each homepage which document it served and records the answer beside the
-          figures. Where a target declares no identity — every page we track but this one — nothing
+          figures. Where a target declares no identity, which is every page we track but this one, nothing
           is asked and nothing is recorded.
         </p>
         <p>
@@ -517,35 +511,7 @@ function Variants({ figures }: { figures: HowItWorksFigures | null }) {
 }
 
 /* ------------------------------------------------------------------ */
-/* 8. What a baseline is                                               */
-/* ------------------------------------------------------------------ */
-
-function Baseline({ figures }: { figures: HowItWorksFigures | null }) {
-  return (
-    <Chapter
-      id="baseline"
-      lead="A baseline is a pair of runs, not a run — and there is no such thing on this dashboard as a figure “since last time”."
-    >
-      <BaselinePair pair={figures?.environments ?? null} />
-
-      <div className="mt-5 max-w-measure space-y-3 text-sm leading-relaxed text-muted">
-        <p>
-          Keeping one pair rather than a history is a choice about what the numbers are for. A trend
-          line drawn across runs taken with different browsers, different scanner code and different
-          homepage documents joins measurements made with different instruments, and reads as a change
-          in the site.
-        </p>
-        <p>
-          So the dashboard shows what is true now, and comparing two runs is a deliberate act with its
-          own screen. Nothing arrives pre-compared.
-        </p>
-      </div>
-    </Chapter>
-  );
-}
-
-/* ------------------------------------------------------------------ */
-/* 9. Every figure’s stamp                                             */
+/* 8. Every figure’s stamp                                             */
 /* ------------------------------------------------------------------ */
 
 /**
@@ -619,7 +585,7 @@ function Stamp({ figures }: { figures: HowItWorksFigures | null }) {
 }
 
 /* ------------------------------------------------------------------ */
-/* 10. What it cannot tell you                                         */
+/* 9. What it cannot tell you                                         */
 /* ------------------------------------------------------------------ */
 
 interface Limit {

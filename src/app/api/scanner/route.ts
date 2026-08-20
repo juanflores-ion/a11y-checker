@@ -41,7 +41,7 @@ export async function POST(request: Request) {
     return NextResponse.json(
       {
         error:
-          'Publishing is switched off — SCAN_PUBLISH_SECRET is not set on this deployment.',
+          'Publishing is switched off: SCAN_PUBLISH_SECRET is not set on this deployment.',
       },
       { status: 503 }
     );

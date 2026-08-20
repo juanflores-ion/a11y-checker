@@ -49,7 +49,7 @@ export function ScanResultCard({
           <p className={`inline-flex items-center gap-2 text-sm font-medium ${style.text}`}>
             <span aria-hidden="true" className={`inline-block h-1.5 w-1.5 rounded-full ${style.bar}`} />
             {VERDICT_LABEL[verdict]}
-            <span className="font-normal text-muted">— {style.blurb}</span>
+            <span className="font-normal text-muted">· {style.blurb}</span>
           </p>
         </header>
 
@@ -76,7 +76,7 @@ export function ScanResultCard({
         <div className="mt-6 border-t border-rule pt-5">
           {findings.length === 0 ? (
             <Notice tone="good" title="No rule failures on this page">
-              Every automated rule passed. That covers what a scanner can see — it isn’t a
+              Every automated rule passed. That covers what a scanner can see, but it isn’t a
               substitute for testing with a real screen reader.
             </Notice>
           ) : (

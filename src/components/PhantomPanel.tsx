@@ -34,7 +34,7 @@ export function PhantomPanel({
   if (!phantom) {
     return (
       <p className={`text-xs text-faint ${className}`}>
-        Closed mobile menu: no mega-menu element on this page — nothing to measure.
+        Closed mobile menu: no mega-menu element on this page, so nothing to measure.
       </p>
     );
   }
@@ -46,7 +46,7 @@ export function PhantomPanel({
   if (clean) {
     return (
       <div className={`rounded-card border border-good/40 bg-good/5 p-4 ${className}`}>
-        <Eyebrow className="text-good">Phantom menu — cleared</Eyebrow>
+        <Eyebrow className="text-good">Phantom menu · cleared</Eyebrow>
         <p className="mt-1.5 font-display text-lg font-semibold text-good">
           The closed menu is no longer reachable
         </p>
@@ -60,7 +60,7 @@ export function PhantomPanel({
 
   return (
     <div className={`rounded-card border border-phantom/35 bg-phantom/[0.04] p-4 ${className}`}>
-      <Eyebrow className="text-phantom">Phantom menu — exposed</Eyebrow>
+      <Eyebrow className="text-phantom">Phantom menu · exposed</Eyebrow>
 
       <p className="mt-1.5 font-display text-lg font-semibold leading-snug text-ink">
         Closed menu is exposed to agents
@@ -75,7 +75,7 @@ export function PhantomPanel({
         {unclickable ? (
           <>
             {' '}
-            — but <code className="font-mono text-xs">pointer-events: none</code> makes all of them
+            , but <code className="font-mono text-xs">pointer-events: none</code> makes all of them
             unclickable.
           </>
         ) : (
@@ -105,7 +105,7 @@ export function PhantomPanel({
 
       {pagesWithMenu && pagesWithMenu > 1 ? (
         <p className="mt-3 text-xs text-muted">
-          Identical on all {pagesWithMenu} scanned pages of this brand — it&apos;s one shared
+          Identical on all {pagesWithMenu} scanned pages of this brand, because it&apos;s one shared
           component, so one fix clears every page.
         </p>
       ) : null}

@@ -159,7 +159,7 @@ export function LiveScanClient({ mode, targets = [] }: { mode: Mode; targets?: S
     const { maxUrls, hosted } = endpoints(serverUrl);
     if (urls.length > maxUrls) {
       setError(
-        `That’s ${urls.length} URLs — this scanner takes ${maxUrls} at a time` +
+        `That’s ${urls.length} URLs. This scanner takes ${maxUrls} at a time` +
           (hosted ? '. A scanner inside your network takes ten.' : '.')
       );
       return;
@@ -232,7 +232,7 @@ export function LiveScanClient({ mode, targets = [] }: { mode: Mode; targets?: S
       return { pairs: [], titles: [], error: 'Pick at least one page, or type a URL under “Other URLs”.' };
     }
     if (pairs.length > MAX_COMPARE_PAIRS) {
-      return { pairs: [], titles: [], error: `That’s ${pairs.length} pairs — keep it to ${MAX_COMPARE_PAIRS} or fewer.` };
+      return { pairs: [], titles: [], error: `That’s ${pairs.length} pairs. Keep it to ${MAX_COMPARE_PAIRS} or fewer.` };
     }
     return { pairs, titles, error: null };
   }
@@ -322,7 +322,7 @@ export function LiveScanClient({ mode, targets = [] }: { mode: Mode; targets?: S
               <details className="group">
                 <summary className="inline-flex cursor-pointer list-none items-center text-xs text-muted hover:text-ink [&::-webkit-details-marker]:hidden">
                   <span aria-hidden="true" className="mr-1 inline-block transition-transform group-open:rotate-90">›</span>
-                  Other URLs — a preview build, or a page not on the list
+                  Other URLs: a preview build, or a page not on the list
                 </summary>
                 <div className="mt-2 grid gap-3 sm:grid-cols-2">
                   <div>
@@ -339,7 +339,7 @@ export function LiveScanClient({ mode, targets = [] }: { mode: Mode; targets?: S
                   </div>
                 </div>
                 <p className="mt-1.5 text-[11px] text-faint">
-                  Paired line by line, and added to the pages picked above — up to {MAX_COMPARE_PAIRS} pairs in one run.
+                  Paired line by line, and added to the pages picked above, up to {MAX_COMPARE_PAIRS} pairs in one run.
                 </p>
               </details>
             </div>
@@ -357,7 +357,7 @@ export function LiveScanClient({ mode, targets = [] }: { mode: Mode; targets?: S
                 {VIEWPORT_NAMES.map((v) => (
                   <option key={v} value={v}>
                     {VIEWPORT_LABEL[v]}
-                    {v === 'desktop' ? ' — what agents get' : ''}
+                    {v === 'desktop' ? ' (what agents get)' : ''}
                   </option>
                 ))}
               </select>
@@ -384,7 +384,7 @@ export function LiveScanClient({ mode, targets = [] }: { mode: Mode; targets?: S
             <ExampleChips examples={SCAN_EXAMPLES} onPick={(url) => setUrlsText((t) => (t.trim() ? `${t.trim()}\n${url}` : url))} />
           ) : (
             <p className="max-w-lg text-xs text-faint">
-              Only the pages picked above are scanned — each one twice, the same path on both
+              Only the pages picked above are scanned, each one twice, the same path on both
               origins, at the one device profile. Nothing is written to the run history.
             </p>
           )}
@@ -397,7 +397,7 @@ export function LiveScanClient({ mode, targets = [] }: { mode: Mode; targets?: S
                         progress.active > 1 ? `–${progress.done + progress.active}` : ''
                       } of ${progress.total} in a real browser…`
                     : `Scanned ${progress.done} of ${progress.total} URLs…`
-                  : 'Loading each page in a real browser — usually under a minute.'}
+                  : 'Loading each page in a real browser. Usually under a minute.'}
               </span>
             ) : null}
             <button type="button" onClick={run} disabled={busy} className="inline-flex items-center gap-2 rounded-card bg-accent px-4 py-2 text-sm font-medium text-paper shadow-card hover:bg-accent/90 disabled:cursor-not-allowed disabled:opacity-55">
@@ -418,7 +418,7 @@ export function LiveScanClient({ mode, targets = [] }: { mode: Mode; targets?: S
             onDownload={() => downloadJson({ scannedAt, results }, 'scan')}
           />
         ) : (
-          <p className="text-sm text-muted">Nothing came back — the scanner returned no pages.</p>
+          <p className="text-sm text-muted">Nothing came back. The scanner returned no pages.</p>
         )
       ) : null}
 
@@ -525,7 +525,7 @@ function ScanResults({ results, onDownload }: { results: LiveScanResult[]; onDow
               return (
                 <tr key={key}>
                   <Td className="font-mono text-xs">{r.url}</Td>
-                  <Td colSpan={8} className="text-critical">Couldn’t load — {r.error}</Td>
+                  <Td colSpan={8} className="text-critical">Couldn’t load: {r.error}</Td>
                 </tr>
               );
             }

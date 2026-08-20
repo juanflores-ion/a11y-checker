@@ -52,6 +52,6 @@ export function formatCount(value: number, target: number | null, higherIsBetter
   return value.toLocaleString();
 }
 
-export const NOT_MEASURED_TITLE = 'Not measured — this run never ran the check. Absence, not zero.';
+export const NOT_MEASURED_TITLE = 'Not measured: this run never ran the check. Absence, not zero.';
 export const NOT_MEASURABLE_TITLE =
-  "Not measurable on this site's markup — the control is a <div>, so the rule cannot fire on it. It is still nameless.";
+  "Not measurable on this site's markup: the control is a <div>, so the rule cannot fire on it. It is still nameless.";

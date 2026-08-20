@@ -84,7 +84,7 @@ export function RulesClient({
         </THead>
         <TBody>
           <GroupRow colSpan={cols} variant="note">
-            Standard rulebook — axe-core
+            Standard rulebook · axe-core
           </GroupRow>
           {ruleIds.map((id) => {
             const meta = ruleMeta(id);
@@ -139,7 +139,7 @@ export function RulesClient({
                     perPage={(brand) => now.perPage[brand]?.[id] ?? {}}
                     scanned={(brand, key) => now.pageKeys[brand]?.includes(key) ?? false}
                     pageOrder={pageOrder}
-                    note="A dot means the rule did not fire on that page. Counts aggregate by rule and page type only — class-name hashes change on every deploy, so individual elements aren't tracked between runs."
+                    note="A dot means the rule did not fire on that page. Counts aggregate by rule and page type only, because class-name hashes change on every deploy, so individual elements aren't tracked between runs."
                   />
                 ) : null}
               </Fragment>
@@ -147,12 +147,12 @@ export function RulesClient({
           })}
 
           <GroupRow colSpan={cols} variant="note">
-            Scanner checks — controls and links checked directly in the browser; no standard rule covers these
+            Scanner checks · controls and links checked directly in the browser; no standard rule covers these
           </GroupRow>
           {!now.hasProbes ? (
             <tr>
               <Td colSpan={cols} className="text-muted">
-                This run predates these checks. Their absence is not a zero — take a new scan.
+                This run predates these checks. Their absence is not a zero. Take a new scan.
               </Td>
             </tr>
           ) : (
@@ -277,7 +277,7 @@ function PerPageRow({
                         {!scanned(brand, key) ? (
                           <span className="text-faint" title="Page not present in this run">n/a</span>
                         ) : n ? (
-                          <Link href={`/runs/pages/${brand}/${key}`} className="text-ink underline decoration-rule underline-offset-2 hover:decoration-accent" title={`${PAGE_LABEL[key] ?? key} — open page detail`}>
+                          <Link href={`/runs/pages/${brand}/${key}`} className="text-ink underline decoration-rule underline-offset-2 hover:decoration-accent" title={`${PAGE_LABEL[key] ?? key} · open page detail`}>
                             {n}
                           </Link>
                         ) : (

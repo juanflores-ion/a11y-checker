@@ -49,7 +49,7 @@ export function EnvironmentRefusal({ pair }: { pair: EnvironmentPair | null }) {
               measure of anything anybody changed.
             </>
           )}{' '}
-          Two runs of the <em>same</em> deployment do compare — that is what Scan{' '}
+          Two runs of the <em>same</em> deployment do compare. That is what Scan{' '}
           <Arrow className="mx-0.5 text-muted" /> Compare runs is for.
         </>
       }
@@ -82,7 +82,7 @@ export function EnvironmentRefusal({ pair }: { pair: EnvironmentPair | null }) {
           {gap > 0 ? 'fewer' : gap < 0 ? 'more' : 'changed'}&#8221;.
         </text>
         <text x="390" y="174" textAnchor="middle" className="fill-muted text-[11.5px]">
-          Nobody changed anything &#8212; the two sides are not the same page.
+          Nobody changed anything. The two sides are not the same page.
         </text>
       </svg>
     </Figure>

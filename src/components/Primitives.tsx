@@ -54,7 +54,7 @@ export function DeltaChip({
     ? 'text-good bg-good/[0.08]'
     : 'text-critical bg-critical/[0.08]';
   const title = delta.exact
-    ? `${delta.previous} → ${delta.current}. This rule should be exact — any movement is real.`
+    ? `${delta.previous} → ${delta.current}. This rule should be exact, so any movement is real.`
     : `${delta.previous} → ${delta.current}. Small drift on this rule is normal content churn.`;
 
   return (

@@ -57,7 +57,7 @@ export function PageDetailClient({
       />
       <SectionHead
         chapter={false}
-        title={`${BRAND_LABEL[brand]} — ${PAGE_LABEL[pageKey] ?? pageKey}`}
+        title={`${BRAND_LABEL[brand]} · ${PAGE_LABEL[pageKey] ?? pageKey}`}
         note="Everything the scanner recorded for this one page, with the markup it captured."
       />
 
@@ -65,7 +65,7 @@ export function PageDetailClient({
         <p className="text-sm text-muted">This page type wasn’t part of the selected run. Pick a different run in the bar above.</p>
       ) : isFailedPage(entry.result) ? (
         <div className="text-sm">
-          <p className="text-critical">Scan failed — <span className="font-mono text-xs">{entry.result.url}</span></p>
+          <p className="text-critical">Scan failed: <span className="font-mono text-xs">{entry.result.url}</span></p>
           <p className="mt-1 text-muted">{entry.result.error}. Nothing was measured here; this page contributed zero to every total, so read those totals as incomplete for this run.</p>
         </div>
       ) : (

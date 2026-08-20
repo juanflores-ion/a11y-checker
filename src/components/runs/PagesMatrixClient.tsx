@@ -84,7 +84,7 @@ function Cell({
         href={href}
         className="text-faint hover:underline"
         title={cell.error}
-        aria-label={`${BRAND_LABEL[brand]} ${PAGE_LABEL[pageKey] ?? pageKey}: failed to load — ${cell.error}`}
+        aria-label={`${BRAND_LABEL[brand]} ${PAGE_LABEL[pageKey] ?? pageKey}: failed to load: ${cell.error}`}
       >
         <StatusDot tone="na" className="mr-2" />failed to load
       </Link>
@@ -94,8 +94,8 @@ function Cell({
     <Link
       href={href}
       className="inline-flex items-center gap-2 hover:underline underline-offset-2"
-      title={`${VERDICT_TEXT[cell.verdict]} — open page detail`}
-      aria-label={`${BRAND_LABEL[brand]} ${PAGE_LABEL[pageKey] ?? pageKey}: ${cell.nodes} failing elements, ${cell.rules} rule${cell.rules === 1 ? '' : 's'}, ${VERDICT_TEXT[cell.verdict]} — open page detail`}
+      title={`${VERDICT_TEXT[cell.verdict]} · open page detail`}
+      aria-label={`${BRAND_LABEL[brand]} ${PAGE_LABEL[pageKey] ?? pageKey}: ${cell.nodes} failing elements, ${cell.rules} rule${cell.rules === 1 ? '' : 's'}, ${VERDICT_TEXT[cell.verdict]} · open page detail`}
     >
       <StatusDot tone={VERDICT_DOT[cell.verdict]} />
       <span className={cell.verdict === 'blocking' ? 'font-medium text-critical' : 'text-ink'}>{cell.nodes}</span>
@@ -108,7 +108,7 @@ function Cell({
       */}
       {cell.identity ? (
         <span
-          title={`${cell.identity.key}: ${cell.identity.value ?? 'could not be identified'} — this URL serves more than one document, so its figures move between runs on their own.`}
+          title={`${cell.identity.key}: ${cell.identity.value ?? 'could not be identified'}. This URL serves more than one document, so its figures move between runs on their own.`}
           className="rounded-[5px] border border-serious/35 bg-serious/[0.08] px-1.5 py-0.5 font-mono text-[10px] text-serious"
         >
           {cell.identity.value ?? 'variant unknown'}
@@ -116,7 +116,7 @@ function Cell({
       ) : null}
       {/*
         The same URL's other documents, measured in the same run. Beside the
-        figure, never summed into it — this page contributes once to any total,
+        figure, never summed into it. This page contributes once to any total,
         whatever the content test served.
       */}
       {cell.variants?.length ? (
