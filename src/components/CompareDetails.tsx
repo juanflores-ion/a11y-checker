@@ -83,7 +83,7 @@ export function CompareDetails({ diff }: { diff: PageDiff }) {
           </div>
           <p className="mt-2 max-w-measure text-xs leading-relaxed text-faint">
             Counts every focusable control inside the closed mega-menu, including panels a
-            disclosure button correctly announces — so it over-reports on exactly the code that has
+            disclosure button correctly announces, so it over-reports on exactly the code that has
             been fixed. A lead to check by hand, not a verdict.
           </p>
         </section>
@@ -233,7 +233,7 @@ function Figure({ value, className }: { value: number | null; className: string 
     return (
       <span
         className="text-sm text-faint"
-        title="This side was not measured — no scan, or a scanner with no such check. Absence, not zero."
+        title="This side was not measured: no scan, or a scanner with no such check. Absence, not zero."
       >
         not measured
       </span>

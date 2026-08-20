@@ -282,7 +282,7 @@ function Evidence({ side }: { side: FindingSide | null }) {
   if (!side) {
     return (
       <p className="text-sm text-faint">
-        This side was not measured — no scan, or a scan that failed. That is absence, not a clean
+        This side was not measured: no scan, or a scan that failed. That is absence, not a clean
         result.
       </p>
     );

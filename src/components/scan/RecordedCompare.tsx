@@ -171,7 +171,7 @@ export function RecordedCompare() {
 
         {index !== null && index.length < 2 ? (
           <p className="mt-4 text-sm text-muted">
-            Only {index.length} run on file. Record another with <strong>Full run</strong> — a
+            Only {index.length} run on file. Record another with <strong>Full run</strong>. A
             staging run needs a scanner inside the network.
           </p>
         ) : null}
@@ -179,7 +179,7 @@ export function RecordedCompare() {
         {mismatch ? (
           <p role="alert" className="mt-4 rounded-card border border-critical/25 bg-critical/[0.05] px-3 py-2 text-sm text-critical">
             {ENVIRONMENT_LABEL[before!.environment]} against {ENVIRONMENT_LABEL[after!.environment]} is
-            not a comparison — the two deployments serve different content, so every difference
+            not a comparison. The two deployments serve different content, so every difference
             would read as a change somebody made. Pick two runs of the same environment.
           </p>
         ) : null}

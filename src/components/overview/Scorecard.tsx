@@ -92,12 +92,12 @@ export function Scorecard({
               <span className="font-medium text-ink tnum">{now[b].inScopeNodes}</span>
             </Fragment>
           ))}{' '}
-          <span className="text-faint">(volume — moves between scans)</span>
+          <span className="text-faint">(volume, moves between scans)</span>
         </span>
         {failed > 0 ? (
           <span className="text-muted">
             <StatusDot tone="bad" className="mr-1.5" />
-            {failed} page{failed === 1 ? '' : 's'} failed to load —{' '}
+            {failed} page{failed === 1 ? '' : 's'} failed to load:{' '}
             <Link href="/runs/pages" className="underline underline-offset-2">
               By page
             </Link>

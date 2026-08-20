@@ -111,7 +111,7 @@ export function IssuesTable({
           {parked.length ? (
             <>
               <GroupRow colSpan={4} variant="note">
-                Measured, but owned elsewhere — styling and brand-palette decisions, tracked here,
+                Measured, but owned elsewhere: styling and brand-palette decisions, tracked here,
                 not part of this workstream
               </GroupRow>
               {parked.map((issue) => (
@@ -197,7 +197,7 @@ function IssueRows({
             {issue.title}
           </button>
           {issue.detection === 'manual' ? (
-            <Tag tone="phantom" className="ml-2" title="No automated tool can detect this — found by reading the code and testing by hand">
+            <Tag tone="phantom" className="ml-2" title="No automated tool can detect this. Found by reading the code and testing by hand">
               manual finding
             </Tag>
           ) : null}

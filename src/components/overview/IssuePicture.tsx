@@ -113,7 +113,7 @@ function Control({ control, fixed, label }: { control: 'burger' | 'close' | 'bac
       );
     case 'link':
       return fixed ? (
-        <span className="text-[11px] text-faint">— nothing rendered —</span>
+        <span className="text-[11px] text-faint">(nothing rendered)</span>
       ) : (
         <span className="inline-block h-4 w-14 rounded border border-dashed border-critical/70 align-middle" aria-hidden="true" />
       );
@@ -150,7 +150,7 @@ function Menu({ variant, fixed }: { variant: 'hover' | 'unfindable'; fixed: bool
         <span>+ 53 more</span>
         {!fixed ? (
           <span className="basis-full text-[9.5px] text-critical">
-            {variant === 'hover' ? 'opens on hover only' : 'not in the tree — nothing announces it'}
+            {variant === 'hover' ? 'opens on hover only' : 'not in the tree, nothing announces it'}
           </span>
         ) : null}
       </div>
@@ -179,7 +179,7 @@ function Panel({ variant, fixed }: { variant: 'drawer' | 'related' | 'hidden'; f
       </div>
       <div className={`mt-1 rounded-[5px] border px-2 py-1 text-[10px] ${fixed ? 'border-rule text-faint/60' : 'border-dashed border-critical text-faint'}`}>
         {fixed ? (
-          <span>closed — nothing inside is reachable</span>
+          <span>closed, nothing inside is reachable</span>
         ) : (
           <span className="flex flex-wrap gap-x-2">
             {items.map((i) => (
@@ -202,7 +202,7 @@ function Page({ variant, fixed }: { variant: 'main' | 'regions'; fixed: boolean 
     variant === 'main'
       ? [
           { t: 'header · menu · banner', ok: false },
-          { t: fixed ? 'main — content starts here' : '…content somewhere in here…', ok: fixed },
+          { t: fixed ? 'main, content starts here' : '…content somewhere in here…', ok: fixed },
           { t: 'footer', ok: false },
         ]
       : [
@@ -230,7 +230,7 @@ function Text({ variant, fixed }: { variant: 'contrast' | 'link-colour'; fixed: 
           Toll-free: (800) 668-7020
         </div>
         <div className={`mt-1.5 font-mono text-[10.5px] ${fixed ? 'text-good' : 'text-critical'}`}>
-          {fixed ? '4.5 : 1 — passes' : '3.7 : 1 — needs 4.5 : 1'}
+          {fixed ? '4.5 : 1, passes' : '3.7 : 1, needs 4.5 : 1'}
         </div>
       </div>
     );
@@ -261,7 +261,7 @@ function Headings({ fixed }: { fixed: boolean }) {
         ? line('H3', 'General liability', 'ink', 2)
         : [
             <div key="gap" className="pl-6 text-[10px] text-critical">
-              — H3 missing —
+              (H3 missing)
             </div>,
             line('H4', 'General liability', 'bad', 3),
           ]}

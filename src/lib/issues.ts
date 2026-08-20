@@ -43,7 +43,7 @@ export const SEVERITY_LABEL: Record<Severity, string> = {
 
 export const SEVERITY_BLURB: Record<Severity, string> = {
   blocking: 'An agent or keyboard user hits a dead end and the journey stops here.',
-  serious: 'The journey continues, but degraded — slower, confusing, or partly unreachable.',
+  serious: 'The journey continues, but degraded: slower, confusing, or partly unreachable.',
   moderate: 'Nothing stops working; the page is harder for an agent to read correctly.',
 };
 
@@ -204,14 +204,14 @@ export const ISSUES: Issue[] = [
     brands: ['insureon', 'techinsurance'],
     detection: 'scanner',
     plain:
-      'On a phone the menu looks closed, but underneath all its links are still live. An agent stepping through the page hits about seventy links it cannot see — on every page.',
-    picture: { kind: 'panel', variant: 'drawer', now: { hears: 'link, link, link… ~70 stops behind a closed menu' }, fixed: { hears: 'button “Menu”, collapsed — nothing behind it until opened' } },
+      'On a phone the menu looks closed, but underneath all its links are still live. An agent stepping through the page hits about seventy links it cannot see, on every page.',
+    picture: { kind: 'panel', variant: 'drawer', now: { hears: 'link, link, link… ~70 stops behind a closed menu' }, fixed: { hears: 'button “Menu”, collapsed, nothing behind it until opened' } },
     whatBreaks:
       'The mobile menu looks closed, but every link inside it is still live and still announced. An agent reading the page is handed roughly seventy navigation links that go nowhere, on every single page.',
     whyItMatters:
-      'This is the root cause behind most of what the automated audits flag. An assistant trying to find a quote form has to wade through seventy dead controls first, on every page it visits — and a keyboard user has to press Tab seventy times to get past a menu they never opened.',
+      'This is the root cause behind most of what the automated audits flag. An assistant trying to find a quote form has to wade through seventy dead controls first, on every page it visits, and a keyboard user has to press Tab seventy times to get past a menu they never opened.',
     technical:
-      'The menu is hidden with transform: translate(-100%) and pointer-events: none only. There is no display:none, no visibility:hidden, no aria-hidden and no inert, and every submenu is mounted at once. Moving something off-screen does not remove it from the accessibility tree, so all of it stays exposed and tabbable while pointer-events makes it unclickable — reachable and useless at the same time.',
+      'The menu is hidden with transform: translate(-100%) and pointer-events: none only. There is no display:none, no visibility:hidden, no aria-hidden and no inert, and every submenu is mounted at once. Moving something off-screen does not remove it from the accessibility tree, so all of it stays exposed and tabbable while pointer-events makes it unclickable: reachable and useless at the same time.',
     metrics: [
       { kind: 'phantom', label: 'Focusable controls in the closed menu' },
       { kind: 'phantom-links', label: 'Of those, links' },
@@ -223,11 +223,11 @@ export const ISSUES: Issue[] = [
         'Hide the closed menu properly, so the browser genuinely takes it out of play rather than just sliding it out of sight.',
       technical:
         'Add inert (or aria-hidden plus a tabindex sweep) to the closed panel, or switch the hiding mechanism to visibility:hidden, which the transition can still animate. Keep the transform for the slide animation.',
-      risk: 'The menu open/close animation has to be re-checked — visibility and inert both interact with transitions. No visual change if done right.',
+      risk: 'The menu open/close animation has to be re-checked, because visibility and inert both interact with transitions. No visual change if done right.',
       riskLevel: 'low',
     },
     verify:
-      'Re-scan and check "Focusable controls in the closed menu" reads 0. Or, by hand: load the page, do not open the menu, and press Tab — focus should never land inside it.',
+      'Re-scan and check "Focusable controls in the closed menu" reads 0. Or, by hand: load the page, do not open the menu, and press Tab. Focus should never land inside it.',
     inScope: true,
   },
 
@@ -238,14 +238,14 @@ export const ISSUES: Issue[] = [
     brands: ['insureon', 'techinsurance'],
     detection: 'scanner',
     plain:
-      'The three-line icon that opens the mobile menu looks like a button but isn’t one. To an agent it is an unnamed shape — it can’t tell what it does, and can’t press it.',
-    picture: { kind: 'control', control: 'burger', now: { hears: '— nothing —' }, fixed: { label: 'Menu', hears: 'button, “Menu”, collapsed' } },
+      'The three-line icon that opens the mobile menu looks like a button but isn’t one. To an agent it is an unnamed shape: it can’t tell what it does, and can’t press it.',
+    picture: { kind: 'control', control: 'burger', now: { hears: '(nothing)' }, fixed: { label: 'Menu', hears: 'button, “Menu”, collapsed' } },
     whatBreaks:
       'The hamburger icon that opens mobile navigation is a plain container with a click handler. It has no name and no role, so an agent cannot tell it is a button, and a keyboard user cannot reach it at all.',
     whyItMatters:
-      'It is the only way into mobile navigation. Every off-the-shelf audit reports a clean result here, because a rule about buttons cannot fire on something that never claims to be one — which is exactly why this went unnoticed. Our scanner now measures it directly.',
+      'It is the only way into mobile navigation. Every off-the-shelf audit reports a clean result here, because a rule about buttons cannot fire on something that never claims to be one, which is exactly why this went unnoticed. Our scanner now measures it directly.',
     technical:
-      'The control is a bare <div onClick> carrying data-test-id="nav-hamburger-icon". axe\'s button-name rule only fires on elements with a button role, so a <div> is structurally invisible to it — a false negative, not a pass. It is also absent from the tab order, because a div has no implicit tabindex. Our probe finds it by the property that actually matters: it carries a real click listener, has no accessible name, and cannot be reached by keyboard.',
+      'The control is a bare <div onClick> carrying data-test-id="nav-hamburger-icon". axe\'s button-name rule only fires on elements with a button role, so a <div> is structurally invisible to it: a false negative, not a pass. It is also absent from the tab order, because a div has no implicit tabindex. Our probe finds it by the property that actually matters: it carries a real click listener, has no accessible name, and cannot be reached by keyboard.',
     metrics: [
       { kind: 'ghost-controls-matching', match: 'menu', label: 'Menu buttons an agent can\'t identify' },
     ],
@@ -271,13 +271,13 @@ export const ISSUES: Issue[] = [
     detection: 'scanner',
     plain:
       'The box where you type your profession to start a quote has no name. An agent sees a text box and no idea what to put in it.',
-    picture: { kind: 'control', control: 'input', now: { label: 'What kind of work do you do?', hears: 'text box — no name' }, fixed: { label: 'What kind of work do you do?', hears: 'text box, “What kind of work do you do?”' } },
+    picture: { kind: 'control', control: 'input', now: { label: 'What kind of work do you do?', hears: 'text box, no name' }, fixed: { label: 'What kind of work do you do?', hears: 'text box, “What kind of work do you do?”' } },
     whatBreaks:
-      'The type-ahead field where a customer enters their profession — the first step of getting a quote — is announced with no name at all. An agent can see a text box, but nothing tells it what to type there.',
+      'The type-ahead field where a customer enters their profession, the first step of getting a quote, is announced with no name at all. An agent can see a text box, but nothing tells it what to type there.',
     whyItMatters:
       'This is the entry point to the funnel. Everything else on the site can be perfect and an assistant still cannot start a quote, because it cannot work out what the one field on the screen is for. If an AI assistant is going to complete a journey anywhere, it is this one.',
     technical:
-      'The field renders as role="combobox" with no accessible name — no aria-label, no aria-labelledby, and the visible heading above it is not programmatically associated. Insureon carries this twice, because an A/B variant (search-app-start-top20) mounts a second copy of the same component.',
+      'The field renders as role="combobox" with no accessible name: no aria-label, no aria-labelledby, and the visible heading above it is not programmatically associated. Insureon carries this twice, because an A/B variant (search-app-start-top20) mounts a second copy of the same component.',
     metrics: [{ kind: 'rule', ruleId: 'label', label: 'Unlabelled form fields' }],
     samples: [
       {
@@ -310,11 +310,11 @@ export const ISSUES: Issue[] = [
     detection: 'scanner',
     plain:
       'The × that closes the quote pop-up is a button with no name. It is the only way out of that pop-up, and nothing says what it does.',
-    picture: { kind: 'control', control: 'close', now: { hears: 'button — no name' }, fixed: { label: 'Close', hears: 'button, “Close”' } },
+    picture: { kind: 'control', control: 'close', now: { hears: 'button, no name' }, fixed: { label: 'Close', hears: 'button, “Close”' } },
     whatBreaks:
       'The X that closes the quote pop-up is an empty button. It is the only way out of that dialog, and nothing describes what it does.',
     whyItMatters:
-      'An agent that opens the quote modal and cannot close it is stuck — the session ends there. Same for anyone using a screen reader: they are trapped in a dialog with an unlabelled exit.',
+      'An agent that opens the quote modal and cannot close it is stuck. The session ends there. Same for anyone using a screen reader: they are trapped in a dialog with an unlabelled exit.',
     technical:
       'An empty <button> with the icon supplied through CSS rather than markup, so there is no text, no aria-label and no child image alt for the name computation to fall back on.',
     metrics: [
@@ -339,14 +339,14 @@ export const ISSUES: Issue[] = [
     brands: ['insureon'],
     detection: 'scanner',
     plain:
-      'The big product menu opens only when a mouse pointer moves over it. An agent has no mouse — so 56 category links might as well not exist.',
-    picture: { kind: 'menu', variant: 'hover', now: { hears: 'link “Products” — that’s all' }, fixed: { hears: 'button “Products”, has menu — press, and the links appear' } },
+      'The big product menu opens only when a mouse pointer moves over it. An agent has no mouse, so 56 category links might as well not exist.',
+    picture: { kind: 'menu', variant: 'hover', now: { hears: 'link “Products”, that’s all' }, fixed: { hears: 'button “Products”, has menu, press and the links appear' } },
     whatBreaks:
       'On a desktop screen the main navigation opens when the mouse moves over it, and by no other means. There is nothing to click and nothing to focus, so an agent or a keyboard user cannot open it at all.',
     whyItMatters:
-      'Fifty-six category links — the whole product taxonomy an assistant would use to find the right policy — are simply unreachable without a mouse. An agent has no mouse.',
+      'Fifty-six category links, the whole product taxonomy an assistant would use to find the right policy, are simply unreachable without a mouse. An agent has no mouse.',
     technical:
-      'The mega-menu is driven by CSS :hover / mouseenter with no click or focus handler and no keyboard-operable trigger. No axe rule covers "opens only on hover"; the scanner\'s own check counts the menu panels that nothing in the tree announces — the mark a hover-only menu leaves, since a real trigger would carry aria-expanded / aria-controls.',
+      'The mega-menu is driven by CSS :hover / mouseenter with no click or focus handler and no keyboard-operable trigger. No axe rule covers "opens only on hover"; the scanner\'s own check counts the menu panels that nothing in the tree announces: the mark a hover-only menu leaves, since a real trigger would carry aria-expanded / aria-controls.',
     metrics: [{ kind: 'unannounced-panels', label: 'Menu panels nothing announces' }],
     sources: ['Navigation/DesktopMenu/index.js:66'],
     fix: {
@@ -354,11 +354,11 @@ export const ISSUES: Issue[] = [
         'Make the desktop menu open by click or keyboard as well as hover, so it can be reached without a mouse.',
       technical:
         'Give the top-level items a real button trigger with aria-expanded, opening on click and on Enter/Space, keeping hover as an additional convenience.',
-      risk: 'This one needs a product and design decision on how the menu should open before engineering starts — hover-and-click together has real interaction trade-offs.',
+      risk: 'This one needs a product and design decision on how the menu should open before engineering starts, because hover-and-click together has real interaction trade-offs.',
       riskLevel: 'medium',
     },
     verify:
-      'Re-scan on desktop: menu panels nothing announces should read 0 (production Insureon: 52). Then by hand, because the scanner never presses keys: Tab to a top-level nav item and press Enter — the submenu should open and its links be reachable.',
+      'Re-scan on desktop: menu panels nothing announces should read 0 (production Insureon: 52). Then by hand, because the scanner never presses keys: Tab to a top-level nav item and press Enter. The submenu should open and its links be reachable.',
     inScope: true,
   },
 
@@ -370,20 +370,20 @@ export const ISSUES: Issue[] = [
     detection: 'scanner',
     plain:
       'Inside the mobile menu, the control that takes you back up a level has no name. On Insureon it isn’t even a button.',
-    picture: { kind: 'control', control: 'back', now: { hears: '— nothing — (Insureon) · button, no name (TechInsurance)' }, fixed: { label: 'Back', hears: 'button, “Back”' } },
+    picture: { kind: 'control', control: 'back', now: { hears: '(nothing) on Insureon · button, no name on TechInsurance' }, fixed: { label: 'Back', hears: 'button, “Back”' } },
     whatBreaks:
       'Stepping back up a level inside the mobile menu is done with an empty control. It has no name, so nothing indicates what it does.',
     whyItMatters:
-      'One of the two defects PageSpeed named — and it is worse than reported. It fires five times per page on TechInsurance, not once, because every submenu mounts its own copy.',
+      'One of the two defects PageSpeed named, and it is worse than reported. It fires five times per page on TechInsurance, not once, because every submenu mounts its own copy.',
     technical:
-      'On TechInsurance this is an empty <button>, so button-name fires on all five instances per page. On Insureon the same control is a <div>, which means the rule structurally cannot fire — Insureon reads zero on that rule, and that zero is a measurement artefact, not health. The second row below is the same control counted by property rather than by tag, and it shows the fifty Insureon instances the rule cannot see.',
+      'On TechInsurance this is an empty <button>, so button-name fires on all five instances per page. On Insureon the same control is a <div>, which means the rule structurally cannot fire. Insureon reads zero on that rule, and that zero is a measurement artefact, not health. The second row below is the same control counted by property rather than by tag, and it shows the fifty Insureon instances the rule cannot see.',
     metrics: [
       { kind: 'rule', ruleId: 'button-name', label: 'Buttons with no name (axe)' },
       { kind: 'ghost-controls-matching', match: 'backbutton', label: 'Back controls an agent can\'t identify' },
     ],
     samples: [
       {
-        caption: 'TechInsurance — the empty back button, five per page',
+        caption: 'TechInsurance · the empty back button, five per page',
         code: '<button class="backButton--CYYVi"></button>',
         brand: 'techinsurance',
       },
@@ -397,7 +397,7 @@ export const ISSUES: Issue[] = [
       riskLevel: 'low',
     },
     verify:
-      'TechInsurance: re-scan, "Buttons with no name" should drop by five per page. Insureon: the count will go *up* from zero before it goes down — that is the rule finally being able to see the control. Confirm by hand.',
+      'TechInsurance: re-scan, "Buttons with no name" should drop by five per page. Insureon: the count will go *up* from zero before it goes down. That is the rule finally being able to see the control. Confirm by hand.',
     inScope: true,
   },
 
@@ -408,8 +408,8 @@ export const ISSUES: Issue[] = [
     brands: ['techinsurance'],
     detection: 'scanner',
     plain:
-      'Every page carries a link with no text and no destination. It is still there for an agent — a stop that leads nowhere.',
-    picture: { kind: 'control', control: 'link', now: { hears: 'link — no name, goes nowhere' }, fixed: { hears: 'nothing — the link is not rendered when there is nothing to link to' } },
+      'Every page carries a link with no text and no destination. It is still there for an agent: a stop that leads nowhere.',
+    picture: { kind: 'control', control: 'link', now: { hears: 'link, no name, goes nowhere' }, fixed: { hears: 'nothing, because the link is not rendered when there is nothing to link to' } },
     whatBreaks:
       'An empty link with an empty destination is rendered unconditionally. It has no text and goes nowhere, but it is still in the tab order and still announced.',
     whyItMatters:
@@ -422,7 +422,7 @@ export const ISSUES: Issue[] = [
     ],
     samples: [
       {
-        caption: 'TechInsurance — captured on the home page',
+        caption: 'TechInsurance · captured on the home page',
         code: '<a href="" class="escape--s+X-e"></a>',
         brand: 'techinsurance',
       },
@@ -431,7 +431,7 @@ export const ISSUES: Issue[] = [
     fix: {
       summary: 'Stop rendering the link when there is nothing to link to.',
       technical: 'Guard the render on a non-empty href, rather than emitting an empty anchor.',
-      risk: 'Removing a rendered element — worth a visual check, though the element is empty and invisible today.',
+      risk: 'Removing a rendered element, so worth a visual check, though the element is empty and invisible today.',
       riskLevel: 'low',
     },
     verify: 'Re-scan and check "Links with no name" and "Links with an empty destination" both read 0.',
@@ -450,9 +450,9 @@ export const ISSUES: Issue[] = [
     whatBreaks:
       'The collapsed "related topics" panels on blog articles use the same broken hiding technique as the menu. Their tag links stay live and tabbable while collapsed.',
     whyItMatters:
-      'It confirms the menu was not a one-off. The same mistake is repeated in a second component, which means the pattern itself needs fixing rather than the one instance — otherwise it comes back.',
+      'It confirms the menu was not a one-off. The same mistake is repeated in a second component, which means the pattern itself needs fixing rather than the one instance, otherwise it comes back.',
     technical:
-      'The .hidden class sets max-height:0 and opacity:0 only. Neither removes an element from the accessibility tree. The scanner no longer looks for this component by name — it looks for the property, so any component making the same mistake is caught. The figures below exclude each page\'s largest hidden region, which is the mega-menu counted above.',
+      'The .hidden class sets max-height:0 and opacity:0 only. Neither removes an element from the accessibility tree. The scanner no longer looks for this component by name. It looks for the property, so any component making the same mistake is caught. The figures below exclude each page\'s largest hidden region, which is the mega-menu counted above.',
     metrics: [
       { kind: 'secondary-hidden-panel-controls', label: 'Controls trapped in other hidden panels' },
       { kind: 'hidden-panels', label: 'Hidden-but-live regions per run' },
@@ -466,7 +466,7 @@ export const ISSUES: Issue[] = [
       riskLevel: 'low',
     },
     verify:
-      'Re-scan and check the trapped-control count falls to zero once the mega-menu is excluded. By hand on a blog article: collapse the panel, then Tab — focus should skip its links.',
+      'Re-scan and check the trapped-control count falls to zero once the mega-menu is excluded. By hand on a blog article: collapse the panel, then Tab. Focus should skip its links.',
     inScope: true,
   },
 
@@ -478,13 +478,13 @@ export const ISSUES: Issue[] = [
     detection: 'scanner',
     plain:
       'On desktop most of the navigation lives inside menus that nothing announces. Of roughly sixty links, an agent can find about eight.',
-    picture: { kind: 'menu', variant: 'unfindable', now: { hears: '8 links — the other 56 are simply not there' }, fixed: { hears: 'button “Products”, has menu — all 60 reachable' } },
+    picture: { kind: 'menu', variant: 'unfindable', now: { hears: '8 links, the other 56 are simply not there' }, fixed: { hears: 'button “Products”, has menu, all 60 reachable' } },
     whatBreaks:
-      'The desktop mega-menu is hidden with display:none until a mouse hovers it, and nothing else on the page says those destinations exist. An agent reading the home page finds a handful of navigation links instead of the full set — the rest are in the HTML but absent from the accessibility tree.',
+      'The desktop mega-menu is hidden with display:none until a mouse hovers it, and nothing else on the page says those destinations exist. An agent reading the home page finds a handful of navigation links instead of the full set. The rest are in the HTML but absent from the accessibility tree.',
     whyItMatters:
-      'This is the layout agents are actually served. Measured against production, a desktop browser, an unrecognised user-agent and a request with no user-agent at all are all sent the desktop markup; only a recognised mobile user-agent gets the mobile one. So the version an assistant sees is the version where most of the site map is missing, and it cannot browse to pages it never learns about. It also cannot hover — there is no pointer to hover with.',
+      'This is the layout agents are actually served. Measured against production, a desktop browser, an unrecognised user-agent and a request with no user-agent at all are all sent the desktop markup; only a recognised mobile user-agent gets the mobile one. So the version an assistant sees is the version where most of the site map is missing, and it cannot browse to pages it never learns about. It also cannot hover, because there is no pointer to hover with.',
     technical:
-      'Sitecore resolves a deviceLayout server-side from the user-agent, and Navigation.tsx branches on it through the Media component, rendering exactly one of MobileMenu/TabletMenu/DesktopMenu. On desktop the mega-menu panels are display:none until :hover, which removes them from the accessibility tree entirely. That is why the other probes never reported it: they all skip content properly out of the tree, on the reasoning that a closed menu should be. The distinction that matters is not whether content is hidden but whether anything in the tree announces it — a disclosure button with aria-expanded is a promise an agent can act on, a :hover rule is not. None of these panels have one. Note this is the mirror image of the mobile failure, not a duplicate of it: on mobile the same links are in the tree but trapped off-screen in the drawer.',
+      'Sitecore resolves a deviceLayout server-side from the user-agent, and Navigation.tsx branches on it through the Media component, rendering exactly one of MobileMenu/TabletMenu/DesktopMenu. On desktop the mega-menu panels are display:none until :hover, which removes them from the accessibility tree entirely. That is why the other probes never reported it: they all skip content properly out of the tree, on the reasoning that a closed menu should be. The distinction that matters is not whether content is hidden but whether anything in the tree announces it. A disclosure button with aria-expanded is a promise an agent can act on, a :hover rule is not. None of these panels have one. Note this is the mirror image of the mobile failure, not a duplicate of it: on mobile the same links are in the tree but trapped off-screen in the drawer.',
     metrics: [
       { kind: 'unfindable-links', label: 'Links an agent cannot find' },
       { kind: 'unannounced-panels', label: 'Hidden regions nothing announces' },
@@ -493,19 +493,19 @@ export const ISSUES: Issue[] = [
     ],
     sources: [
       'page-components/Navigation/Navigation.tsx',
-      'components/Media/index.tsx — breakpoint resolution',
+      'components/Media/index.tsx · breakpoint resolution',
       'page-components/Navigation/DesktopMenu/MegaMenu/styles.module.scss',
     ],
     fix: {
       summary:
         'Make the menu open from the keyboard, and say what it controls, instead of relying on hover.',
       technical:
-        'Give each top-level menu item a real button with aria-expanded and aria-controls pointing at its panel, toggle the panel on click and focus as well as hover, and keep the panel display:none while closed. The hiding is correct — what is missing is the control that announces it.',
+        'Give each top-level menu item a real button with aria-expanded and aria-controls pointing at its panel, toggle the panel on click and focus as well as hover, and keep the panel display:none while closed. The hiding is correct. What is missing is the control that announces it.',
       risk: 'Touches the primary navigation on every page, and the hover interaction has to keep working for mouse users.',
       riskLevel: 'medium',
     },
     verify:
-      'Re-scan at the desktop profile and check that "links an agent cannot find" reaches zero. Do not expect the nav links to appear in the accessibility tree while the menu is closed — they should not, and a fix that merely exposes them trades this defect for the trapped-controls one. What has to change is that the trigger announces the panel. By hand: load the desktop site and Tab — every top-level menu should open and expose its links without touching the mouse.',
+      'Re-scan at the desktop profile and check that "links an agent cannot find" reaches zero. Do not expect the nav links to appear in the accessibility tree while the menu is closed. They should not, and a fix that merely exposes them trades this defect for the trapped-controls one. What has to change is that the trigger announces the panel. By hand: load the desktop site and Tab. Every top-level menu should open and expose its links without touching the mouse.',
     inScope: true,
   },
 
@@ -521,13 +521,13 @@ export const ISSUES: Issue[] = [
     whatBreaks:
       'Not one page carries the standard marker that says "the actual content begins here". Every page on both sites is missing it.',
     whyItMatters:
-      'It is how an agent skips the navigation and gets to the answer. Without it, an assistant re-reads the header and menu on every page it visits before finding anything useful — slower, and more likely to summarise the wrong thing.',
+      'It is how an agent skips the navigation and gets to the answer. Without it, an assistant re-reads the header and menu on every page it visits before finding anything useful: slower, and more likely to summarise the wrong thing.',
     technical:
       'No <main> element and no role="main" anywhere in the document, so axe\'s landmark-one-main fires on all ten page types for both brands.',
     metrics: [{ kind: 'pages-missing-main', label: 'Pages with no main marker' }],
     samples: [
       {
-        caption: 'The rule fires against the document root — there is nothing else to point at',
+        caption: 'The rule fires against the document root, because there is nothing else to point at',
         code: '<html lang="en">',
       },
     ],
@@ -549,10 +549,10 @@ export const ISSUES: Issue[] = [
     brands: ['insureon', 'techinsurance'],
     detection: 'scanner',
     plain:
-      'Most of each page is not inside any labelled section — no “this is the header”, “this is the content”, “this is the footer” — so there is no structure to move around by.',
+      'Most of each page is not inside any labelled section: no “this is the header”, “this is the content”, “this is the footer”. So there is no structure to move around by.',
     picture: { kind: 'page', variant: 'regions' },
     whatBreaks:
-      'Large parts of each page are not inside any named region, so there is no structure for an agent to navigate by — just an undifferentiated run of content.',
+      'Large parts of each page are not inside any named region, so there is no structure for an agent to navigate by, just an undifferentiated run of content.',
     whyItMatters:
       'It is the difference between an assistant being able to say "the pricing section says X" and having to guess from a wall of text. Lower confidence answers, and more of them wrong.',
     technical:
@@ -566,7 +566,7 @@ export const ISSUES: Issue[] = [
       riskLevel: 'medium',
     },
     verify:
-      'The target here is "sharply reduced", not zero — there is no clean pass/fail line, so read this one as a trend rather than a gate.',
+      'The target here is "sharply reduced", not zero. There is no clean pass/fail line, so read this one as a trend rather than a gate.',
     inScope: true,
   },
 
@@ -577,7 +577,7 @@ export const ISSUES: Issue[] = [
     brands: ['insureon', 'techinsurance'],
     detection: 'scanner',
     plain:
-      'The headings jump a level — a small heading directly under a big one with nothing in between — so the outline of the page doesn’t match how it is organised.',
+      'The headings jump a level, a small heading directly under a big one with nothing in between, so the outline of the page doesn’t match how it is organised.',
     picture: { kind: 'headings' },
     whatBreaks:
       'Some pages jump from one heading level to another without the one in between, so the outline of the page does not reflect how it is actually organised.',
@@ -588,7 +588,7 @@ export const ISSUES: Issue[] = [
     metrics: [{ kind: 'rule', ruleId: 'heading-order', label: 'Headings out of order' }],
     samples: [
       {
-        caption: 'A policy page — an h3 following an h1, with no h2 between',
+        caption: 'A policy page · an h3 following an h1, with no h2 between',
         code: '<h3 class="text title_WFhZg">General liability insurance</h3>',
       },
     ],
@@ -610,7 +610,7 @@ export const ISSUES: Issue[] = [
     detection: 'scanner',
     plain:
       'Some parts of the page are marked “hidden” for assistive technology, yet you can still land on them. Hidden and reachable at the same time is a contradiction.',
-    picture: { kind: 'panel', variant: 'hidden', now: { hears: '(hidden) — and yet the cursor lands here' }, fixed: { hears: 'hidden, and skipped' } },
+    picture: { kind: 'panel', variant: 'hidden', now: { hears: '(hidden), and yet the cursor lands here' }, fixed: { hears: 'hidden, and skipped' } },
     whatBreaks:
       'Some elements are explicitly marked hidden from assistive technology while still being focusable, which is a direct contradiction.',
     whyItMatters:
@@ -638,13 +638,13 @@ export const ISSUES: Issue[] = [
     detection: 'scanner',
     plain:
       'Product cards, accordion rows and carousel dots react to a click but tell an agent nothing about themselves. A person discovers them by hovering; an agent can’t.',
-    picture: { kind: 'control', control: 'card', now: { hears: 'text: “General liability…” — nothing to press' }, fixed: { hears: 'link, “General liability” — the card’s title is the link' } },
+    picture: { kind: 'control', control: 'card', now: { hears: 'text: “General liability…”, nothing to press' }, fixed: { hears: 'link, “General liability”, the card’s title is the link' } },
     whatBreaks:
-      'Large parts of each page — product cards, accordion rows, carousel dots — react to a click while telling an agent nothing about themselves. A mouse user discovers them by hovering. An agent has no hover and no way to know they do anything.',
+      'Large parts of each page (product cards, accordion rows, carousel dots) react to a click while telling an agent nothing about themselves. A mouse user discovers them by hovering. An agent has no hover and no way to know they do anything.',
     whyItMatters:
-      'Individually most are harmless, because a real link usually sits inside the card as well. In bulk they are why an agent has to guess at a page: hundreds of elements that behave one way and describe themselves another. It is also how the two genuinely broken controls above went unnoticed for so long — they were hiding in this crowd.',
+      'Individually most are harmless, because a real link usually sits inside the card as well. In bulk they are why an agent has to guess at a page: hundreds of elements that behave one way and describe themselves another. It is also how the two genuinely broken controls above went unnoticed for so long: they were hiding in this crowd.',
     technical:
-      'Elements with a confirmed activation listener and no interactive ARIA role. Counted as a magnitude rather than listed, because the actionable subset — the ones that additionally have no name and no keyboard route — is reported separately above.',
+      'Elements with a confirmed activation listener and no interactive ARIA role. Counted as a magnitude rather than listed, because the actionable subset, the ones that additionally have no name and no keyboard route, is reported separately above.',
     metrics: [
       { kind: 'clickable-no-role', label: 'Clickable elements with no role' },
       { kind: 'ghost-controls', label: 'Of those, unnamed and unreachable' },
@@ -654,11 +654,11 @@ export const ISSUES: Issue[] = [
         'Where a card is genuinely a control, make it one. Where it is a convenience click target wrapping a real link, leave it alone.',
       technical:
         'Give real controls a role and a name, or move the handler onto the link or button already inside. Blanket-converting every clickable div would be worse than the problem.',
-      risk: 'Low individually, wide in aggregate — this touches shared card and list components.',
+      risk: 'Low individually, wide in aggregate. This touches shared card and list components.',
       riskLevel: 'medium',
     },
     verify:
-      'Re-scan and watch the unnamed-and-unreachable count first. The overall clickable count is context, not a target — driving it to zero is not the goal.',
+      'Re-scan and watch the unnamed-and-unreachable count first. The overall clickable count is context, not a target. Driving it to zero is not the goal.',
     inScope: true,
   },
 
@@ -672,14 +672,14 @@ export const ISSUES: Issue[] = [
       'Links inside paragraphs look exactly like the text around them apart from a slightly different colour. If you can’t see that difference, there is no link.',
     picture: { kind: 'text', variant: 'link-colour' },
     whatBreaks:
-      'Inline links inside paragraphs are distinguished from the surrounding text only by their colour — no underline, no other cue.',
+      'Inline links inside paragraphs are distinguished from the surrounding text only by their colour: no underline, no other cue.',
     whyItMatters:
       'Anyone who cannot distinguish the two colours cannot tell there is a link there. Some pairs measure as low as 1.10:1.',
     technical:
       'axe\'s link-in-text-block rule. Counts drift between runs with content changes, so small movements here are not regressions.',
     metrics: [{ kind: 'rule', ruleId: 'link-in-text-block', label: 'Colour-only links' }],
     fix: {
-      summary: 'Give inline links a cue that is not colour — decided with design and applied in the brand CSS.',
+      summary: 'Give inline links a cue that is not colour, decided with design and applied in the brand CSS.',
       technical: 'Brand-level CSS change to inline link styling.',
       risk: 'Changes how every article page looks; the styling is design’s call and was made with them.',
       riskLevel: 'medium',
@@ -703,7 +703,7 @@ export const ISSUES: Issue[] = [
     technical: 'axe\'s color-contrast rule. Drifts with content, like the other styling rules.',
     metrics: [{ kind: 'rule', ruleId: 'color-contrast', label: 'Low-contrast text nodes' }],
     fix: {
-      summary: 'Move the failing text and background pairs to a passing contrast — decided with design and applied in the palette.',
+      summary: 'Move the failing text and background pairs to a passing contrast, decided with design and applied in the palette.',
       technical: 'Palette-level CSS change.',
       risk: 'Changes brand colours site-wide; made with design.',
       riskLevel: 'medium',

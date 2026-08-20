@@ -412,7 +412,7 @@ export function metricStability(metric?: string | null): MetricStability {
       evidence: null,
       note:
         'Never scanned twice. Judged against a tolerance of 2, which is a ' +
-        'placeholder inherited from before anyone measured repeatability — ' +
+        'placeholder inherited from before anyone measured repeatability, ' +
         'not a finding about this metric.',
     };
   }
@@ -681,7 +681,7 @@ export function scorecard(run: Run, brand: Brand): ScorecardRow[] {
       met: hasProbeData(run, brand) ? ghostControlCount(run, brand) === 0 : null,
       inScope: true,
       notMeasured: !hasProbeData(run, brand),
-      note: 'Checked directly by the scanner — no standard rule can see these.',
+      note: 'Checked directly by the scanner. No standard rule can see these.',
     },
     {
       key: 'unfindable-links',
@@ -715,7 +715,7 @@ export function scorecard(run: Run, brand: Brand): ScorecardRow[] {
       target: null,
       met: null,
       inScope: true,
-      note: 'Target is "sharply reduced", not zero — no pass/fail line.',
+      note: 'Target is "sharply reduced", not zero, so no pass/fail line.',
     },
     {
       key: 'link-in-text-block',
@@ -724,7 +724,7 @@ export function scorecard(run: Run, brand: Brand): ScorecardRow[] {
       target: null,
       met: null,
       inScope: true,
-      note: 'Fixed in the brand CSS with design. Drifts with content, so no pass/fail line — expect a sharp drop, then noise.',
+      note: 'Fixed in the brand CSS with design. Drifts with content, so no pass/fail line. Expect a sharp drop, then noise.',
     },
     {
       key: 'color-contrast',
@@ -733,7 +733,7 @@ export function scorecard(run: Run, brand: Brand): ScorecardRow[] {
       target: null,
       met: null,
       inScope: true,
-      note: 'Fixed in the palette with design. Drifts with content, so no pass/fail line — expect a sharp drop, then noise.',
+      note: 'Fixed in the palette with design. Drifts with content, so no pass/fail line. Expect a sharp drop, then noise.',
     },
   ];
 
@@ -1042,7 +1042,7 @@ export const PROBE_CHECKS = [
     id: 'unfindable-links',
     label: 'Links an agent cannot find',
     impact: 'critical' as const,
-    note: 'In the page, out of the accessibility tree, and nothing in the tree says they exist. A menu behind a proper disclosure button is not counted — that one can be found.',
+    note: 'In the page, out of the accessibility tree, and nothing in the tree says they exist. A menu behind a proper disclosure button is not counted, because that one can be found.',
     stability: metricStability('unfindable-links'),
   },
   {

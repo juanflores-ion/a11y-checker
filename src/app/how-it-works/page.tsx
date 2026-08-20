@@ -3,7 +3,7 @@ import { environmentPair, variantFigures, type HowItWorksFigures } from '@/lib/h
 import { isScannedPage, latestRun, loadRuns, runAtViewport, VIEWPORT_LABEL, type Run } from '@/lib/loadRuns';
 
 export const metadata = {
-  title: 'How it works — Agent Readiness',
+  title: 'How it works · Agent Readiness',
   description:
     'What an agent sees, how a page is scanned, what counts as a defect, how to read the numbers, and what the tool cannot tell you.',
 };

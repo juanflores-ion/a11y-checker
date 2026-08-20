@@ -275,7 +275,7 @@ export function FullScanRunner({ targets }: { targets: ScanTarget[] }) {
               while (seen.size < declared.length && attempts < MAX_VARIANT_LOADS) {
                 setProgress((p) => ({
                   ...p,
-                  current: `${scanned.url} — ${seen.size} of ${declared.length} variants seen`,
+                  current: `${scanned.url} · ${seen.size} of ${declared.length} variants seen`,
                 }));
                 const again = await scanner.scan({
                   urls: [{ url: scanned.url, brand: scanned.brand, key: scanned.key }],
@@ -392,11 +392,11 @@ export function FullScanRunner({ targets }: { targets: ScanTarget[] }) {
       <p className="text-sm text-ink">
         Scans every tracked page on both sites, {endpoints(scanner.serverUrl).maxUrls} at a time,
         and hands back a run file. <strong className="text-ink">A baseline is one run per
-        environment</strong> — take production, then switch Measure to Staging and take that
+        environment</strong>: take production, then switch Measure to Staging and take that
         one too, so a later deploy has something of its own to be compared against.{' '}
         <span className="text-muted">
           Drop it in <code className="font-mono text-xs">data/runs/</code> and commit it. Takes a
-          couple of minutes — keep this tab open.
+          couple of minutes, so keep this tab open.
         </span>
       </p>
 
@@ -424,7 +424,7 @@ export function FullScanRunner({ targets }: { targets: ScanTarget[] }) {
           <p className="mt-1.5 text-[11.5px] text-faint">
             {target === 'production'
               ? `${scanTargets.length} pages on the live sites.`
-              : `${scanTargets.length} pages on the preview origins — needs a scanner inside the network.`}
+              : `${scanTargets.length} pages on the preview origins. Needs a scanner inside the network.`}
           </p>
         </fieldset>
 
@@ -458,7 +458,7 @@ export function FullScanRunner({ targets }: { targets: ScanTarget[] }) {
               />
               {VIEWPORT_LABEL[v]}
               {v === 'desktop' ? (
-                <span className="text-faint">— what agents get</span>
+                <span className="text-faint">(what agents get)</span>
               ) : null}
             </label>
           ))}
@@ -536,7 +536,7 @@ export function FullScanRunner({ targets }: { targets: ScanTarget[] }) {
             {progress.total - progress.failures} of {progress.total} page scans measured, across{' '}
             {viewports.map((v) => VIEWPORT_LABEL[v]).join(' and ')}.
             {progress.failures > 0
-              ? ' The pages that failed contribute zero and are flagged in the file — treat the totals as incomplete, and check targets.mjs, since a failure usually means a URL moved.'
+              ? ' The pages that failed contribute zero and are flagged in the file, so treat the totals as incomplete, and check targets.mjs, since a failure usually means a URL moved.'
               : ''}
           </p>
           {/*
@@ -553,7 +553,7 @@ export function FullScanRunner({ targets }: { targets: ScanTarget[] }) {
           </p>
           {engineChanged ? (
             <p className="mt-1.5 text-xs leading-relaxed text-critical">
-              The server reported more than one engine during this run — a deploy probably landed
+              The server reported more than one engine during this run. A deploy probably landed
               mid-scan. The fields that disagreed are stored as not recorded, because the pages in
               this file were not all measured by the same code.
             </p>

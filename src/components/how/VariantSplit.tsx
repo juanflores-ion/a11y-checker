@@ -17,7 +17,7 @@ export function VariantSplit({ figures }: { figures: HowItWorksFigures | null })
     return (
       <NoFigure>
         The run on file did not record which document this URL served, so there is nothing to draw.
-        A page that declares no identity is measured as one page — which is correct for every page
+        A page that declares no identity is measured as one page, which is correct for every page
         we track except this one.
       </NoFigure>
     );
@@ -44,7 +44,7 @@ export function VariantSplit({ figures }: { figures: HowItWorksFigures | null })
           <strong className="font-medium text-ink">{low}</strong> to{' '}
           <strong className="font-medium text-ink">{high}</strong> failing elements depending on which
           document came back
-          {attempts && attempts > 1 ? <> — this run asked {attempts} times before it landed on the one it records</> : null}.
+          {attempts && attempts > 1 ? <>, and this run asked {attempts} times before it landed on the one it records</> : null}.
           The others are kept beside it as reference copies; only the page of record feeds a figure.
         </>
       }

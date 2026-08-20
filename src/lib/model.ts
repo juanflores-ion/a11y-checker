@@ -695,7 +695,7 @@ export const PAGE_DEFECTS: readonly PageDefectDefinition[] = [
   {
     key: 'hiddenPanels',
     label: 'Off-screen panels still in the tab order',
-    why: 'Still in the tree, still tabbable, not on screen — focus lands somewhere invisible.',
+    why: 'Still in the tree, still tabbable, not on screen, so focus lands somewhere invisible.',
     count: (p) => p.hiddenPanels?.length ?? null,
   },
   {
@@ -735,7 +735,7 @@ export const NON_DEFECT_METRICS: ReadonlyArray<{ key: string; why: string }> = [
   },
   {
     key: 'unreachablePanels',
-    why: 'The list behind the totals — it carries announced panels too. Filter on `announced === false` before counting anything.',
+    why: 'The list behind the totals. It carries announced panels too. Filter on `announced === false` before counting anything.',
   },
   {
     key: 'navLinks.inTree < navLinks.total',

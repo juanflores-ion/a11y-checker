@@ -79,11 +79,11 @@ export function CompareCard({ diff, title }: { diff: PageDiff; title?: string })
       </header>
 
       {diff.viewportMismatch ? (
-        <Notice tone="error" title="Not comparable — two different device profiles">
+        <Notice tone="error" title="Not comparable: two different device profiles">
           <p>
             Before was measured at {viewportLabel(diff.viewportMismatch.before)}, after at{' '}
             {viewportLabel(diff.viewportMismatch.after)}. These sites serve different markup per
-            device, so this pair is two different pages — the desktop nav alone accounts for
+            device, so this pair is two different pages. The desktop nav alone accounts for
             roughly 56 links. No comparison is shown, because every number in it would be noise.
             Re-run both sides at one profile.
           </p>
@@ -91,11 +91,11 @@ export function CompareCard({ diff, title }: { diff: PageDiff; title?: string })
       ) : null}
 
       {diff.identityMismatch ? (
-        <Notice tone="error" title="Not comparable — not known to be the same page">
+        <Notice tone="error" title="Not comparable: not known to be the same page">
           <p>
             Before served <strong>{identityLabel(diff.identityMismatch.before)}</strong>, after
             served <strong>{identityLabel(diff.identityMismatch.after)}</strong>. This URL returns
-            more than one document — Insureon&apos;s homepage is one item under a content test
+            more than one document. Insureon&apos;s homepage is one item under a content test
             that serves three, measured at 971, 893 and 1191 DOM nodes. Diffing two of them would
             report every difference between the designs as a change somebody made, so no figures
             are shown. Re-run until both sides land on the same one, or compare a page that
@@ -106,8 +106,8 @@ export function CompareCard({ diff, title }: { diff: PageDiff; title?: string })
 
       {beforeMissing || afterMissing ? (
         <Notice tone="neutral" title="Only one side given">
-          {beforeMissing ? 'No Before URL on this line — showing After only.' : null}
-          {afterMissing ? 'No After URL on this line — showing Before only.' : null}
+          {beforeMissing ? 'No Before URL on this line, so this shows After only.' : null}
+          {afterMissing ? 'No After URL on this line, so this shows Before only.' : null}
         </Notice>
       ) : null}
 
@@ -120,7 +120,7 @@ export function CompareCard({ diff, title }: { diff: PageDiff; title?: string })
             <p>After: {diff.after.error}</p>
           ) : null}
           <p className="mt-1.5 text-muted">
-            That side is reported as not measured, never as zero — nothing looked, so nothing can
+            That side is reported as not measured, never as zero. Nothing looked, so nothing can
             be called clean.
           </p>
         </Notice>

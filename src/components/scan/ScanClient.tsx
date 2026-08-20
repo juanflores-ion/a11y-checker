@@ -48,7 +48,7 @@ function ScanShell({ mode, targets }: { mode: ScanMode; targets: ScanTarget[] })
     <>
       <PageHeader
         title="Scan"
-        description="Point the scanner at any URL — production, staging, a preview build — or compare two runs already on file."
+        description="Point the scanner at any URL (production, staging, a preview build), or compare two runs already on file."
         aside={
           <Tabs
             ariaLabel="Scan modes"

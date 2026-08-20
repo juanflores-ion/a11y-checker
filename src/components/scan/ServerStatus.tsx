@@ -80,8 +80,8 @@ export function ServerStatus({
           <Eyebrow>Which scanner</Eyebrow>
           <p className="mt-1 text-xs leading-relaxed text-muted">
             {hosted
-              ? 'Running on this site — nothing to install. Limited to our own public domains and a few URLs per scan.'
-              : 'Running inside the network — on this machine, or on a colleague’s through a tunnel URL. This is how staging gets scanned. If it was started with a token, enter it below.'}
+              ? 'Running on this site, nothing to install. Limited to our own public domains and a few URLs per scan.'
+              : 'Running inside the network: on this machine, or on a colleague’s through a tunnel URL. This is how staging gets scanned. If it was started with a token, enter it below.'}
           </p>
         </div>
 

@@ -18,7 +18,7 @@ const selectClass =
  */
 function runText(run: { display: string; label?: string; environment?: Environment }) {
   const env = run.environment && run.environment !== 'production' ? `${ENVIRONMENT_LABEL[run.environment]} · ` : '';
-  return run.label ? `${env}${run.display} — ${run.label}` : `${env}${run.display}`;
+  return run.label ? `${env}${run.display} · ${run.label}` : `${env}${run.display}`;
 }
 
 /**
@@ -100,14 +100,14 @@ export function ContextBar() {
               {availableViewports.map((v) => (
                 <option key={v} value={v}>
                   {VIEWPORT_LABEL[v]}
-                  {v === 'desktop' ? ' — what agents get' : ''}
+                  {v === 'desktop' ? ' (what agents get)' : ''}
                 </option>
               ))}
             </select>
           ) : (
             <span className="truncate font-mono text-xs text-ink">
               {VIEWPORT_LABEL[viewport]}
-              {viewport === 'desktop' ? ' — what agents get' : ''}
+              {viewport === 'desktop' ? ' (what agents get)' : ''}
             </span>
           )}
         </Field>
