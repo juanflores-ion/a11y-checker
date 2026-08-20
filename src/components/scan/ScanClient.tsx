@@ -9,15 +9,23 @@ import { PageHeader } from '../ui/PageHeader';
 import { RecordedCompare } from './RecordedCompare';
 import { Tabs } from '../ui/Tabs';
 
-export type ScanMode = 'single' | 'compare' | 'full' | 'runs';
+export type ScanMode = 'single' | 'full' | 'runs';
 
 /**
- * Before / after is the mode this page exists for once fixes reach staging, so
- * it is the first tab and where a bare `/scan` lands. `?mode=compare` still
- * resolves to it, so links written before it became the default keep working.
+ * Compare runs is where a bare `/scan` lands.
+ *
+ * Before / after used to be here: it scanned production and staging live and
+ * diffed them. That is the one comparison this tool refuses everywhere else,
+ * because the two deployments serve different content — on 19 Aug production's
+ * home page was one document and staging's was another, so the diff read "19
+ * fewer" with nobody having fixed anything. Two runs of the same deployment is
+ * the comparison that means something, and that is this tab.
+ *
+ * `?mode=compare` still resolves rather than 404ing, so old links land on the
+ * screen that answers what they were asking.
  */
 function parseMode(raw: string | null): ScanMode {
-  return raw === 'single' || raw === 'full' || raw === 'runs' ? raw : 'compare';
+  return raw === 'single' || raw === 'full' || raw === 'runs' ? raw : 'runs';
 }
 
 /**
@@ -32,7 +40,7 @@ function parseMode(raw: string | null): ScanMode {
  */
 export function ScanClient({ targets }: { targets: ScanTarget[] }) {
   return (
-    <Suspense fallback={<ScanShell mode="compare" targets={targets} />}>
+    <Suspense fallback={<ScanShell mode="runs" targets={targets} />}>
       <ScanWithParams targets={targets} />
     </Suspense>
   );
@@ -48,13 +56,12 @@ function ScanShell({ mode, targets }: { mode: ScanMode; targets: ScanTarget[] })
     <>
       <PageHeader
         title="Scan"
-        description="Point the scanner at any URL (production, staging, a preview build), or compare two runs already on file."
+        description="Compare two runs already on file, point the scanner at any URL, or take a full run of a site."
         aside={
           <Tabs
             ariaLabel="Scan modes"
             items={[
-              { href: '/scan', label: 'Before / after', active: mode === 'compare' },
-              { href: '/scan?mode=runs', label: 'Compare runs', active: mode === 'runs' },
+              { href: '/scan', label: 'Compare runs', active: mode === 'runs' },
               { href: '/scan?mode=single', label: 'Single URL', active: mode === 'single' },
               { href: '/scan?mode=full', label: `Full run · ${targets.length} pages`, active: mode === 'full' },
             ]}
@@ -66,7 +73,7 @@ function ScanShell({ mode, targets }: { mode: ScanMode; targets: ScanTarget[] })
       ) : mode === 'full' ? (
         <FullScanRunner targets={targets} />
       ) : (
-        <LiveScanClient mode={mode === 'compare' ? 'compare' : 'scan'} targets={targets} />
+        <LiveScanClient mode="scan" targets={targets} />
       )}
     </>
   );
