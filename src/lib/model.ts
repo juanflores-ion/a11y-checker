@@ -794,21 +794,38 @@ export function pageKeysUnion(runs: Run[]): string[] {
 }
 
 /**
- * The stamp every run picker shows: "Aug 19, 10:14 PM".
+ * The stamp every run picker shows: "19 Aug, 16:11 UTC".
  *
  * One definition, because there were two. The context bar printed a run as
  * "19 Aug 2026, 16:44" and the comparison pickers as "Aug 19, 10:14 PM", so the
  * same run read as two different runs depending on which control you were
  * looking at. The year is dropped on purpose: runs are kept for days, not
  * years, and it was the least useful thing on the line.
+ *
+ * Pinned to en-GB and UTC, and labelled UTC, for three reasons:
+ *
+ *   1. Half these stamps are rendered on the server and half in the browser.
+ *      Left to the viewer's zone they disagree by the offset, so the same run
+ *      reads as two different times depending on which control drew it.
+ *   2. A run is identified everywhere else by an id that is already UTC —
+ *      `2026-08-19-1611`, stamped when the run finished. Pinned, the label
+ *      lands minutes from the id, which is the run's own duration. On a New
+ *      York clock the same run labelled itself "Aug 19, 12:07 PM" next to an id
+ *      of 1611, four hours apart, and a midnight run labelled itself with the
+ *      previous day's date.
+ *   3. A run is a shared artefact. Two people in two zones quoting one run have
+ *      to be quoting the same number, and an unlabelled 16:11 invites the
+ *      reader to take it for their own clock.
  */
 export function formatRunStamp(startedAt: string): string {
-  return new Date(startedAt).toLocaleString(undefined, {
+  const stamp = new Date(startedAt).toLocaleString('en-GB', {
     day: 'numeric',
     month: 'short',
     hour: '2-digit',
     minute: '2-digit',
+    timeZone: 'UTC',
   });
+  return `${stamp} UTC`;
 }
 
 export function formatRunTime(run: Run): string {
