@@ -19,7 +19,7 @@ import { usePathname } from 'next/navigation';
  */
 export const PRIMARY = [
   { href: '/', label: 'Overview', hint: 'Where the sites stand, and what’s wrong' },
-  { href: '/runs', label: 'Runs', hint: 'Every figure of a measurement, by check and by page' },
+  { href: '/runs', label: 'Runs', hint: 'Every figure of a measurement, by page and by check' },
   { href: '/scan', label: 'Scan', hint: 'Check a fix before and after, measure a URL, or record a full run' },
 ];
 

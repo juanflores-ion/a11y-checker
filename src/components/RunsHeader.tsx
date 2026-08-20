@@ -11,15 +11,21 @@ export function RunsHeader({ aside }: { aside?: React.ReactNode } = {}) {
   return (
     <PageHeader
       title="Runs"
-      description="Every figure the scanner produced for the selected run, by check and by page."
+      description="Every figure the scanner produced for the selected run, by page and by check."
       aside={
         <div className="flex flex-wrap items-end gap-x-6 gap-y-2">
           {aside ? <div className="pb-2">{aside}</div> : null}
           <Tabs
             ariaLabel="Run views"
             items={[
-              { href: '/runs', label: 'By check', active: pathname === '/runs' || pathname === '/runs/' },
-              { href: '/runs/pages', label: 'By page', active: pathname.startsWith('/runs/pages') },
+              {
+                href: '/runs/pages',
+                label: 'By page',
+                // `/runs` redirects here, but the tab has to read as active for
+                // the instant the old URL is still in the bar.
+                active: pathname.startsWith('/runs/pages') || pathname === '/runs' || pathname === '/runs/',
+              },
+              { href: '/runs/checks', label: 'By check', active: pathname.startsWith('/runs/checks') },
             ]}
           />
         </div>
