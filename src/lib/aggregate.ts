@@ -1,4 +1,5 @@
-import type { MetricRef } from './issues';
+import { cellTone, type CellTone } from './format';
+import type { Issue, MetricRef } from './issues';
 import {
   Brand,
   GhostControl,
@@ -1227,4 +1228,64 @@ export function resolveMetric(run: Run, brand: Brand, ref: MetricRef): ResolvedM
     case 'unannounced-panels':
       return out(unreachableStats(run, brand).unannouncedPanels, probes['unfindable-links']);
   }
+}
+
+
+/* ------------------------------------------------------------------ */
+/* Which issue rows the Overview opens on landing                     */
+/* ------------------------------------------------------------------ */
+
+/**
+ * The tone of the figure in Overview's "Measured now" column, for the sites on
+ * screen — the one number a reader sees on a folded row, so the one the
+ * folding is decided on.
+ *
+ * Null when the issue carries no metric at all: a manual finding printing "—"
+ * has no measurement to fold on.
+ */
+export function headlineTone(
+  issue: Issue,
+  brandsShown: Brand[],
+  metricsByBrand: Record<Brand, Record<string, ResolvedMetric[]>>
+): CellTone | null {
+  if (issue.metrics.length === 0) return null;
+  const tones = brandsShown
+    .filter((b) => issue.brands.includes(b))
+    .map((b) => metricsByBrand[b]?.[issue.id]?.[0])
+    .filter((m): m is ResolvedMetric => !!m)
+    .map((m) =>
+      cellTone({
+        value: m.value,
+        target: m.target,
+        higherIsBetter: m.higherIsBetter,
+        notMeasured: m.notMeasured,
+        misleadingZero: m.misleadingZero,
+      })
+    );
+  if (tones.length === 0) return null;
+  /** One site is on screen at a time, but if that ever changes, one figure
+   *  that missed its target is enough to keep the row open. */
+  return tones.every((t) => t === 'ok') ? 'ok' : tones[0];
+}
+
+/**
+ * Whether Overview opens this issue's row on landing.
+ *
+ * Blocking was the whole rule at first, and on Insureon desktop that opened
+ * three cards reading 0 — the mobile-only defects, which that site does not
+ * have on that device. An open card is a claim that there is something to
+ * read, so a measured pass closes it.
+ *
+ * A zero is not automatically a pass, and this is the distinction the rest of
+ * the dashboard is built on: `nm` is 0 because the rule cannot fire on a
+ * <div>, and `na` is a check that never ran. Both stay open. Only `ok` — a
+ * check that ran, on markup it can read, and found nothing — folds.
+ */
+export function issueOpensByDefault(
+  issue: Issue,
+  brandsShown: Brand[],
+  metricsByBrand: Record<Brand, Record<string, ResolvedMetric[]>>
+): boolean {
+  if (issue.severity !== 'blocking') return false;
+  return headlineTone(issue, brandsShown, metricsByBrand) !== 'ok';
 }
