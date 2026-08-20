@@ -1,11 +1,11 @@
 /**
- * Before/after diffing for Compare mode — the QA workflow of "here's prod,
- * here's staging after my fix, what actually changed."
+ * Page-to-page diffing for Compare runs — the QA workflow of "here is the
+ * run from before my fix, here is the run after it, what actually changed."
  *
  * Pure and side-effect free on purpose: it takes two already-fetched
  * PageResults and produces a comparison, nothing more. No fetching, no
  * server calls, so it's cheap to unit test and cheap to reuse anywhere a
- * before/after view is useful later.
+ * two-sided view is useful later.
  *
  * The rule the whole file is built around: **a figure that was never measured
  * is `null`, never 0.** Every number here used to default to zero, so a scan
@@ -112,10 +112,10 @@ export interface PageDiff {
    * fire; it exists because "compared the wrong two things and reported a
    * confident number" is the failure this tool keeps having to design out.
    *
-   * It only fires if the caller states both profiles. `LiveScanClient` holds
-   * one `viewport` for the whole compare run and passes it for both sides, so
-   * the guard is armed but should stay silent — `viewports` above shows on
-   * screen which profile was stated rather than leaving that to a code reading.
+   * It only fires if the caller states both profiles. `RecordedCompare` picks
+   * one viewport for both runs and passes it for both sides, so the guard is
+   * armed but should stay silent — `viewports` above shows on screen which
+   * profile was stated rather than leaving that to a code reading.
    */
   viewportMismatch?: { before: string; after: string };
   /**
@@ -286,23 +286,6 @@ export function diffPages(
       : {}),
     ...(notComparable ? { notComparable } : {}),
   };
-}
-
-/**
- * Pair two line-delimited URL lists positionally (line 1 with line 1, and
- * so on) rather than trying to guess which staging URL corresponds to which
- * prod URL. Uneven lists still pair as far as they can and leave the rest
- * one-sided — better than silently dropping a URL someone typed.
- */
-export function pairUrls(beforeUrls: string[], afterUrls: string[]): Array<{
-  beforeUrl: string | null;
-  afterUrl: string | null;
-}> {
-  const length = Math.max(beforeUrls.length, afterUrls.length);
-  return Array.from({ length }, (_, i) => ({
-    beforeUrl: beforeUrls[i] ?? null,
-    afterUrl: afterUrls[i] ?? null,
-  }));
 }
 
 /* ------------------------------------------------------------------ */

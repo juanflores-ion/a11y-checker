@@ -73,7 +73,7 @@ function ScanShell({ mode, targets }: { mode: ScanMode; targets: ScanTarget[] })
       ) : mode === 'full' ? (
         <FullScanRunner targets={targets} />
       ) : (
-        <LiveScanClient mode="scan" targets={targets} />
+        <LiveScanClient />
       )}
     </>
   );

@@ -137,10 +137,10 @@ function parseEntries(input: unknown): { entries: ScanEntry[]; error?: string } 
   const entries: ScanEntry[] = [];
   for (const item of input) {
     /**
-     * Two shapes, because Scan → Single URL and Before / after send bare
-     * strings for pages that are nobody's tracked target, and the full run
-     * sends the target it is scanning. Neither caller should have to care
-     * about the other's needs.
+     * Two shapes, because Scan → Single URL sends bare strings for pages
+     * that are nobody's tracked target, and the full run sends the target
+     * it is scanning. Neither caller should have to care about the other's
+     * needs.
      */
     const raw = typeof item === 'string' ? item : (item as { url?: unknown })?.url;
     if (typeof raw !== 'string') return { entries: [], error: BODY_SHAPE };

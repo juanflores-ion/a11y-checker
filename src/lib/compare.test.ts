@@ -13,7 +13,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { diffPages, pairUrls, summariseDiff } from './compare';
+import { diffPages, summariseDiff } from './compare';
 import type { ScannedPage } from './model';
 
 function page(overrides: Partial<ScannedPage> = {}): ScannedPage {
@@ -191,19 +191,6 @@ test('phantom-menu focusable count is compared independently of axe violations',
   );
   assert.equal(diff.phantomBefore, 10);
   assert.equal(diff.phantomAfter, 0);
-});
-
-test('pairUrls pairs by line position and tolerates uneven lists', () => {
-  assert.deepEqual(pairUrls(['a', 'b'], ['x', 'y']), [
-    { beforeUrl: 'a', afterUrl: 'x' },
-    { beforeUrl: 'b', afterUrl: 'y' },
-  ]);
-  assert.deepEqual(pairUrls(['a', 'b', 'c'], ['x']), [
-    { beforeUrl: 'a', afterUrl: 'x' },
-    { beforeUrl: 'b', afterUrl: null },
-    { beforeUrl: 'c', afterUrl: null },
-  ]);
-  assert.deepEqual(pairUrls([], []), []);
 });
 
 test('a diff taken across two device profiles is flagged, not quietly reported', () => {
