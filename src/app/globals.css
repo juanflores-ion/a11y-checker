@@ -62,6 +62,17 @@ table {
   font-variant-numeric: tabular-nums;
 }
 
+/*
+ * Jumping to a chapter from the explainer's contents rail. Guarded rather than
+ * unconditional: a reader who has asked for less motion gets the instant jump,
+ * which is also what every anchor did before this existed.
+ */
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
