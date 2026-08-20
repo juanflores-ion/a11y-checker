@@ -383,6 +383,27 @@ export interface Run {
 }
 
 /**
+ * Which sites a run actually scanned.
+ *
+ * A run is no longer automatically both: Full run grew a Site control, so a
+ * run can cover one brand and say nothing at all about the other. Anything
+ * offering a run as a choice for a site has to be able to ask.
+ *
+ * Read across every viewport the run measured, not just the primary one, so
+ * this answers "is there anything here about this site" rather than "at this
+ * profile". The narrower per-profile question is a separate check, and the one
+ * Compare runs still makes once a pair is loaded.
+ *
+ * A page that failed to load counts. It is a page the run tried, and a run
+ * that reached a site and got errors is a run that scanned it.
+ */
+export function sitesCovered(run: Run): Brand[] {
+  return BRANDS.filter((brand) =>
+    run.viewports.some((v) => Object.keys(run.byViewport[v]?.[brand] ?? {}).length > 0)
+  );
+}
+
+/**
  * Re-point a run at one of its viewports so every existing helper reads that
  * profile's numbers. Returns null when the run never measured it — which is a
  * real answer ("not measured"), never a silent fallback to a different profile.

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 
+import { sitesCovered } from '@/lib/model';
 import { isRunId, loadAllRuns, storeAvailable, writeStoredRun } from '@/lib/runStore';
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
@@ -30,6 +31,12 @@ export async function GET(request: Request) {
         environment: r.environment,
         viewports: r.viewports,
         primaryViewport: r.primaryViewport,
+        /**
+         * Which sites this run has anything to say about. A run can cover one
+         * brand now, and a picker that offers it for the other one is offering
+         * a comparison with nothing on one side of it.
+         */
+        sites: sitesCovered(r),
         axeVersion: r.meta.axeVersion ?? null,
         probeVersion: r.meta.probeVersion ?? null,
         browserVersion: r.meta.browserVersion ?? null,
@@ -52,6 +59,7 @@ export async function GET(request: Request) {
     environment: run.environment,
     viewports: run.viewports,
     primaryViewport: run.primaryViewport,
+    sites: sitesCovered(run),
     axeVersion: run.meta.axeVersion ?? null,
     probeVersion: run.meta.probeVersion ?? null,
     browserVersion: run.meta.browserVersion ?? null,

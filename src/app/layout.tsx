@@ -6,6 +6,7 @@ import { ContextBar } from '@/components/ContextBar';
 import { Nav } from '@/components/Nav';
 import { RunProvider, RunSummary } from '@/components/RunContext';
 import { formatRunShort, formatRunTime } from '@/lib/loadRuns';
+import { sitesCovered } from '@/lib/model';
 import { loadAllRuns } from '@/lib/runStore';
 
 /**
@@ -37,6 +38,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     display: formatRunTime(r),
     short: formatRunShort(r),
     viewports: r.viewports,
+    sites: sitesCovered(r),
     environment: r.environment,
   }));
 
