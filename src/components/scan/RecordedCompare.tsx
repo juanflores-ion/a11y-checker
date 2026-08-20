@@ -114,7 +114,27 @@ export function RecordedCompare() {
     }
   }
 
-  const rows = runs && chosenViewport ? buildRows(runs.before, runs.after, chosenViewport, site) : [];
+  /**
+   * Which of the two runs actually scanned the chosen site.
+   *
+   * A run can be taken for one site now, so a pair is not automatically a pair
+   * for every site. Without this the table happily listed ten rows from
+   * whichever run *did* cover the site, with the other side blank on every one
+   * of them: a comparison in shape, with nothing on one side of it. Naming the
+   * run that did not scan the site is the answer; ten half-empty rows is not.
+   */
+  const covers = (run: FullRun): boolean =>
+    !chosenViewport || Object.keys(run.byViewport[chosenViewport]?.[site] ?? {}).length > 0;
+
+  const uncovered = runs ? ([
+    ...(covers(runs.before) ? [] : ['before' as const]),
+    ...(covers(runs.after) ? [] : ['after' as const]),
+  ]) : [];
+
+  const rows =
+    runs && chosenViewport && uncovered.length === 0
+      ? buildRows(runs.before, runs.after, chosenViewport, site)
+      : [];
 
   return (
     <div className="space-y-8">
@@ -229,6 +249,18 @@ export function RecordedCompare() {
         ) : null}
       </section>
 
+      {runs && uncovered.length > 0 ? (
+        <p role="alert" className="rounded-card border border-serious/25 bg-serious/[0.05] px-3 py-2 text-sm text-serious">
+          {uncovered.length === 2
+            ? `Neither run scanned ${BRAND_LABEL[site]}.`
+            : `The ${uncovered[0] === 'before' ? 'Before' : 'After'} run (${stamp(
+                uncovered[0] === 'before' ? runs.before : runs.after
+              )}) did not scan ${BRAND_LABEL[site]}.`}{' '}
+          A run can be taken for one site, so a pair is not automatically a pair for every site. Pick
+          another run, or take a {BRAND_LABEL[site]} run from <strong>Full run</strong>.
+        </p>
+      ) : null}
+
       {rows.length > 0 ? (
         <section>
           <SectionHead
@@ -284,7 +316,7 @@ export function RecordedCompare() {
             ))}
           </div>
         </section>
-      ) : runs ? (
+      ) : runs && uncovered.length === 0 ? (
         <p className="text-sm text-muted">
           Neither run measured a {BRAND_LABEL[site]} page at{' '}
           {VIEWPORT_LABEL[chosenViewport ?? 'desktop']}.
