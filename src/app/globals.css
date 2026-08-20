@@ -2,8 +2,101 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
+/*
+ * Two palettes, one set of names.
+ *
+ * Dark is the default and stays exactly what it was. Light is not an inversion
+ * of it: the severity hues are re-picked so each one clears 4.5:1 against both
+ * the page and the card, which flipping the dark values does not — #F0655C on
+ * white is 3.1:1 and reads as a highlighter rather than an alarm.
+ *
+ * The theme is an attribute on <html>, written before first paint by the
+ * script in layout.tsx. Nothing here reacts to prefers-color-scheme: dark is
+ * the deliberate default for this tool, and light is a choice someone makes.
+ */
+:root,
+:root[data-theme='dark'] {
   color-scheme: dark;
+
+  --c-paper: 11 15 23;
+  --c-card: 17 24 39;
+  --c-ink: 231 236 243;
+  --c-muted: 152 162 179;
+  --c-faint: 95 107 122;
+  --c-rule: 30 39 53;
+  --c-tint: 255 255 255;
+
+  --c-critical: 240 101 92;
+  --c-serious: 245 158 75;
+  --c-moderate: 154 164 178;
+  --c-minor: 107 114 128;
+  --c-good: 52 211 153;
+
+  --c-accent: 124 150 255;
+  --c-phantom: 167 139 250;
+  --c-brand-ion: 124 150 255;
+  --c-brand-tig: 45 212 191;
+
+  /* One quiet indigo glow, top-left, fixed — the only atmosphere on the page. */
+  --body-glow: radial-gradient(1200px 520px at 18% -12%, rgba(124, 150, 255, 0.1), transparent 60%);
+
+  --shadow-card: inset 0 1px 0 rgba(255, 255, 255, 0.03), 0 8px 24px -12px rgba(0, 0, 0, 0.6);
+  --shadow-raised: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 16px 40px -16px rgba(0, 0, 0, 0.7);
+  --shadow-pop: 0 16px 48px -12px rgba(0, 0, 0, 0.8);
+  --shadow-focus: 0 0 0 3px rgba(124, 150, 255, 0.35);
+
+  /* The native select arrow, drawn in `muted` so it belongs to the control. */
+  --select-arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M3 4.5L6 8l3-3.5' stroke='%2398A2B3' stroke-width='1.4' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+}
+
+:root[data-theme='light'] {
+  color-scheme: light;
+
+  /* Not pure white: a faintly cool paper keeps the white cards readable as
+     cards rather than as holes in the page. */
+  --c-paper: 247 248 250;
+  --c-card: 255 255 255;
+  --c-ink: 21 26 34;
+  /*
+   * The three text tiers compress on a light ground and there is no way round
+   * it: every one has to clear 4.5:1, and the ceiling is the page itself. So
+   * `muted` goes darker than a straight translation of the dark theme, to keep
+   * three tiers visibly apart rather than two-and-a-half.
+   *
+   * Measured against the four grounds text actually lands on — the page, a
+   * card, the 4.5% tint wash, and the accent-tinted figure boxes. `faint` at
+   * 108 118 132 was 4.33:1 on the page and 3.97:1 on a figure box:
+   * de-emphasised is the intent, unreadable is not.
+   */
+  --c-muted: 75 84 98;
+  --c-faint: 95 105 118;
+  --c-rule: 226 230 236;
+  /* Black, so the same 3-6% wash that lifts a row on the dark ground darkens
+     it here. White at 4% on white is nothing at all. */
+  --c-tint: 0 0 0;
+
+  --c-critical: 196 54 44;
+  --c-serious: 154 91 0;
+  --c-moderate: 93 102 115;
+  --c-minor: 124 133 146;
+  --c-good: 10 122 79;
+
+  --c-accent: 59 79 209;
+  --c-phantom: 109 63 212;
+  --c-brand-ion: 59 79 209;
+  --c-brand-tig: 15 132 122;
+
+  --body-glow: radial-gradient(1200px 520px at 18% -12%, rgba(59, 79, 209, 0.07), transparent 60%);
+
+  /* No inset highlight: on a white card it does nothing. Depth comes from a
+     hairline-tight shadow instead of the dark theme's deep one, which on light
+     reads as smudge. */
+  --shadow-card: 0 1px 2px rgba(16, 24, 40, 0.06), 0 8px 24px -16px rgba(16, 24, 40, 0.18);
+  --shadow-raised: 0 2px 4px rgba(16, 24, 40, 0.07), 0 16px 40px -20px rgba(16, 24, 40, 0.22);
+  --shadow-pop: 0 12px 40px -12px rgba(16, 24, 40, 0.28);
+  --shadow-focus: 0 0 0 3px rgba(59, 79, 209, 0.28);
+
+  --select-arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M3 4.5L6 8l3-3.5' stroke='%2357606E' stroke-width='1.4' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
 }
 
 html {
@@ -11,12 +104,11 @@ html {
 }
 
 body {
-  background-color: theme('colors.paper');
-  /* One quiet indigo glow, top-left, fixed — the only atmosphere on the page. */
-  background-image: radial-gradient(1200px 520px at 18% -12%, rgba(124, 150, 255, 0.1), transparent 60%);
+  background-color: rgb(var(--c-paper));
+  background-image: var(--body-glow);
   background-attachment: fixed;
   background-repeat: no-repeat;
-  color: theme('colors.ink');
+  color: rgb(var(--c-ink));
   font-family: theme('fontFamily.sans');
   font-size: 15px;
   line-height: 1.55;
@@ -32,7 +124,7 @@ body {
 
 /* Visible keyboard focus. Non-negotiable in an accessibility tool. */
 :focus-visible {
-  outline: 2px solid theme('colors.accent');
+  outline: 2px solid rgb(var(--c-accent));
   outline-offset: 2px;
   border-radius: 4px;
 }
@@ -41,18 +133,18 @@ body {
 textarea:focus-visible,
 input[type='text']:focus-visible {
   outline: none;
-  border-color: theme('colors.accent');
-  box-shadow: theme('boxShadow.focus');
+  border-color: rgb(var(--c-accent));
+  box-shadow: var(--shadow-focus);
 }
 
 ::placeholder {
-  color: theme('colors.faint');
+  color: rgb(var(--c-faint));
 }
 
 /* Native select arrow sits badly against a custom surface. */
 select {
   appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M3 4.5L6 8l3-3.5' stroke='%2398A2B3' stroke-width='1.4' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-image: var(--select-arrow);
   background-repeat: no-repeat;
   background-position: right 0.55rem center;
   padding-right: 1.75rem;
@@ -80,4 +172,16 @@ table {
     animation-duration: 0.001ms !important;
     transition-duration: 0.001ms !important;
   }
+}
+
+/*
+ * Theme-conditional bits of the toggle itself.
+ *
+ * Keyed off the attribute rather than React state so the button paints the
+ * right face on the first frame, before hydration — the pre-paint script has
+ * already set the attribute by then.
+ */
+:root:not([data-theme='light']) .theme-only-light,
+:root[data-theme='light'] .theme-only-dark {
+  display: none;
 }

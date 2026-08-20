@@ -226,8 +226,8 @@ function TwoDevices({ figures }: { figures: HowItWorksFigures | null }) {
           <div aria-hidden="true" className="hidden justify-center sm:flex">
             {/* Decorative: both branches it joins are named in text beside it. */}
             <svg aria-hidden="true" width="34" height="80" viewBox="0 0 34 80" fill="none">
-              <path d="M1 40h12M13 40V14h20M13 40v26h20" stroke="#2F3A4B" strokeWidth="1.5" />
-              <path d="M29 10l5 4-5 4M29 62l5 4-5 4" stroke="#5F6B7A" strokeWidth="1.5" fill="none" />
+              <path d="M1 40h12M13 40V14h20M13 40v26h20" className="stroke-rule" strokeWidth="1.5" />
+              <path d="M29 10l5 4-5 4M29 62l5 4-5 4" className="stroke-faint" strokeWidth="1.5" fill="none" />
             </svg>
           </div>
 

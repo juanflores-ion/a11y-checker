@@ -5,6 +5,8 @@ import './globals.css';
 import { ContextBar } from '@/components/ContextBar';
 import { Nav } from '@/components/Nav';
 import { RunProvider, RunSummary } from '@/components/RunContext';
+import { ThemeToggle } from '@/components/ThemeToggle';
+import { THEME_KEY } from '@/lib/theme';
 import { formatRunShort, formatRunTime } from '@/lib/loadRuns';
 import { sitesCovered } from '@/lib/model';
 import { loadAllRuns } from '@/lib/runStore';
@@ -42,9 +44,23 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     environment: r.environment,
   }));
 
+  /**
+   * Apply the saved theme before the first paint.
+   *
+   * Without this the page renders dark, then swaps to light once React has
+   * hydrated — a white flash on every navigation for anyone who chose light.
+   * It has to be inline and it has to be in <head>: a deferred or imported
+   * script runs after the browser has already painted.
+   *
+   * Only ever sets the attribute for an explicit stored choice. No
+   * prefers-color-scheme branch: dark is this tool's default, not a fallback.
+   */
+  const themeScript = `try{var t=localStorage.getItem(${JSON.stringify(THEME_KEY)});if(t==='light')document.documentElement.setAttribute('data-theme','light')}catch(e){}`;
+
   return (
-    <html lang="en">
+    <html lang="en" data-theme="dark">
       <head>
+        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link
@@ -64,6 +80,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
                   </span>
                 </Link>
                 <Nav />
+                <ThemeToggle />
               </div>
               <ContextBar />
             </header>
@@ -85,9 +102,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
 function Mark() {
   return (
     <svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true" className="shrink-0">
-      <rect x="1" y="4" width="4" height="12" rx="1.5" fill="#7C96FF" />
-      <rect x="6.5" y="4" width="4" height="12" rx="1.5" fill="#7C96FF" opacity="0.55" />
-      <rect x="12" y="4" width="4" height="12" rx="1.5" fill="#A78BFA" opacity="0.35" />
+      <rect x="1" y="4" width="4" height="12" rx="1.5" className="fill-accent" />
+      <rect x="6.5" y="4" width="4" height="12" rx="1.5" className="fill-accent" opacity="0.55" />
+      <rect x="12" y="4" width="4" height="12" rx="1.5" className="fill-phantom" opacity="0.35" />
     </svg>
   );
 }

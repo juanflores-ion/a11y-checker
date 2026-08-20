@@ -48,7 +48,7 @@ export function Readiness({
                 setSite(b);
               }
             }}
-            className={`grid cursor-pointer grid-cols-[minmax(7rem,9rem)_1fr_auto] items-center gap-x-5 px-5 py-4 transition-colors hover:bg-white/[0.03] sm:gap-x-7 ${
+            className={`grid cursor-pointer grid-cols-[minmax(7rem,9rem)_1fr_auto] items-center gap-x-5 px-5 py-4 transition-colors hover:bg-tint/[0.03] sm:gap-x-7 ${
               i > 0 ? 'border-t border-rule' : ''
             } ${selected ? '' : 'opacity-55'}`}
           >

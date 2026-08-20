@@ -93,7 +93,7 @@ export function RulesClient({
                 <tr
                   onClick={() => setOpen(open === id ? null : id)}
                   className={`cursor-pointer border-t-[3px] border-rule transition-colors ${
-                    open === id ? 'bg-white/[0.045] hover:bg-white/[0.06]' : 'hover:bg-paper/60'
+                    open === id ? 'bg-tint/[0.045] hover:bg-tint/[0.06]' : 'hover:bg-paper/60'
                   }`}
                 >
                   <Td className={open === id ? 'h-11 border-b-0' : ''}>
@@ -161,7 +161,7 @@ export function RulesClient({
                 <tr
                   onClick={() => setOpen(open === check.id ? null : check.id)}
                   className={`cursor-pointer border-t-[3px] border-rule transition-colors ${
-                    open === check.id ? 'bg-white/[0.045] hover:bg-white/[0.06]' : 'hover:bg-paper/60'
+                    open === check.id ? 'bg-tint/[0.045] hover:bg-tint/[0.06]' : 'hover:bg-paper/60'
                   }`}
                 >
                   <Td className={open === check.id ? 'h-11 border-b-0' : ''}>

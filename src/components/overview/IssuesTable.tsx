@@ -164,7 +164,7 @@ function IssueRows({
       <tr
         onClick={onToggle}
         className={`cursor-pointer border-t-[3px] border-rule transition-colors ${
-          open ? 'bg-white/[0.045] hover:bg-white/[0.06]' : 'hover:bg-paper/60'
+          open ? 'bg-tint/[0.045] hover:bg-tint/[0.06]' : 'hover:bg-paper/60'
         }`}
       >
         <Td className={`pr-0 font-mono text-xs text-faint tnum ${open ? 'h-11 border-b-0' : ''}`}>

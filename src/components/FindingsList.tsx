@@ -32,7 +32,7 @@ export function FindingsList({ findings, pageUrl }: { findings: Finding[]; pageU
             <button
               type="button"
               onClick={() => setOpen(i)}
-              className="flex w-full items-center gap-3 px-4 py-2.5 text-left transition-colors hover:bg-white/[0.03]"
+              className="flex w-full items-center gap-3 px-4 py-2.5 text-left transition-colors hover:bg-tint/[0.03]"
             >
               <ImpactDot impact={finding.impact} />
               <span className="min-w-0 flex-1 truncate text-sm text-ink">{finding.label}</span>
