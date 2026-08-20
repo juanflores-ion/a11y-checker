@@ -46,7 +46,7 @@ const MAX_URLS = 3;
 /**
  * Which probe code this deployment is running.
  *
- * Same definition as `probeVersion()` in scanner/scan.mjs, which owns it: the
+ * Same definition as `probeVersion()` in scanner/core.mjs, which owns it: the
  * short SHA of the last commit that touched `scanner/`, suffixed `+dirty` when
  * the working tree has moved on. Deliberately re-derived here rather than
  * shared, because the two callers cannot locate `scanner/` the same way. The
