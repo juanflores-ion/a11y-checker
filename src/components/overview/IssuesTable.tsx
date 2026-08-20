@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { Fragment, useMemo, useState } from 'react';
 
-import type { ResolvedMetric } from '@/lib/aggregate';
+import { issueOpensByDefault, type ResolvedMetric } from '@/lib/aggregate';
 import { cellTone, NOT_MEASURABLE_TITLE, NOT_MEASURED_TITLE } from '@/lib/format';
 import { ISSUES, SEVERITY_LABEL, sortIssues, type Issue, type Severity } from '@/lib/issues';
 import type { Brand } from '@/lib/model';
@@ -35,7 +35,7 @@ const RISK_LABEL = { 'very-low': 'very low risk', low: 'low risk', medium: 'medi
  * to verify, sample markup and every live metric.
  *
  * Carries no notion of whether anything has been fixed — that was tried and
- * removed. Whether a fix landed is answered by Scan → Before / after.
+ * removed. Whether a fix landed is answered by Scan → Compare runs.
  */
 export function IssuesTable({
   metricsByBrand,
@@ -45,24 +45,24 @@ export function IssuesTable({
   /** The context bar's Site control decides which brands' issues and figures show. */
   const { site, brands: brandsShown } = useRuns();
   /**
-   * The blocking issues start open; everything below them starts folded.
+   * The blocking issues this run still finds start open; everything else
+   * starts folded.
    *
    * The row's whole point is the picture and the plain sentence inside it, so
    * arriving on sixteen collapsed titles asks the reader to guess that
    * anything is there — but sixteen open cards is a page nobody can scan.
-   * Blocking is the line: those are the ones a first-time reader must not
-   * miss, and the open cards double as a demonstration that every row opens.
-   * The state tracks the rows the reader has toggled away from that default.
+   * `issueOpensByDefault` holds the rule and the reasoning behind it.
+   *
+   * What the reader chose is tracked per row and absolutely, rather than as a
+   * set of "rows toggled away from the default": the default now moves with
+   * the Site and Device controls, so a delta would fold a row the reader had
+   * opened the moment they switched device.
    */
-  const [toggled, setToggled] = useState<ReadonlySet<string>>(() => new Set());
-  const isOpen = (issue: Issue) => (issue.severity === 'blocking') !== toggled.has(issue.id);
-  const toggle = (id: string) =>
-    setToggled((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
+  const [chosen, setChosen] = useState<ReadonlyMap<string, boolean>>(() => new Map());
+  const isOpen = (issue: Issue) =>
+    chosen.get(issue.id) ?? issueOpensByDefault(issue, brandsShown, metricsByBrand);
+  const toggle = (issue: Issue) =>
+    setChosen((prev) => new Map(prev).set(issue.id, !isOpen(issue)));
 
   const { tracked, parked } = useMemo(() => {
     const sorted = sortIssues(ISSUES);
@@ -79,7 +79,7 @@ export function IssuesTable({
           <>
             {visible.length} issue{visible.length === 1 ? '' : 's'}
             {parked.length ? `, ${parked.length} owned elsewhere` : ''}, hardest-blocking first.
-            Blocking ones are open; click any row to open or fold it.
+            The blocking ones this run still finds are open; click any row to open or fold it.
           </>
         }
       />
@@ -105,7 +105,7 @@ export function IssuesTable({
               brandsShown={brandsShown}
               metricsByBrand={metricsByBrand}
               open={isOpen(issue)}
-              onToggle={() => toggle(issue.id)}
+              onToggle={() => toggle(issue)}
             />
           ))}
           {parked.length ? (
@@ -122,7 +122,7 @@ export function IssuesTable({
                   brandsShown={brandsShown}
                   metricsByBrand={metricsByBrand}
                   open={isOpen(issue)}
-                  onToggle={() => toggle(issue.id)}
+                  onToggle={() => toggle(issue)}
                   muted
                 />
               ))}
@@ -338,7 +338,7 @@ function IssueDetail({
             <Block title="Verify">
               <p className="text-muted">
                 {issue.verify}{' '}
-                <Link href="/scan?mode=compare" className="text-accent underline underline-offset-2">Scan <Arrow className="mx-0.5" /> Before / after</Link>{' '}
+                <Link href="/scan" className="text-accent underline underline-offset-2">Scan <Arrow className="mx-0.5" /> Compare runs</Link>{' '}
                 shows whether it moved.
               </p>
             </Block>

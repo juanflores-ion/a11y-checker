@@ -43,10 +43,10 @@ export function productionUrls(): string[] {
 /**
  * The staging twin of a production URL: same path, staging origin.
  *
- * This is what lets Scan → Before / after work from a list of page types
- * rather than twenty typed URLs — the tracked targets give the production
- * side, and each one's After side is the same path on the site's staging
- * origin. Returns null when the brand has no staging origin, or when the URL
+ * This is what lets Scan → Full run take a whole site's tracked targets and
+ * point them at staging instead — the targets give the production side, and
+ * each one's staging twin is the same path on the site's staging origin.
+ * Returns null when the brand has no staging origin, or when the URL
  * given is not a URL. Assumes staging mirrors production's paths, which is
  * what a preview of the same site is; a staging host that served a different
  * path layout would need its own target list, not a rewrite here.

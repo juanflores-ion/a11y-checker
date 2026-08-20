@@ -62,7 +62,9 @@ import {
   countedGhostControls,
   ghostControlCount,
   hasReachData,
+  headlineTone,
   hiddenPanelStats,
+  issueOpensByDefault,
   mainCoverage,
   makeDelta,
   metricStability,
@@ -83,7 +85,10 @@ import {
   totalNodes,
   unreachableStats,
   worstPhantom,
+  type ResolvedMetric,
 } from './aggregate';
+import type { Issue } from './issues';
+import type { Brand } from './model';
 
 /** The runs the app actually renders. */
 const runs = loadRuns();
@@ -1384,4 +1389,100 @@ test('nameless control lists are counted', () => {
   const tig = namelessCounts(baseline, 'techinsurance');
   assert.ok(tig.buttons > 0);
   assert.equal(tig.emptyHref, 7);
+});
+
+
+/* ------------------------------------------------------------------ */
+/* Which issue rows Overview opens on landing                         */
+/* ------------------------------------------------------------------ */
+
+/**
+ * The rule is small; what it is guarding is not. Overview opens a row to say
+ * "there is something here to read", and it used to open every blocking row —
+ * including the three that read 0 on Insureon desktop because those defects
+ * are mobile-only. The tests below pin the four kinds of zero apart, because
+ * folding the wrong one is the false clean this whole tool exists to refuse.
+ */
+const anIssue = (over: Partial<Issue>): Issue =>
+  ({
+    id: 'test-issue',
+    severity: 'blocking',
+    brands: ['insureon'],
+    metrics: [{ kind: 'phantom', label: 'phantom controls' }],
+    ...over,
+  }) as Issue;
+
+const aMetric = (over: Partial<ResolvedMetric> = {}): ResolvedMetric => ({
+  label: 'phantom controls',
+  value: 0,
+  target: 0,
+  higherIsBetter: false,
+  misleadingZero: false,
+  notMeasured: false,
+  ...over,
+});
+
+const shown = (m: ResolvedMetric, id = 'test-issue') =>
+  ({ insureon: { [id]: [m] }, techinsurance: {} }) as Record<
+    Brand,
+    Record<string, ResolvedMetric[]>
+  >;
+
+test('a blocking row measuring a real zero folds', () => {
+  const metrics = shown(aMetric({ value: 0 }));
+  assert.equal(headlineTone(anIssue({}), ['insureon'], metrics), 'ok');
+  assert.equal(issueOpensByDefault(anIssue({}), ['insureon'], metrics), false);
+});
+
+test('a blocking row that is still failing opens', () => {
+  const metrics = shown(aMetric({ value: 13 }));
+  assert.equal(headlineTone(anIssue({}), ['insureon'], metrics), 'bad');
+  assert.equal(issueOpensByDefault(anIssue({}), ['insureon'], metrics), true);
+});
+
+test('a zero the rule could not produce is not a pass, and stays open', () => {
+  // Insureon reads 0 on button-name because its buttons are <div>s the rule
+  // cannot fire on. Folding that row would assert a fix nobody made.
+  const metrics = shown(aMetric({ value: 0, misleadingZero: true }));
+  assert.equal(headlineTone(anIssue({}), ['insureon'], metrics), 'nm');
+  assert.equal(issueOpensByDefault(anIssue({}), ['insureon'], metrics), true);
+});
+
+test('a check that never ran is absence, not zero, and stays open', () => {
+  const metrics = shown(aMetric({ value: 0, notMeasured: true }));
+  assert.equal(headlineTone(anIssue({}), ['insureon'], metrics), 'na');
+  assert.equal(issueOpensByDefault(anIssue({}), ['insureon'], metrics), true);
+});
+
+test('only blocking rows open, however bad the figure', () => {
+  const metrics = shown(aMetric({ value: 616 }));
+  assert.equal(issueOpensByDefault(anIssue({ severity: 'serious' }), ['insureon'], metrics), false);
+  assert.equal(issueOpensByDefault(anIssue({ severity: 'moderate' }), ['insureon'], metrics), false);
+});
+
+test('a blocking finding with no figure at all has nothing to fold on, so it opens', () => {
+  // The manual findings: no automated check produces a number, the row prints
+  // "—", and the row is the only place its sentence appears.
+  const issue = anIssue({ metrics: [], detection: 'manual' });
+  assert.equal(headlineTone(issue, ['insureon'], shown(aMetric())), null);
+  assert.equal(issueOpensByDefault(issue, ['insureon'], shown(aMetric())), true);
+});
+
+test('a figure for a site that is not on screen does not decide the fold', () => {
+  const metrics = {
+    insureon: { 'test-issue': [aMetric({ value: 0 })] },
+    techinsurance: { 'test-issue': [aMetric({ value: 40 })] },
+  } as Record<Brand, Record<string, ResolvedMetric[]>>;
+  const issue = anIssue({ brands: ['insureon', 'techinsurance'] });
+  assert.equal(issueOpensByDefault(issue, ['insureon'], metrics), false);
+  assert.equal(issueOpensByDefault(issue, ['techinsurance'], metrics), true);
+});
+
+test('a run that resolved no metric for the row leaves it open', () => {
+  const empty = { insureon: {}, techinsurance: {} } as Record<
+    Brand,
+    Record<string, ResolvedMetric[]>
+  >;
+  assert.equal(headlineTone(anIssue({}), ['insureon'], empty), null);
+  assert.equal(issueOpensByDefault(anIssue({}), ['insureon'], empty), true);
 });

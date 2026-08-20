@@ -38,11 +38,11 @@ interface FullRun extends RunIndexEntry {
 /**
  * Compare two runs that were already recorded.
  *
- * The live Before/after answers "is staging different from production right
- * now", which on 18 Aug 2026 turned out to be the wrong question: with no
- * fixes deployed it still reported two checks "resolved", because cd-preview
- * serves different content from www. Environment differences and fixes were
- * indistinguishable.
+ * The retired live Before/after answered "is staging different from
+ * production right now", which on 18 Aug 2026 turned out to be the wrong
+ * question: with no fixes deployed it still reported two checks "resolved",
+ * because cd-preview serves different content from www. Environment
+ * differences and fixes were indistinguishable.
  *
  * Two recorded runs of the *same* environment separate them: the only thing
  * that changed between staging-then and staging-now is the deploy. It also
