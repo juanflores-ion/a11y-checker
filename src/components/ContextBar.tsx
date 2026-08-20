@@ -35,6 +35,7 @@ export function ContextBar() {
   const pathname = usePathname() ?? '/';
   const {
     runs,
+    totalRuns,
     current,
     currentId,
     setCurrentId,
@@ -46,7 +47,15 @@ export function ContextBar() {
   } = useRuns();
 
   const showsData = pathname === '/' || pathname.startsWith('/runs');
-  if (!showsData || !current) return null;
+  /**
+   * Nothing on file at all: there is no context to state, so the strip goes.
+   *
+   * A site with no runs is a different case and keeps the bar. `runs` is
+   * filtered to the selected site, so hiding on an empty list would take the
+   * Site control away with it and strand the reader on the site that has
+   * nothing — with `site` in the URL hash, a reload would strand them again.
+   */
+  if (!showsData || totalRuns === 0) return null;
 
   /**
    * The instrument stamp — which axe, which scanner build, which Chromium
@@ -54,17 +63,23 @@ export function ContextBar() {
    * whoever reads one, so it sits behind an icon at the far right and shows
    * on hover or focus rather than taking a third of the strip.
    */
-  const stamp = [
-    current.axeVersion ? `axe-core ${current.axeVersion}` : 'axe-core not recorded',
-    current.probeVersion ? `scanner ${current.probeVersion}` : 'scanner not recorded',
-    current.browserVersion ?? 'browser not recorded',
-  ];
+  const stamp = current
+    ? [
+        current.axeVersion ? `axe-core ${current.axeVersion}` : 'axe-core not recorded',
+        current.probeVersion ? `scanner ${current.probeVersion}` : 'scanner not recorded',
+        current.browserVersion ?? 'browser not recorded',
+      ]
+    : [];
 
   return (
     <div className="border-t border-rule bg-card/60">
       <div className="mx-auto flex min-h-[38px] max-w-6xl flex-wrap items-center gap-x-5 gap-y-1.5 px-5 py-1.5 text-xs text-muted sm:px-8">
         <Field label="Run">
-          {runs.length >= 2 ? (
+          {!current ? (
+            <span className="font-mono text-xs text-serious">
+              No run has scanned {BRAND_LABEL[site]}
+            </span>
+          ) : runs.length >= 2 ? (
             <select
               aria-label="Run"
               className={selectClass}
@@ -89,6 +104,7 @@ export function ContextBar() {
           )}
         </Field>
 
+        {current ? (
         <Field label="Device">
           {availableViewports.length >= 2 ? (
             <select
@@ -111,6 +127,7 @@ export function ContextBar() {
             </span>
           )}
         </Field>
+        ) : null}
 
         <Field label="Site">
           <select
@@ -128,6 +145,7 @@ export function ContextBar() {
         </Field>
 
 
+        {current ? (
         <span className="group relative ml-auto flex items-center">
           <button
             type="button"
@@ -152,6 +170,7 @@ export function ContextBar() {
             ))}
           </span>
         </span>
+        ) : null}
       </div>
     </div>
   );

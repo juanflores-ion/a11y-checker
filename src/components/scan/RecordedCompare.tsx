@@ -27,6 +27,8 @@ interface RunIndexEntry {
   environment: Environment;
   viewports: ViewportName[];
   primaryViewport: ViewportName;
+  /** Which sites this run scanned. See `sitesCovered` in lib/model.ts. */
+  sites: Brand[];
   probeVersion: string | null;
   browserVersion: string | null;
 }
@@ -67,25 +69,49 @@ export function RecordedCompare() {
   useEffect(() => {
     fetch('/api/runs', { cache: 'no-store' })
       .then((r) => (r.ok ? r.json() : null))
-      .then((body: { runs?: RunIndexEntry[] } | null) => {
-        const list = body?.runs ?? [];
-        setIndex(list);
-        /**
-         * Default to the newest pair that shares an environment. Offering a
-         * prod run against a staging one as the default would hand the reader
-         * the exact comparison this view exists to stop them making.
-         */
-        for (let i = list.length - 1; i >= 0; i -= 1) {
-          const mate = list.slice(0, i).reverse().find((r) => r.environment === list[i].environment);
-          if (mate) {
-            setAfterId(list[i].id);
-            setBeforeId(mate.id);
-            break;
-          }
-        }
-      })
+      .then((body: { runs?: RunIndexEntry[] } | null) => setIndex(body?.runs ?? []))
       .catch(() => setIndex([]));
   }, []);
+
+  /**
+   * Only the runs that scanned the chosen site.
+   *
+   * Full run takes a site now, so a run can cover one brand and say nothing
+   * about the other. Offering all of them for either site offered comparisons
+   * with nothing on one side: pick TechInsurance, pick an Insureon-only
+   * staging run, and the answer is a banner saying that run never scanned it.
+   * The pair that cannot work is better not offered than explained.
+   */
+  const available = (index ?? []).filter((r) => r.sites.includes(site));
+  /**
+   * Whether these runs contain a comparison at all.
+   *
+   * Two runs are not a pair unless they share an environment, so a site can
+   * have runs on file and still have nothing to compare. Filtering by site
+   * made that ordinary rather than rare, and without this the reader gets two
+   * empty pickers and a dead Compare button with nothing saying why.
+   */
+  const pairable = defaultPair(available) !== null;
+
+  /**
+   * Default the pair on load, and again whenever the site changes the list out
+   * from under the current selection.
+   *
+   * Deliberately keyed on the index and the site alone. Keyed on the ids too,
+   * clearing a picker back to "Pick a run…" would snap straight back to the
+   * default and the control would look broken.
+   */
+  useEffect(() => {
+    if (!index) return;
+    const listed = (id: string) => available.some((r) => r.id === id);
+    if (listed(beforeId) && listed(afterId)) return;
+    const pair = defaultPair(available);
+    setBeforeId(pair?.before ?? '');
+    setAfterId(pair?.after ?? '');
+    // Results belong to a pair that is no longer the selected one.
+    setRuns(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [index, site]);
 
   const before = index?.find((r) => r.id === beforeId) ?? null;
   const after = index?.find((r) => r.id === afterId) ?? null;
@@ -191,13 +217,8 @@ export function RecordedCompare() {
         </div>
 
         <div className="mt-4 grid gap-4 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
-          <RunPicker
-            label="Before"
-            value={beforeId}
-            options={index ?? []}
-            onChange={setBeforeId}
-          />
-          <RunPicker label="After" value={afterId} options={index ?? []} onChange={setAfterId} />
+          <RunPicker label="Before" value={beforeId} options={available} onChange={setBeforeId} />
+          <RunPicker label="After" value={afterId} options={available} onChange={setAfterId} />
           <button
             type="button"
             onClick={load}
@@ -208,10 +229,16 @@ export function RecordedCompare() {
           </button>
         </div>
 
-        {index !== null && index.length < 2 ? (
+        {index !== null && !pairable ? (
           <p className="mt-4 text-sm text-muted">
-            Only {index.length} run on file. Record another with <strong>Full run</strong>. A
-            staging run needs a scanner inside the network.
+            {available.length < 2
+              ? `Only ${available.length} ${BRAND_LABEL[site]} run on file`
+              : `No two ${BRAND_LABEL[site]} runs share an environment, so there is nothing here to compare: production against staging is not one`}
+            {index.length > available.length
+              ? ` (${index.length} runs in total, the rest did not scan ${BRAND_LABEL[site]})`
+              : ''}
+            . Record another with <strong>Full run</strong>. A staging run needs a scanner inside
+            the network.
           </p>
         ) : null}
 
@@ -325,6 +352,20 @@ export function RecordedCompare() {
       ) : null}
     </div>
   );
+}
+
+/**
+ * The newest pair that shares an environment, newest as After.
+ *
+ * Offering a production run against a staging one as the default would hand
+ * the reader the exact comparison this view exists to stop them making.
+ */
+function defaultPair(list: RunIndexEntry[]): { before: string; after: string } | null {
+  for (let i = list.length - 1; i >= 0; i -= 1) {
+    const mate = list.slice(0, i).reverse().find((r) => r.environment === list[i].environment);
+    if (mate) return { before: mate.id, after: list[i].id };
+  }
+  return null;
 }
 
 function stamp(run: FullRun): string {

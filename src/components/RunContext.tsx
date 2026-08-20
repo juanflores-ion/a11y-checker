@@ -34,6 +34,12 @@ export interface RunSummary {
   /** Which device profiles this run measured. Pre-profile runs are mobile-only. */
   viewports: ViewportName[];
   /**
+   * Which sites this run actually scanned. A run can cover one brand now, so
+   * a picker offering every run for every site offers runs with nothing in
+   * them. See `sitesCovered` in lib/model.ts.
+   */
+  sites: Brand[];
+  /**
    * Production or staging, derived from the URLs the run recorded. Shown in
    * the picker because the two are not interchangeable: cd-preview serves
    * different content from www, so a staging run read as production would put
@@ -43,7 +49,16 @@ export interface RunSummary {
 }
 
 interface RunSelection {
+  /**
+   * The runs that scanned the selected site, and only those.
+   *
+   * Every run picker in the app reads this, so the filter is written once
+   * here rather than in each control. Picking TechInsurance used to leave
+   * Insureon-only runs in the list, and choosing one gave a page of blanks.
+   */
   runs: RunSummary[];
+  /** Every run on file, whatever it scanned. Only for "is there anything at all". */
+  totalRuns: number;
   currentId: string;
   compareId: string | null;
   current: RunSummary | null;
@@ -182,10 +197,32 @@ export function RunProvider({
   );
 
   const value = useMemo<RunSelection>(() => {
-    const current = runs.find((r) => r.id === currentId) ?? null;
+    /**
+     * The site filter, applied once, here.
+     *
+     * A run covers one site or both, so "every run" is not the list of runs
+     * that can answer for the site on screen. Filtering at the source means
+     * the context bar's picker, and anything else reading `runs`, cannot
+     * offer a run that has nothing to say.
+     */
+    const visible = runs.filter((r) => r.sites.includes(site));
+
+    /**
+     * When the selected run does not cover the newly selected site, fall back
+     * the same way the first load does: the newest production run, or the
+     * newest of anything if there is no production run. Falling back rather
+     * than clearing keeps a site switch from emptying the page; `currentId`
+     * below reports the run actually in use, so the picker never shows a
+     * value that is not in its own list.
+     */
+    const production = visible.filter((r) => r.environment === 'production');
+    const fallbackId = (production.length ? production : visible).slice(-1)[0]?.id ?? '';
+    const effectiveId = visible.some((r) => r.id === currentId) ? currentId : fallbackId;
+
+    const current = visible.find((r) => r.id === effectiveId) ?? null;
     const compare =
-      compareId && compareId !== currentId
-        ? runs.find((r) => r.id === compareId) ?? null
+      compareId && compareId !== effectiveId
+        ? visible.find((r) => r.id === compareId) ?? null
         : null;
 
     const availableViewports = current?.viewports ?? [];
@@ -202,9 +239,10 @@ export function RunProvider({
     const compareHasViewport = !compare || compare.viewports.includes(effective);
 
     return {
-      runs,
-      currentId,
-      compareId: compareId === currentId ? null : compareId,
+      runs: visible,
+      totalRuns: runs.length,
+      currentId: effectiveId,
+      compareId: compare?.id ?? null,
       current,
       compare: compareHasViewport ? compare : null,
       setCurrentId,
@@ -212,7 +250,7 @@ export function RunProvider({
       viewport: effective,
       setViewport,
       availableViewports,
-      currentKey: viewKey(currentId, effective),
+      currentKey: viewKey(effectiveId, effective),
       compareKey:
         compare && compareHasViewport ? viewKey(compare.id, effective) : null,
       compareMissingViewport: !!compare && !compareHasViewport,
