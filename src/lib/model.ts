@@ -793,17 +793,26 @@ export function pageKeysUnion(runs: Run[]): string[] {
   return [...canonical, ...extra];
 }
 
-/** "2026-08-07-0914" -> "7 Aug 2026, 09:14" */
-export function formatRunTime(run: Run): string {
-  const d = new Date(run.meta.startedAt);
-  return d.toLocaleString('en-GB', {
+/**
+ * The stamp every run picker shows: "Aug 19, 10:14 PM".
+ *
+ * One definition, because there were two. The context bar printed a run as
+ * "19 Aug 2026, 16:44" and the comparison pickers as "Aug 19, 10:14 PM", so the
+ * same run read as two different runs depending on which control you were
+ * looking at. The year is dropped on purpose: runs are kept for days, not
+ * years, and it was the least useful thing on the line.
+ */
+export function formatRunStamp(startedAt: string): string {
+  return new Date(startedAt).toLocaleString(undefined, {
     day: 'numeric',
     month: 'short',
-    year: 'numeric',
     hour: '2-digit',
     minute: '2-digit',
-    timeZone: 'UTC',
   });
+}
+
+export function formatRunTime(run: Run): string {
+  return formatRunStamp(run.meta.startedAt);
 }
 
 /** Short axis label for the trend chart. */
