@@ -1,82 +1,60 @@
 import { NON_DEFECT_METRICS, PAGE_DEFECTS } from '@/lib/model';
+import type { HowItWorksFigures } from '@/lib/howItWorks';
 
-import { Eyebrow } from './Primitives';
+import { BaselinePair } from './how/BaselinePair';
+import { Chapter } from './how/Chapter';
+import { DefectMatrix } from './how/DefectMatrix';
+import { EnvironmentRefusal } from './how/EnvironmentRefusal';
+import { Rail } from './how/Rail';
+import { TreeReach } from './how/TreeReach';
+import { VariantSplit } from './how/VariantSplit';
+import { Arrow, Eyebrow } from './Primitives';
+
+export type { HowItWorksFigures };
 
 /**
- * The explainer page.
+ * The explainer.
  *
- * Seven sections, one visual each, written for someone who has never opened a
- * dev tool. Every diagram is built from real markup rather than an image: it
- * stays sharp at any size, and — fittingly for this tool — a screen reader or
- * an agent can read the diagrams too.
+ * Ten chapters in three groups, written for someone who has never opened a dev
+ * tool, with a contents rail because it is referred back to out of order far
+ * more often than it is read start to finish.
  *
- * Any figure shown is passed in from the latest real run. Nothing here is
- * illustrative-but-invented; if there is no run on file, the figures are simply
- * omitted rather than filled in with plausible ones.
+ * Two rules hold the page together. **Every diagram is markup or hand-authored
+ * SVG, never an image** — it stays sharp at any size, it survives a restyle, and
+ * a screen reader or an agent can read it, which on this page of all pages is
+ * not optional. And **every figure is passed in from a real run**: if there is
+ * no run on file the diagrams say so rather than drawing a plausible number.
  *
  * The incident history that used to live here — what each false positive cost,
  * which checks were rewritten and why — was cut deliberately. It is in git and
- * in the code comments, and on this page it buried the four things a reader
- * actually needs: what an agent sees, how a page is scanned, what counts as a
- * defect, and what the tool cannot tell you.
+ * in the code comments, and on this page it buried what a reader actually needs.
  */
-export interface HowItWorksFigures {
-  navTotal: number;
-  navInTree: number;
-  /** Human labels of the profiles the run measured, e.g. ["Desktop", "Mobile"]. */
-  profiles: string[];
-  /**
-   * Provenance, from `RunMeta`. Optional there because older runs predate the
-   * fields. Absent renders as "not recorded" — never as a version number
-   * somebody inferred, and never silently omitted: a missing stamp is the
-   * finding.
-   */
-  axeVersion?: string | null;
-  probeVersion?: string | null;
-  browserVersion?: string | null;
-}
-
 export function HowItWorks({ figures }: { figures: HowItWorksFigures | null }) {
   return (
-    <div className="space-y-16">
+    <div>
       <Hero />
-      <TwoWays />
-      <TwoDevices figures={figures} />
-      <OneScan />
-      <WhatCounts />
-      <Stamp figures={figures} />
-      <Limits />
+      <div className="mt-12 lg:grid lg:grid-cols-[13rem_minmax(0,1fr)] lg:items-start lg:gap-12">
+        <Rail />
+        <div className="min-w-0 space-y-14">
+          <TheList figures={figures} />
+          <TwoDevices figures={figures} />
+          <HowScanned />
+          <WhatCounts />
+          <ExactLists />
+          <Environments figures={figures} />
+          <Variants figures={figures} />
+          <Baseline figures={figures} />
+          <Stamp figures={figures} />
+          <Limits />
+        </div>
+      </div>
     </div>
   );
 }
 
 /* ------------------------------------------------------------------ */
-/* Small shared pieces                                                 */
+/* Shared pieces                                                       */
 /* ------------------------------------------------------------------ */
-
-function Section({
-  id,
-  title,
-  lead,
-  children,
-}: {
-  id: string;
-  title: string;
-  lead?: React.ReactNode;
-  children: React.ReactNode;
-}) {
-  return (
-    <section aria-labelledby={id}>
-      <h2 id={id} className="font-display text-xl font-bold tracking-tight text-ink sm:text-2xl">
-        {title}
-      </h2>
-      {lead ? (
-        <p className="mt-2 max-w-measure text-base leading-relaxed text-muted">{lead}</p>
-      ) : null}
-      <div className="mt-6">{children}</div>
-    </section>
-  );
-}
 
 /** A line in an accessibility-tree diagram. */
 function TreeLine({
@@ -92,8 +70,7 @@ function TreeLine({
   tone?: 'normal' | 'bad' | 'good';
   note?: string;
 }) {
-  const toneClass =
-    tone === 'bad' ? 'text-critical' : tone === 'good' ? 'text-good' : 'text-ink';
+  const toneClass = tone === 'bad' ? 'text-critical' : tone === 'good' ? 'text-good' : 'text-ink';
   return (
     <div className="flex items-baseline gap-2 py-[3px] font-mono text-xs leading-relaxed">
       <span aria-hidden="true" style={{ width: `${depth * 14}px` }} className="shrink-0" />
@@ -119,8 +96,7 @@ function Panel({
       : tone === 'bad'
         ? 'border-critical/30 bg-critical/[0.03]'
         : 'border-rule bg-card';
-  const labelTone =
-    tone === 'good' ? 'text-good' : tone === 'bad' ? 'text-critical' : 'text-muted';
+  const labelTone = tone === 'good' ? 'text-good' : tone === 'bad' ? 'text-critical' : 'text-muted';
   return (
     <div className={`rounded-card border p-4 ${ring}`}>
       <Eyebrow className={labelTone}>{label}</Eyebrow>
@@ -129,45 +105,8 @@ function Panel({
   );
 }
 
-/** "Defect" / "Not a defect", coloured the only two ways this page allows. */
-function Verdict({ defect }: { defect: boolean }) {
-  return (
-    <span
-      className={`inline-flex rounded-pill px-2 py-0.5 text-[11px] font-medium ${
-        defect ? 'bg-critical/[0.08] text-critical' : 'bg-good/[0.08] text-good'
-      }`}
-    >
-      {defect ? 'Defect' : 'Not a defect'}
-    </span>
-  );
-}
-
-/**
- * A one-into-two connector that stretches to whatever it sits above. The two
- * legs land at 25% and 75%, i.e. the centres of a two-column grid beneath.
- * Decorative only: every branch it joins is labelled in text.
- */
-function Fork({ className = '' }: { className?: string }) {
-  return (
-    <svg
-      aria-hidden="true"
-      viewBox="0 0 100 24"
-      preserveAspectRatio="none"
-      className={`block h-6 w-full ${className}`}
-    >
-      <path
-        d="M50 0v11M25 11h50M25 11v13M75 11v13"
-        fill="none"
-        stroke="#2F3A4B"
-        strokeWidth="1.5"
-        vectorEffect="non-scaling-stroke"
-      />
-    </svg>
-  );
-}
-
 /* ------------------------------------------------------------------ */
-/* 1. Hero                                                             */
+/* Hero                                                                */
 /* ------------------------------------------------------------------ */
 
 function Hero() {
@@ -180,25 +119,24 @@ function Hero() {
       <p className="mt-4 text-base leading-relaxed text-muted">
         ChatGPT, Gemini and Perplexity can&apos;t see colour, layout or where a button sits. The
         browser hands them a plain list of what is on the page and what each thing is for. If
-        something is missing from that list, it doesn&apos;t exist as far as the agent is
-        concerned.
+        something is missing from that list, it doesn&apos;t exist as far as the agent is concerned.
       </p>
       <p className="mt-3 text-base leading-relaxed text-muted">
-        This tool measures how much of our sites survives that translation.
+        This tool measures how much of our sites survives that translation. Everything below is read
+        from real runs — no figure on this page is an illustration.
       </p>
     </header>
   );
 }
 
 /* ------------------------------------------------------------------ */
-/* 2. The same page, two ways                                          */
+/* 1. The list, not the page                                           */
 /* ------------------------------------------------------------------ */
 
-function TwoWays() {
+function TheList({ figures }: { figures: HowItWorksFigures | null }) {
   return (
-    <Section
-      id="two-ways"
-      title="The same page, two ways"
+    <Chapter
+      id="the-list"
       lead="Left, what a person sees. Right, the list the browser hands an agent. The gaps between them are what this tool counts."
     >
       <div className="grid gap-5 lg:grid-cols-2">
@@ -254,29 +192,30 @@ function TwoWays() {
           </div>
           <p className="mt-3 text-sm leading-relaxed text-muted">
             The button came through. The two icons arrived as{' '}
-            <span className="font-mono text-critical">???</span> — something is there, but not
-            what it does.
+            <span className="font-mono text-critical">???</span> — something is there, but not what
+            it does.
           </p>
         </Panel>
       </div>
 
       <p className="mt-5 max-w-measure text-sm leading-relaxed text-muted">
-        That list is the <strong className="font-medium text-ink">accessibility tree</strong>.
-        Screen readers use it too, so the same fix helps blind users and AI agents at once.
+        That list is the <strong className="font-medium text-ink">accessibility tree</strong>. Screen
+        readers use it too, so the same fix helps blind users and AI agents at once.
       </p>
-    </Section>
+
+      <TreeReach figures={figures} />
+    </Chapter>
   );
 }
 
 /* ------------------------------------------------------------------ */
-/* 3. One address, two pages                                           */
+/* 2. Two devices, two pages                                           */
 /* ------------------------------------------------------------------ */
 
 function TwoDevices({ figures }: { figures: HowItWorksFigures | null }) {
   return (
-    <Section
+    <Chapter
       id="two-devices"
-      title="One address, two different pages"
       lead="Our sites send a phone a genuinely different page from a laptop — not the same page at two widths. Agents get the laptop one."
     >
       <div className="rounded-lg border border-rule bg-card p-5 shadow-card">
@@ -287,7 +226,8 @@ function TwoDevices({ figures }: { figures: HowItWorksFigures | null }) {
           </div>
 
           <div aria-hidden="true" className="hidden justify-center sm:flex">
-            <svg width="34" height="80" viewBox="0 0 34 80" fill="none">
+            {/* Decorative: both branches it joins are named in text beside it. */}
+            <svg aria-hidden="true" width="34" height="80" viewBox="0 0 34 80" fill="none">
               <path d="M1 40h12M13 40V14h20M13 40v26h20" stroke="#2F3A4B" strokeWidth="1.5" />
               <path d="M29 10l5 4-5 4M29 62l5 4-5 4" stroke="#5F6B7A" strokeWidth="1.5" fill="none" />
             </svg>
@@ -302,8 +242,8 @@ function TwoDevices({ figures }: { figures: HowItWorksFigures | null }) {
                 <span className="text-sm font-medium text-ink">What agents get</span>
               </div>
               <p className="mt-1.5 text-sm leading-relaxed text-muted">
-                A laptop, a search bot, or anything the server doesn&apos;t recognise. Menus open
-                on hover.
+                A laptop, a search bot, or anything the server doesn&apos;t recognise. Menus open on
+                hover.
               </p>
             </div>
             <div className="rounded-card border border-rule bg-paper p-3">
@@ -323,22 +263,16 @@ function TwoDevices({ figures }: { figures: HowItWorksFigures | null }) {
 
       <p className="mt-5 max-w-measure text-sm leading-relaxed text-muted">
         The scanner measures both, every time, and every figure says which device it belongs to.
-        {figures ? (
-          <>
-            {' '}
-            On Insureon&apos;s desktop home page,{' '}
-            <strong className="font-medium text-ink tnum">{figures.navInTree}</strong> of{' '}
-            <strong className="font-medium text-ink tnum">{figures.navTotal}</strong> navigation
-            links are in the list an agent reads.
-          </>
+        {figures && figures.profiles.length > 0 ? (
+          <> This run measured {figures.profiles.join(' and ')}.</>
         ) : null}
       </p>
-    </Section>
+    </Chapter>
   );
 }
 
 /* ------------------------------------------------------------------ */
-/* 4. How a page is scanned                                            */
+/* 3. How a page is scanned                                            */
 /* ------------------------------------------------------------------ */
 
 const STEPS = [
@@ -364,179 +298,109 @@ const STEPS = [
   },
 ];
 
-function OneScan() {
+/**
+ * Five rows, not five columns.
+ *
+ * This was a five-column row whose text blocks ended at wildly different
+ * heights — one ran six lines against its neighbours' three, leaving about
+ * 200px of rag and dead space under the short ones. Steps are a sequence, and a
+ * sequence reads down.
+ */
+function HowScanned() {
   return (
-    <Section id="one-scan" title="How a page is scanned" lead="Five steps, about five seconds a page.">
-      {/*
-        A rail with numbered nodes rather than a stack of cards: the shape says
-        "in this order" before a word is read. Columns abut so the rail runs
-        unbroken; the text gets its breathing room from padding instead.
-      */}
-      <ol className="grid gap-y-6 sm:grid-cols-5 sm:gap-y-0">
-        {STEPS.map((s, i) => (
-          <li key={s.title} className="flex gap-3 sm:block">
-            <div className="flex shrink-0 flex-col items-center sm:flex-row">
-              <span
-                aria-hidden="true"
-                className="flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-pill border border-rule bg-card font-mono text-[11px] font-medium text-accent shadow-card"
-              >
-                {i + 1}
-              </span>
-              {i < STEPS.length - 1 ? (
-                <span aria-hidden="true" className="w-px flex-1 bg-rule sm:h-px sm:w-auto" />
-              ) : null}
-            </div>
-            <div className="pb-1 sm:mt-3 sm:pr-5">
-              <h3 className="font-display text-sm font-bold leading-[26px] text-ink sm:leading-snug">
-                {s.title}
-              </h3>
-              <p className="mt-1 text-sm leading-relaxed text-muted">{s.body}</p>
-            </div>
+    <Chapter
+      id="how-scanned"
+      lead="Five steps, about five seconds a page. It never clicks, hovers, scrolls or types — so the page is measured exactly as delivered, and two runs always measure the same thing."
+    >
+      <ol className="overflow-hidden rounded-lg border border-rule bg-card shadow-card">
+        {STEPS.map((step, i) => (
+          <li
+            key={step.title}
+            className="grid gap-x-4 gap-y-1 border-b border-rule px-5 py-4 last:border-b-0 sm:grid-cols-[2.5rem_13rem_1fr] sm:items-baseline"
+          >
+            <span className="font-mono text-xs text-accent tnum">
+              {String(i + 1).padStart(2, '0')}
+            </span>
+            <span className="text-sm font-medium text-ink">{step.title}</span>
+            <p className="text-sm leading-relaxed text-muted">{step.body}</p>
           </li>
         ))}
       </ol>
-
-      <p className="mt-6 max-w-measure text-sm leading-relaxed text-muted">
-        <strong className="font-medium text-ink">It never clicks, hovers, scrolls or types.</strong>{' '}
-        The page is measured exactly as delivered, so two runs always measure the same thing.
-      </p>
-    </Section>
+    </Chapter>
   );
 }
 
 /* ------------------------------------------------------------------ */
-/* 5. What counts as a defect                                          */
+/* 4. What counts as a defect                                          */
 /* ------------------------------------------------------------------ */
 
-/**
- * The classification, and the reason it is a diagram rather than a paragraph.
- *
- * "Hidden" is something you can observe. "Unfindable" is a decision somebody
- * has to write down, and until it is written down every layer of the code
- * quietly invents its own answer — that exact mistake once turned a correct
- * fix into hundreds of imaginary regressions. This diagram is the thing the
- * code is written against, not documentation of it.
- */
-interface Leaf {
-  answer: 'Yes' | 'No';
-  term: string;
-  defect: boolean;
-  body: string;
-}
-
-function BranchCard({
-  label,
-  then,
-  question,
-  leaves,
-}: {
-  label: string;
-  then: string;
-  question: string;
-  leaves: [Leaf, Leaf];
-}) {
+function WhatCounts() {
   return (
-    <div className="rounded-card border border-rule bg-paper p-4">
-      <Eyebrow>{label}</Eyebrow>
-      <p className="mt-1 text-sm leading-relaxed text-muted">{then}</p>
-      <h3 className="mt-3 text-center font-display text-sm font-bold text-ink">{question}</h3>
-      <Fork className="mt-1" />
-      <div className="grid grid-cols-2 gap-3">
-        {leaves.map((leaf) => (
-          <div
-            key={leaf.term}
-            className={`rounded-card border p-3 ${
-              leaf.defect
-                ? 'border-critical/30 bg-critical/[0.04]'
-                : 'border-good/30 bg-good/[0.04]'
-            }`}
-          >
-            <div className="font-mono text-[11px] text-faint">{leaf.answer}</div>
-            <div
-              className={`mt-0.5 font-display text-base font-bold tracking-tight ${
-                leaf.defect ? 'text-critical' : 'text-good'
-              }`}
-            >
-              {leaf.term}
+    <Chapter
+      id="what-counts"
+      lead="Two questions decide it. Hidden is not the same as unfindable, and only one of them is a problem."
+    >
+      <DefectMatrix />
+
+      {/*
+        One worked example, not three.
+        
+        The matrix above already names all four outcomes. What markup adds is the
+        one thing prose cannot show: what "something announces it" actually looks
+        like in the tree. That needs the contrast, so the example carries both
+        states rather than one — and the third card, a fully open menu, went: it
+        is the trivial case and the matrix covers it.
+      */}
+      <Panel label="The same closed menu, two ways">
+        <div className="grid gap-4 lg:grid-cols-2">
+          <div>
+            <div className="rounded-card border border-good/30 bg-paper p-3">
+              <TreeLine role="button" name="Products" note="collapsed" tone="good" />
+              <div className="py-[3px] pl-[14px] font-mono text-xs text-faint">
+                (3 links, hidden for now)
+              </div>
             </div>
-            <div className="mt-1.5">
-              <Verdict defect={leaf.defect} />
-            </div>
-            <p className="mt-2 text-xs leading-relaxed text-muted">{leaf.body}</p>
+            <p className="mt-2.5 text-sm leading-relaxed text-muted">
+              <strong className="font-medium text-good">Hidden.</strong> The links are out of the
+              list, but the button announces them. An agent knows to open it.
+            </p>
           </div>
-        ))}
+          <div>
+            <div className="rounded-card border border-critical/30 bg-paper p-3">
+              <TreeLine role="text" name="Products" note="not a button" tone="bad" />
+              <div className="py-[3px] pl-[14px] font-mono text-xs text-faint">
+                (3 links, hidden — nothing mentions them)
+              </div>
+            </div>
+            <p className="mt-2.5 text-sm leading-relaxed text-muted">
+              <strong className="font-medium text-critical">Unfindable.</strong> The links exist, but
+              nothing in the list points to them. They open on hover, and an agent has no pointer.
+            </p>
+          </div>
+        </div>
+      </Panel>
+
+      <div className="mt-5 max-w-measure space-y-3 text-sm leading-relaxed text-muted">
+        <p>
+          One thing never reaches the list at all: a{' '}
+          <strong className="font-medium text-ink">ghost control</strong> — something that responds
+          to a click but was never marked as a button. No standard rulebook can see it. Ours counts
+          it.
+        </p>
+        <p>
+          Most of the defects lived in a handful of shared building blocks — the navigation, the link
+          and image primitives, the expandable panels — so they were fixed at the source. That is why
+          the counts fall on every page at once rather than one page at a time.
+        </p>
       </div>
-    </div>
+    </Chapter>
   );
 }
 
-function DecisionTree() {
-  return (
-    <div className="rounded-lg border border-rule bg-card p-5 shadow-card">
-      <div className="flex justify-center">
-        <span className="rounded-pill border border-rule bg-paper px-3 py-1 text-xs font-medium text-ink">
-          Anything on the page
-        </span>
-      </div>
-      <h3 className="mt-3 text-center font-display text-sm font-bold text-ink">
-        Is it in the list an agent reads?
-      </h3>
-      {/* Two-column fork above two columns; on a phone the branches stack, so a plain stub. */}
-      <Fork className="mt-1 hidden sm:block" />
-      <div aria-hidden="true" className="mx-auto mt-1 h-4 w-px bg-rule sm:hidden" />
-      <div className="grid gap-4 sm:grid-cols-2">
-        <BranchCard
-          label="Yes — it is in the list"
-          then="An agent has it. The only question left is whether a person can see it."
-          question="Is it on screen?"
-          leaves={[
-            {
-              answer: 'Yes',
-              term: 'Working',
-              defect: false,
-              body: 'The person and the agent see the same thing.',
-            },
-            {
-              answer: 'No',
-              term: 'Trapped',
-              defect: true,
-              body: 'Off screen, yet still handed to the agent and still reachable by Tab.',
-            },
-          ]}
-        />
-        <BranchCard
-          label="No — it is not in the list"
-          then="An agent does not have it. The only question is whether anything in the list points at it."
-          question="Does anything announce it?"
-          leaves={[
-            {
-              answer: 'Yes',
-              term: 'Hidden',
-              defect: false,
-              body: 'A closed menu behind a button that says it is there. This is what correct looks like.',
-            },
-            {
-              answer: 'No',
-              term: 'Unfindable',
-              defect: true,
-              body: 'No way in, and nothing to say there is one. This is what the tool exists to count.',
-            },
-          ]}
-        />
-      </div>
-    </div>
-  );
-}
+/* ------------------------------------------------------------------ */
+/* 5. The exact lists                                                  */
+/* ------------------------------------------------------------------ */
 
-/**
- * Plain-English titles for the measurements that are *supposed* to be
- * non-zero. The list itself comes from `NON_DEFECT_METRICS` in model.ts so
- * this page cannot drift out of step with the code; only the wording is here.
- *
- * An unmapped key falls back to the key itself rather than being dropped: the
- * right failure is a row that looks unfinished, not a row that silently
- * disappears from the page whose subject is things that silently disappear.
- */
 const NON_DEFECT_TITLE: Record<string, string> = {
   // Named as the row reads under Runs → By check, so a reader who arrived
   // here from that table can find the same thing twice.
@@ -546,111 +410,142 @@ const NON_DEFECT_TITLE: Record<string, string> = {
   'navLinks.inTree < navLinks.total': 'Nav links that are not in the list',
 };
 
-function WhatCounts() {
+/**
+ * Its own chapter, because it is reference material.
+ *
+ * It used to sit at the foot of "What counts as a defect", which made that one
+ * section 1,747px — a third of the page — and buried the decision it was there
+ * to explain under two long catalogues nobody reads end to end.
+ */
+function ExactLists() {
   return (
-    <Section
-      id="what-counts"
-      title="What counts as a defect"
-      lead="Two questions decide it. Hidden is not the same as unfindable, and only one of them is a problem."
+    <Chapter
+      id="exact-lists"
+      lead="Both lists are printed from the scanner’s own definitions, so this page cannot drift from what it measures."
     >
-      <DecisionTree />
-
-      <div className="mt-6 grid gap-4 lg:grid-cols-3">
-        <Panel label="Menu open" tone="good">
-          <div className="rounded-card border border-rule bg-paper p-3">
-            <TreeLine role="button" name="Products" note="expanded" tone="good" />
-            <TreeLine depth={1} role="link" name="General liability" />
-            <TreeLine depth={1} role="link" name="Professional liability" />
-            <TreeLine depth={1} role="link" name="Workers’ comp" />
-          </div>
-          <p className="mt-3 text-sm leading-relaxed text-muted">Everything is in the list.</p>
+      <div className="grid gap-4 lg:grid-cols-2 lg:items-start">
+        <Panel label="Counted as defects — a correct page has all of these at zero" tone="bad">
+          <ul className="space-y-2">
+            {PAGE_DEFECTS.map((d) => (
+              <li key={d.key} className="border-b border-rule pb-2 last:border-0 last:pb-0">
+                <div className="text-sm font-medium text-ink">{d.label}</div>
+                <p className="mt-0.5 text-xs leading-relaxed text-muted">{d.why}</p>
+              </li>
+            ))}
+          </ul>
         </Panel>
 
-        <Panel label="Closed, and it says so" tone="good">
-          <div className="rounded-card border border-rule bg-paper p-3">
-            <TreeLine role="button" name="Products" note="collapsed" tone="good" />
-            <div className="py-[3px] pl-[14px] font-mono text-xs text-faint">
-              (3 links, hidden for now)
-            </div>
-          </div>
-          <p className="mt-3 text-sm leading-relaxed text-muted">
-            <strong className="font-medium text-ink">Hidden.</strong> The links are out of the
-            list, but the button announces them. An agent knows to open it.
-          </p>
-        </Panel>
-
-        <Panel label="Closed, and silent" tone="bad">
-          <div className="rounded-card border border-rule bg-paper p-3">
-            <TreeLine role="text" name="Products" note="not a button" tone="bad" />
-            <div className="py-[3px] pl-[14px] font-mono text-xs text-faint">
-              (3 links, hidden — nothing mentions them)
-            </div>
-          </div>
-          <p className="mt-3 text-sm leading-relaxed text-muted">
-            <strong className="font-medium text-critical">Unfindable.</strong> The links exist,
-            but nothing in the list points to them. They open on hover, and an agent has no
-            pointer.
-          </p>
+        <Panel label="Expected to be non-zero — descriptions, not scores" tone="good">
+          <ul className="space-y-2">
+            {NON_DEFECT_METRICS.map((m) => (
+              <li key={m.key} className="border-b border-rule pb-2 last:border-0 last:pb-0">
+                <div className="text-sm font-medium text-ink">
+                  {NON_DEFECT_TITLE[m.key] ?? m.key}
+                </div>
+                <p className="mt-0.5 text-xs leading-relaxed text-muted">{m.why}</p>
+              </li>
+            ))}
+          </ul>
         </Panel>
       </div>
-
-      <div className="mt-6 max-w-measure space-y-3 text-sm leading-relaxed text-muted">
-        <p className="font-display text-base font-bold tracking-tight text-ink">
-          Hidden is not unfindable. Only unfindable is a defect.
-        </p>
-        <p>
-          One thing never reaches the list at all: a{' '}
-          <strong className="font-medium text-ink">ghost control</strong> — something that
-          responds to a click but was never marked as a button. No standard rulebook can see it.
-          Ours counts it.
-        </p>
-        <p>
-          Most of the defects lived in a handful of shared building blocks — the navigation, the
-          link and image primitives, the expandable panels — so they were fixed at the source.
-          That is why the counts fall on every page at once rather than one page at a time.
-        </p>
-      </div>
-
-      <div className="mt-8">
-        <h3 className="font-display text-base font-bold tracking-tight text-ink">
-          The exact lists
-        </h3>
-        <p className="mt-1 max-w-measure text-sm leading-relaxed text-muted">
-          Both are printed from the scanner&apos;s own definitions, so this page cannot drift from
-          what it measures.
-        </p>
-        <div className="mt-4 grid gap-4 lg:grid-cols-2 lg:items-start">
-          <Panel label="Counted as defects — a correct page has all of these at zero" tone="bad">
-            <ul className="space-y-2">
-              {PAGE_DEFECTS.map((d) => (
-                <li key={d.key} className="border-b border-rule pb-2 last:border-0 last:pb-0">
-                  <div className="text-sm font-medium text-ink">{d.label}</div>
-                  <p className="mt-0.5 text-xs leading-relaxed text-muted">{d.why}</p>
-                </li>
-              ))}
-            </ul>
-          </Panel>
-
-          <Panel label="Expected to be non-zero — descriptions, not scores" tone="good">
-            <ul className="space-y-2">
-              {NON_DEFECT_METRICS.map((m) => (
-                <li key={m.key} className="border-b border-rule pb-2 last:border-0 last:pb-0">
-                  <div className="text-sm font-medium text-ink">
-                    {NON_DEFECT_TITLE[m.key] ?? m.key}
-                  </div>
-                  <p className="mt-0.5 text-xs leading-relaxed text-muted">{m.why}</p>
-                </li>
-              ))}
-            </ul>
-          </Panel>
-        </div>
-      </div>
-    </Section>
+    </Chapter>
   );
 }
 
 /* ------------------------------------------------------------------ */
-/* 6. What every figure is stamped with                                */
+/* 6. Production and staging                                           */
+/* ------------------------------------------------------------------ */
+
+function Environments({ figures }: { figures: HowItWorksFigures | null }) {
+  return (
+    <Chapter
+      id="environments"
+      lead="Every run records which deployment it measured. The two are never diffed against each other, and that is a deliberate refusal rather than a missing feature."
+    >
+      <EnvironmentRefusal pair={figures?.environments ?? null} />
+
+      <div className="mt-5 max-w-measure space-y-3 text-sm leading-relaxed text-muted">
+        <p>
+          Production is the site the public gets. Staging is where a fix lands first. They serve
+          different content — different copy, different components, sometimes a different homepage
+          entirely — so the difference between them is not a measure of anything anybody changed.
+        </p>
+        <p>
+          <strong className="font-medium text-ink">The comparison that does work</strong> is two runs
+          of the same deployment: staging before the fix against staging after it. Only the deploy
+          changed in between, so only the deploy can explain the movement. That is what{' '}
+          <strong className="font-medium text-ink">Scan <Arrow className="mx-0.5 text-muted" /> Compare runs</strong> is for, and why it
+          refuses a pair whose environments differ.
+        </p>
+      </div>
+    </Chapter>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* 7. One URL, three homepages                                         */
+/* ------------------------------------------------------------------ */
+
+function Variants({ figures }: { figures: HowItWorksFigures | null }) {
+  return (
+    <Chapter
+      id="variants"
+      lead="A URL is assumed to name a page, and one of ours does not. Insureon’s homepage is a single item under a content test that returns one of several different documents."
+    >
+      <VariantSplit figures={figures} />
+
+      <div className="mt-5 max-w-measure space-y-3 text-sm leading-relaxed text-muted">
+        <p>
+          The scanner asks each homepage which document it served and records the answer beside the
+          figures. Where a target declares no identity — every page we track but this one — nothing
+          is asked and nothing is recorded.
+        </p>
+        <p>
+          A page that is asked and <em>cannot tell</em> records{' '}
+          <strong className="font-medium text-ink">null</strong>, never a guess. Two pages that both
+          failed to identify themselves are not treated as the same page: that is how a comparison of
+          one variant against another would render as a confident delta, and it is guarded the same
+          way a cross-device comparison is.
+        </p>
+        <p>
+          This is why the homepage figure can move between runs with nobody having touched it, and
+          why a homepage comparison is the one most likely to be declined.
+        </p>
+      </div>
+    </Chapter>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* 8. What a baseline is                                               */
+/* ------------------------------------------------------------------ */
+
+function Baseline({ figures }: { figures: HowItWorksFigures | null }) {
+  return (
+    <Chapter
+      id="baseline"
+      lead="A baseline is a pair of runs, not a run — and there is no such thing on this dashboard as a figure “since last time”."
+    >
+      <BaselinePair pair={figures?.environments ?? null} />
+
+      <div className="mt-5 max-w-measure space-y-3 text-sm leading-relaxed text-muted">
+        <p>
+          Keeping one pair rather than a history is a choice about what the numbers are for. A trend
+          line drawn across runs taken with different browsers, different scanner code and different
+          homepage documents joins measurements made with different instruments, and reads as a change
+          in the site.
+        </p>
+        <p>
+          So the dashboard shows what is true now, and comparing two runs is a deliberate act with its
+          own screen. Nothing arrives pre-compared.
+        </p>
+      </div>
+    </Chapter>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* 9. Every figure’s stamp                                             */
 /* ------------------------------------------------------------------ */
 
 /**
@@ -686,9 +581,8 @@ function StampRow({
 
 function Stamp({ figures }: { figures: HowItWorksFigures | null }) {
   return (
-    <Section
+    <Chapter
       id="stamp"
-      title="What every figure is stamped with"
       lead="A count only means something next to the instrument that took it. Two runs are only comparable when all of these match."
     >
       <div className="rounded-lg border border-rule bg-card px-5 py-2 shadow-card">
@@ -714,34 +608,20 @@ function Stamp({ figures }: { figures: HowItWorksFigures | null }) {
         />
       </div>
       {figures ? (
-        <p className="mt-3 text-xs text-faint">From the latest run on file.</p>
+        <p className="mt-3 text-xs text-faint">From the run this page reads from.</p>
       ) : (
         <p className="mt-3 text-xs text-faint">
           No run on file, so every row is blank rather than filled in.
         </p>
       )}
-    </Section>
+    </Chapter>
   );
 }
 
 /* ------------------------------------------------------------------ */
-/* 7. What it cannot tell you                                          */
+/* 10. What it cannot tell you                                         */
 /* ------------------------------------------------------------------ */
 
-/**
- * The limits, written down. A limit that is known and published is a caveat
- * a reader can work with; a limit that is only known is how a page full of
- * stranded content comes back clean and nobody asks why.
- *
- * Two kinds are mixed here, and the badge is what separates them:
- *
- *   permanent — no version of this tool answers this, because the answer is
- *               not represented anywhere it can read. Not a backlog.
- *   open      — a real gap with a real closing move, not yet made.
- *
- * Rule for anything added here: one sentence, in the concrete, and never
- * imply a number is safer than it is.
- */
 interface Limit {
   title: string;
   /** The one-word status. Its wording is the point; do not generalise it. */
@@ -781,19 +661,12 @@ const LIMITS: Limit[] = [
     kind: 'open',
     body: 'Chat widgets, embedded forms and video players are never looked at. Zero problems inside a frame means nobody looked.',
   },
-  {
-    title: 'How many clickable elements Insureon has',
-    badge: 'Not reproducible',
-    kind: 'open',
-    body: 'insureon.com serves different markup to identical requests, so its volume figures move between scans. Its structural figures — what is in the list, what is announced — do not.',
-  },
 ];
 
 function Limits() {
   return (
-    <Section
+    <Chapter
       id="limits"
-      title="What it cannot tell you"
       lead="Every measurement has an edge. These are this one’s, written down so nobody has to find them by being surprised."
     >
       <ul className="divide-y divide-rule rounded-lg border border-rule bg-card px-5 shadow-card">
@@ -817,10 +690,11 @@ function Limits() {
       </ul>
 
       <p className="mt-5 max-w-measure text-sm leading-relaxed text-muted">
-        <strong className="font-medium text-ink">A check that never ran is never reported as a
-        pass.</strong>{' '}
+        <strong className="font-medium text-ink">
+          A check that never ran is never reported as a pass.
+        </strong>{' '}
         If something could not be measured, the dashboard says so rather than showing a zero.
       </p>
-    </Section>
+    </Chapter>
   );
 }
