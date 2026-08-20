@@ -8,6 +8,7 @@ import {
   BRANDS,
   BRAND_LABEL,
   PAGE_LABEL,
+  formatRunStamp,
   VIEWPORT_LABEL,
   type Brand,
   type BrandResults,
@@ -327,12 +328,7 @@ export function RecordedCompare() {
 }
 
 function stamp(run: FullRun): string {
-  const when = new Date(run.startedAt).toLocaleString(undefined, {
-    day: 'numeric',
-    month: 'short',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
+  const when = formatRunStamp(run.startedAt);
   return run.label ? `${when} (${run.label})` : when;
 }
 
@@ -358,7 +354,7 @@ function RunPicker({
         <option value="">Pick a run…</option>
         {[...options].reverse().map((r) => (
           <option key={r.id} value={r.id}>
-            {ENVIRONMENT_LABEL[r.environment]} · {new Date(r.startedAt).toLocaleString(undefined, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+            {ENVIRONMENT_LABEL[r.environment]} · {formatRunStamp(r.startedAt)}
             {r.label ? ` · ${r.label}` : ''}
           </option>
         ))}

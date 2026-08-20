@@ -8,15 +8,26 @@ import {
   probeTotals,
   ruleTotals,
 } from '@/lib/aggregate';
-import { BRANDS, loadRuns, pageKeysUnion, runAtViewport, viewKey, type Brand } from '@/lib/loadRuns';
+import { BRANDS, pageKeysUnion, runAtViewport, viewKey, type Brand } from '@/lib/loadRuns';
+import { loadAllRuns } from '@/lib/runStore';
+
+/**
+ * Rendered per request, not baked at build.
+ *
+ * Runs are no longer only files on disk: one taken from the dashboard lives in
+ * the run store, and a page prerendered at build time cannot know about it.
+ * This is the cost of runs that appear the moment they are taken.
+ */
+export const dynamic = 'force-dynamic';
+
 
 /**
  * Runs → By check. Keyed by run and viewport — the same run holds two
  * different sets of numbers, because the sites serve different markup per
  * device.
  */
-export default function RunsPage() {
-  const runs = loadRuns();
+export default async function RunsPage() {
+  const runs = await loadAllRuns();
 
   const byRun: Record<string, RulesRunData> = {};
   for (const run of runs) {

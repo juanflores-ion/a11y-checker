@@ -1,6 +1,17 @@
 import { HowItWorks } from '@/components/HowItWorks';
 import { environmentPair, variantFigures, type HowItWorksFigures } from '@/lib/howItWorks';
-import { isScannedPage, latestRun, loadRuns, runAtViewport, VIEWPORT_LABEL, type Run } from '@/lib/loadRuns';
+import { isScannedPage, latestRun, runAtViewport, VIEWPORT_LABEL, type Run } from '@/lib/loadRuns';
+import { loadAllRuns } from '@/lib/runStore';
+
+/**
+ * Rendered per request, not baked at build.
+ *
+ * Runs are no longer only files on disk: one taken from the dashboard lives in
+ * the run store, and a page prerendered at build time cannot know about it.
+ * This is the cost of runs that appear the moment they are taken.
+ */
+export const dynamic = 'force-dynamic';
+
 
 export const metadata = {
   title: 'How it works · Agent Readiness',
@@ -29,8 +40,8 @@ function subjectRun(runs: Run[]): Run | null {
  * file it renders without them — an explanation with no numbers is fine; an
  * explanation with invented ones is not.
  */
-export default function HowItWorksPage() {
-  const runs = loadRuns();
+export default async function HowItWorksPage() {
+  const runs = await loadAllRuns();
   const subject = subjectRun(runs);
 
   let figures: HowItWorksFigures | null = null;

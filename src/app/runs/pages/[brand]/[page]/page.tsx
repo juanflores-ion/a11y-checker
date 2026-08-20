@@ -2,24 +2,23 @@ import { notFound } from 'next/navigation';
 
 import { PageDetailClient, type PageDetailByRun } from '@/components/PageDetailClient';
 import { worstPhantom } from '@/lib/aggregate';
-import { BRANDS, loadRuns, pageKeysUnion, runAtViewport, viewKey, type Brand } from '@/lib/loadRuns';
-
+import { BRANDS, pageKeysUnion, runAtViewport, viewKey, type Brand } from '@/lib/loadRuns';
+import { loadAllRuns } from '@/lib/runStore';
 /**
- * Static export needs every brand/page combination enumerated up front. Build
- * from the union of keys actually present in the data, not the canonical ten —
- * an interrupted scan is allowed to have fewer.
+ * Rendered per request, not baked at build.
+ *
+ * Runs are no longer only files on disk: one taken from the dashboard lives in
+ * the run store, and a page prerendered at build time cannot know about it.
+ * This is the cost of runs that appear the moment they are taken.
  */
-export function generateStaticParams() {
-  const runs = loadRuns();
-  const keys = pageKeysUnion(runs);
-  return BRANDS.flatMap((brand) => keys.map((page) => ({ brand, page })));
-}
+export const dynamic = 'force-dynamic';
 
-export default function PageDetail({ params }: { params: { brand: string; page: string } }) {
+
+export default async function PageDetail({ params }: { params: { brand: string; page: string } }) {
   const brand = params.brand as Brand;
   if (!BRANDS.includes(brand)) notFound();
 
-  const runs = loadRuns();
+  const runs = await loadAllRuns();
   const pageKeys = pageKeysUnion(runs);
   if (!pageKeys.includes(params.page)) notFound();
 

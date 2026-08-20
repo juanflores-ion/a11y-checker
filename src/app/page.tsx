@@ -2,7 +2,18 @@ import { OverviewClient } from '@/components/overview/OverviewClient';
 import type { OverviewBrandSnapshot, OverviewSnapshots } from '@/components/overview/types';
 import { failedPages, inScopeNodes, passRatio, resolveMetric, scorecard } from '@/lib/aggregate';
 import { ISSUES } from '@/lib/issues';
-import { BRANDS, loadRuns, runAtViewport, viewKey, type Brand } from '@/lib/loadRuns';
+import { BRANDS, runAtViewport, viewKey, type Brand } from '@/lib/loadRuns';
+import { loadAllRuns } from '@/lib/runStore';
+
+/**
+ * Rendered per request, not baked at build.
+ *
+ * Runs are no longer only files on disk: one taken from the dashboard lives in
+ * the run store, and a page prerendered at build time cannot know about it.
+ * This is the cost of runs that appear the moment they are taken.
+ */
+export const dynamic = 'force-dynamic';
+
 
 /**
  * Overview: where the sites stand for an AI agent, and what is wrong.
@@ -11,8 +22,8 @@ import { BRANDS, loadRuns, runAtViewport, viewKey, type Brand } from '@/lib/load
  * without a request — the same shape Runs uses. These sites serve different
  * markup per device, so one run holds two independent sets of numbers.
  */
-export default function OverviewPage() {
-  const runs = loadRuns();
+export default async function OverviewPage() {
+  const runs = await loadAllRuns();
 
   const snapshots: OverviewSnapshots = {};
   for (const run of runs) {
