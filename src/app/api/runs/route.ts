@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
 
-import { loadRuns, normaliseRun } from '@/lib/loadRuns';
-import { isRunId, readStoredRun, storeAvailable, storedIds, writeStoredRun } from '@/lib/runStore';
+import { isRunId, loadAllRuns, storeAvailable, writeStoredRun } from '@/lib/runStore';
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 
@@ -18,29 +17,9 @@ import path from 'node:path';
  */
 export const dynamic = 'force-dynamic';
 
-/**
- * Committed runs and stored ones, as one list, oldest first.
- *
- * A run taken from the hosted dashboard lives in the KV store; a baseline lives
- * in `data/runs/`. The reader does not care which, and neither should anything
- * downstream of it. A committed run wins a clash, because that is the one in
- * git.
- */
-async function allRuns() {
-  const committed = loadRuns();
-  const have = new Set(committed.map((r) => r.id));
-  const stored = [];
-  for (const id of await storedIds()) {
-    if (have.has(id)) continue;
-    const file = await readStoredRun(id);
-    if (file) stored.push(normaliseRun(id, file));
-  }
-  return [...committed, ...stored].sort((a, b) => a.id.localeCompare(b.id));
-}
-
 export async function GET(request: Request) {
   const id = new URL(request.url).searchParams.get('id');
-  const runs = await allRuns();
+  const runs = await loadAllRuns();
 
   if (!id) {
     return NextResponse.json({

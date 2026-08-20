@@ -5,7 +5,18 @@ import './globals.css';
 import { ContextBar } from '@/components/ContextBar';
 import { Nav } from '@/components/Nav';
 import { RunProvider, RunSummary } from '@/components/RunContext';
-import { formatRunShort, formatRunTime, loadRuns } from '@/lib/loadRuns';
+import { formatRunShort, formatRunTime } from '@/lib/loadRuns';
+import { loadAllRuns } from '@/lib/runStore';
+
+/**
+ * Rendered per request, not baked at build.
+ *
+ * Runs are no longer only files on disk: one taken from the dashboard lives in
+ * the run store, and a page prerendered at build time cannot know about it.
+ * This is the cost of runs that appear the moment they are taken.
+ */
+export const dynamic = 'force-dynamic';
+
 
 export const metadata: Metadata = {
   title: 'Agent Readiness',
@@ -13,8 +24,8 @@ export const metadata: Metadata = {
     'Internal tool for measuring how well AI browsing agents, screen readers and keyboard users can operate our sites.',
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
-  const runs = loadRuns();
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const runs = await loadAllRuns();
   const summaries: RunSummary[] = runs.map((r) => ({
     id: r.id,
     label: r.meta.label,

@@ -19,7 +19,8 @@
  * deployment with neither a writable checkout nor a KV store says so rather
  * than accepting a run and dropping it.
  */
-import type { RunFile } from './model';
+import { loadRuns, normaliseRun } from './loadRuns';
+import type { Run, RunFile } from './model';
 
 const KV_URL = () => process.env.KV_REST_API_URL ?? process.env.UPSTASH_REDIS_REST_URL;
 const KV_TOKEN = () => process.env.KV_REST_API_TOKEN ?? process.env.UPSTASH_REDIS_REST_TOKEN;
@@ -98,4 +99,29 @@ export async function writeStoredRun(id: string, run: RunFile): Promise<boolean>
     }).catch(() => null);
   }
   return true;
+}
+
+/**
+ * Every run, committed and stored, as one list.
+ *
+ * The app used to read runs off disk at build time, which meant a run taken
+ * from the dashboard could not appear anywhere until somebody committed the
+ * file and redeployed: the Runs picker, Overview and the page details were all
+ * baked with whatever was on disk when the build ran. Reading here instead
+ * costs those pages their static prerender and buys a run that shows up the
+ * moment it is taken, which is the point of saving it server-side at all.
+ *
+ * A committed run wins a clash with a stored one, because that is the one in
+ * git.
+ */
+export async function loadAllRuns(): Promise<Run[]> {
+  const committed = loadRuns();
+  const have = new Set(committed.map((r) => r.id));
+  const stored: Run[] = [];
+  for (const id of await storedIds()) {
+    if (have.has(id)) continue;
+    const file = await readStoredRun(id);
+    if (file) stored.push(normaliseRun(id, file));
+  }
+  return [...committed, ...stored].sort((a, b) => a.id.localeCompare(b.id));
 }
