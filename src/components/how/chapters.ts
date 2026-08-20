@@ -20,7 +20,6 @@ export const CHAPTERS: ChapterMeta[] = [
   { id: 'exact-lists', title: 'The exact lists', group: 'How we measure' },
   { id: 'environments', title: 'Production and staging', group: 'Reading the numbers' },
   { id: 'variants', title: 'One URL, three homepages', group: 'Reading the numbers' },
-  { id: 'baseline', title: 'What a baseline is', group: 'Reading the numbers' },
   { id: 'stamp', title: 'Every figure’s stamp', group: 'Reading the numbers' },
   { id: 'limits', title: 'What it cannot tell you', group: 'Reading the numbers' },
 ];
