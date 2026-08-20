@@ -3,9 +3,12 @@
 import { useState } from 'react';
 
 import {
+  BRAND_LABEL,
+  BRANDS,
   DEFAULT_VIEWPORT,
   VIEWPORT_LABEL,
   VIEWPORT_NAMES,
+  type Brand,
   type PageResult,
   type ViewportName,
   type ViewportSpec,
@@ -122,6 +125,10 @@ export function FullScanRunner({ targets }: { targets: ScanTarget[] }) {
   });
   const [error, setError] = useState<string | null>(null);
   const [runFile, setRunFile] = useState<string | null>(null);
+  /** Which site to scan. 'all' keeps the run a whole-estate baseline. */
+  const [site, setSite] = useState<'all' | Brand>('all');
+  const [saved, setSaved] = useState<{ path: string } | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [label, setLabel] = useState('');
   const [engine, setEngine] = useState<RunProvenance | null>(null);
   const [engineChanged, setEngineChanged] = useState(false);
@@ -132,10 +139,12 @@ export function FullScanRunner({ targets }: { targets: ScanTarget[] }) {
    * production by accident — a run that quietly mixed the two would be
    * exactly the thing this control exists to prevent.
    */
+  const chosen = site === 'all' ? targets : targets.filter((t) => t.brand === site);
+
   const scanTargets: ScanTarget[] =
     target === 'production'
-      ? targets
-      : targets
+      ? chosen
+      : chosen
           .map((t) => {
             const url = stagingTwin(t.brand as never, t.url);
             return url ? { ...t, url } : null;
@@ -351,10 +360,33 @@ export function FullScanRunner({ targets }: { targets: ScanTarget[] }) {
         },
         byViewport,
       };
-      setRunFile(JSON.stringify(run, null, 2));
+      const text = JSON.stringify(run, null, 2);
+      setRunFile(text);
       setEngine(provenance);
       setEngineChanged(mixedEngine);
       setStatus('done');
+
+      /*
+        Save it where the dashboard reads from, rather than leaving four manual
+        steps between measuring something and being able to look at it. A
+        deployment with a read-only filesystem answers 501 and the download
+        button below stays; the reason is shown rather than swallowed.
+      */
+      const id = runId(target);
+      try {
+        const res = await fetch('/api/runs', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id, run }),
+        });
+        const body = (await res.json().catch(() => null)) as
+          | { saved?: boolean; path?: string; error?: string }
+          | null;
+        if (res.ok && body?.saved) setSaved({ path: body.path ?? `data/runs/${id}.json` });
+        else setSaveError(body?.error ?? 'Could not save the run file.');
+      } catch {
+        setSaveError('Could not reach this site to save the run file.');
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
       setStatus('failed');
@@ -371,11 +403,22 @@ export function FullScanRunner({ targets }: { targets: ScanTarget[] }) {
     );
   }
 
-  function download() {
-    if (!runFile) return;
+  /**
+   * `2026-08-19-1611` for production, `-staging` appended for the other, which
+   * is the shape every file already in `data/runs` carries. The environment is
+   * in the name because two runs taken minutes apart are otherwise told apart
+   * only by opening them.
+   */
+  function runId(env: Target): string {
     const stamp = new Date().toISOString().slice(0, 16).replace(/[-T:]/g, (m) =>
       m === 'T' ? '-' : m === ':' ? '' : '-'
     );
+    return env === 'staging' ? `${stamp}-staging` : stamp;
+  }
+
+  function download() {
+    if (!runFile) return;
+    const stamp = runId(target);
     const blob = new Blob([runFile], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -401,32 +444,43 @@ export function FullScanRunner({ targets }: { targets: ScanTarget[] }) {
       </p>
 
       <div className="mt-4 flex flex-wrap items-start justify-between gap-4 border-b border-rule pb-4">
-        <fieldset>
-          <legend className="text-xs font-medium text-muted">Measure</legend>
-          <div className="mt-2 flex gap-1" role="group" aria-label="Which deployment to scan">
-            {(['production', 'staging'] as const).map((t) => (
-              <button
-                key={t}
-                type="button"
-                aria-pressed={target === t}
-                disabled={status === 'running'}
-                onClick={() => setTarget(t)}
-                className={`rounded-[7px] border px-3 py-1 text-xs transition-colors disabled:opacity-55 ${
-                  target === t
-                    ? 'border-accent/50 bg-accent/10 text-ink'
-                    : 'border-rule bg-paper text-muted hover:border-accent/40 hover:text-ink'
-                }`}
-              >
-                {t === 'production' ? 'Production' : 'Staging'}
-              </button>
-            ))}
-          </div>
-          <p className="mt-1.5 text-[11.5px] text-faint">
+        <div className="flex flex-wrap items-end gap-4">
+          <label className="text-xs text-muted">
+            Site
+            <select
+              value={site}
+              onChange={(e) => setSite(e.target.value as 'all' | Brand)}
+              disabled={status === 'running'}
+              className="mt-1.5 block appearance-none rounded-[7px] border border-rule bg-card py-1.5 pl-2.5 pr-7 text-xs text-ink hover:border-accent disabled:opacity-55"
+            >
+              <option value="all">Both sites</option>
+              {BRANDS.map((b) => (
+                <option key={b} value={b}>
+                  {BRAND_LABEL[b]}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label className="text-xs text-muted">
+            Measure
+            <select
+              value={target}
+              onChange={(e) => setTarget(e.target.value as Target)}
+              disabled={status === 'running'}
+              className="mt-1.5 block appearance-none rounded-[7px] border border-rule bg-card py-1.5 pl-2.5 pr-7 text-xs text-ink hover:border-accent disabled:opacity-55"
+            >
+              <option value="production">Production</option>
+              <option value="staging">Staging</option>
+            </select>
+          </label>
+
+          <p className="pb-1.5 text-[11.5px] text-faint">
             {target === 'production'
               ? `${scanTargets.length} pages on the live sites.`
               : `${scanTargets.length} pages on the preview origins. Needs a scanner inside the network.`}
           </p>
-        </fieldset>
+        </div>
 
         <div className="text-xs text-muted">
           Scanner
@@ -558,6 +612,17 @@ export function FullScanRunner({ targets }: { targets: ScanTarget[] }) {
               this file were not all measured by the same code.
             </p>
           ) : null}
+          {saved ? (
+            <p className="mt-3 rounded-card border border-good/25 bg-good/[0.05] px-3 py-2 text-sm text-good">
+              Saved to <span className="font-mono text-xs">{saved.path}</span>. It is on the run
+              picker now; commit the file to keep it.
+            </p>
+          ) : saveError ? (
+            <p className="mt-3 rounded-card border border-serious/25 bg-serious/[0.05] px-3 py-2 text-sm text-serious">
+              Not saved automatically. {saveError}
+            </p>
+          ) : null}
+
           <div className="mt-3 flex flex-wrap items-center gap-4">
             <button
               type="button"

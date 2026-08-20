@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 
 import { loadRuns } from '@/lib/loadRuns';
+import { promises as fs } from 'node:fs';
+import path from 'node:path';
 
 /**
  * Recorded runs, for the comparison the Scan page draws between two of them.
@@ -56,4 +58,54 @@ export async function GET(request: Request) {
     meta: run.meta,
     byViewport: run.byViewport,
   });
+}
+
+/**
+ * Save a completed run straight into `data/runs/`.
+ *
+ * The alternative is what this replaced: download the file, find it, move it
+ * into the repo, commit. Four manual steps between measuring something and the
+ * dashboard being able to read it, and every one of them a chance to drop a
+ * run on the floor.
+ *
+ * **This only works where the filesystem is writable**, which means a checkout
+ * running `npm start` or `npm run dev`. On Vercel the deployment is read-only,
+ * so this answers 501 and the caller keeps the download button. That is stated
+ * rather than hidden: a save button that silently does nothing on the hosted
+ * copy would be worse than no save button.
+ */
+export async function POST(request: Request) {
+  const body = (await request.json().catch(() => null)) as { id?: string; run?: unknown } | null;
+  const id = typeof body?.id === 'string' ? body.id.trim() : '';
+
+  // The id becomes a filename, so it may only be what a run id actually is.
+  if (!/^\d{4}-\d{2}-\d{2}-\d{4}(-[a-z]+)?$/.test(id)) {
+    return Response.json({ error: 'Not a run id.' }, { status: 400 });
+  }
+  if (!body?.run || typeof body.run !== 'object') {
+    return Response.json({ error: 'No run to save.' }, { status: 400 });
+  }
+
+  const dir = path.join(process.cwd(), 'data', 'runs');
+  const file = path.join(dir, `${id}.json`);
+  try {
+    await fs.mkdir(dir, { recursive: true });
+    // Never clobber a run that already exists; two runs a minute apart share a
+    // stamp, and losing the first one silently is not a trade worth making.
+    await fs.writeFile(file, `${JSON.stringify(body.run, null, 2)}\n`, { flag: 'wx' });
+    return Response.json({ saved: true, id, path: `data/runs/${id}.json` });
+  } catch (err) {
+    const code = (err as NodeJS.ErrnoException)?.code;
+    if (code === 'EEXIST') {
+      return Response.json({ error: `data/runs/${id}.json already exists.` }, { status: 409 });
+    }
+    // EROFS / EACCES / ENOENT on a read-only deployment.
+    return Response.json(
+      {
+        error:
+          'This deployment cannot write run files. Download the file and commit it, or take the run from a local checkout.',
+      },
+      { status: 501 }
+    );
+  }
 }
