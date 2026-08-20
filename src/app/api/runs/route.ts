@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 
-import { loadRuns } from '@/lib/loadRuns';
+import { loadRuns, normaliseRun } from '@/lib/loadRuns';
+import { isRunId, readStoredRun, storeAvailable, storedIds, writeStoredRun } from '@/lib/runStore';
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 
@@ -17,9 +18,29 @@ import path from 'node:path';
  */
 export const dynamic = 'force-dynamic';
 
+/**
+ * Committed runs and stored ones, as one list, oldest first.
+ *
+ * A run taken from the hosted dashboard lives in the KV store; a baseline lives
+ * in `data/runs/`. The reader does not care which, and neither should anything
+ * downstream of it. A committed run wins a clash, because that is the one in
+ * git.
+ */
+async function allRuns() {
+  const committed = loadRuns();
+  const have = new Set(committed.map((r) => r.id));
+  const stored = [];
+  for (const id of await storedIds()) {
+    if (have.has(id)) continue;
+    const file = await readStoredRun(id);
+    if (file) stored.push(normaliseRun(id, file));
+  }
+  return [...committed, ...stored].sort((a, b) => a.id.localeCompare(b.id));
+}
+
 export async function GET(request: Request) {
   const id = new URL(request.url).searchParams.get('id');
-  const runs = loadRuns();
+  const runs = await allRuns();
 
   if (!id) {
     return NextResponse.json({
@@ -76,36 +97,42 @@ export async function GET(request: Request) {
  */
 export async function POST(request: Request) {
   const body = (await request.json().catch(() => null)) as { id?: string; run?: unknown } | null;
-  const id = typeof body?.id === 'string' ? body.id.trim() : '';
+  const id = body?.id;
 
-  // The id becomes a filename, so it may only be what a run id actually is.
-  if (!/^\d{4}-\d{2}-\d{2}-\d{4}(-[a-z]+)?$/.test(id)) {
-    return Response.json({ error: 'Not a run id.' }, { status: 400 });
-  }
+  if (!isRunId(id)) return Response.json({ error: 'Not a run id.' }, { status: 400 });
   if (!body?.run || typeof body.run !== 'object') {
     return Response.json({ error: 'No run to save.' }, { status: 400 });
   }
 
-  const dir = path.join(process.cwd(), 'data', 'runs');
-  const file = path.join(dir, `${id}.json`);
+  const text = `${JSON.stringify(body.run, null, 2)}\n`;
+
+  /*
+    A checkout gets the file, because a file can be committed and a committed
+    run is the only kind that survives a redeploy. `wx` so two runs a minute
+    apart cannot silently overwrite each other.
+  */
   try {
+    const dir = path.join(process.cwd(), 'data', 'runs');
     await fs.mkdir(dir, { recursive: true });
-    // Never clobber a run that already exists; two runs a minute apart share a
-    // stamp, and losing the first one silently is not a trade worth making.
-    await fs.writeFile(file, `${JSON.stringify(body.run, null, 2)}\n`, { flag: 'wx' });
-    return Response.json({ saved: true, id, path: `data/runs/${id}.json` });
+    await fs.writeFile(path.join(dir, `${id}.json`), text, { flag: 'wx' });
+    return Response.json({ saved: true, id, where: 'file', path: `data/runs/${id}.json` });
   } catch (err) {
-    const code = (err as NodeJS.ErrnoException)?.code;
-    if (code === 'EEXIST') {
-      return Response.json({ error: `data/runs/${id}.json already exists.` }, { status: 409 });
+    if ((err as NodeJS.ErrnoException)?.code === 'EEXIST') {
+      return Response.json({ error: `A run called ${id} already exists.` }, { status: 409 });
     }
-    // EROFS / EACCES / ENOENT on a read-only deployment.
-    return Response.json(
-      {
-        error:
-          'This deployment cannot write run files. Download the file and commit it, or take the run from a local checkout.',
-      },
-      { status: 501 }
-    );
+    // Read-only filesystem: the hosted deployment. Fall through to the store.
   }
+
+  if (await writeStoredRun(id, body.run as never)) {
+    return Response.json({ saved: true, id, where: 'store' });
+  }
+
+  return Response.json(
+    {
+      error: storeAvailable()
+        ? 'The run store could not be written to.'
+        : 'This deployment has nowhere to keep runs. Connect a KV store (Vercel, Storage) and redeploy.',
+    },
+    { status: 503 }
+  );
 }
