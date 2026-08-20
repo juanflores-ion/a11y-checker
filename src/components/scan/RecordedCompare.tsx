@@ -119,7 +119,46 @@ export function RecordedCompare() {
   return (
     <div className="space-y-8">
       <section className="rounded-lg border border-rule bg-card p-5 shadow-card">
-        <div className="grid gap-4 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
+        {/*
+          Scope above the pair. Site and Device are filters, not halves of the
+          comparison, and on one line with the two run pickers they read as
+          equal partners in it: five controls at three widths, and their labels
+          on two different baselines.
+        */}
+        <div className="flex flex-wrap items-end gap-3 border-b border-rule pb-4">
+          <label className="text-xs text-muted">
+            Site
+            <select
+              value={site}
+              onChange={(e) => setSite(e.target.value as Brand)}
+              className="mt-1 block appearance-none rounded-[7px] border border-rule bg-card py-1.5 pl-2.5 pr-7 font-mono text-xs text-ink hover:border-accent"
+            >
+              {BRANDS.map((b) => (
+                <option key={b} value={b}>
+                  {BRAND_LABEL[b]}
+                </option>
+              ))}
+            </select>
+          </label>
+          {shared.length > 1 ? (
+            <label className="text-xs text-muted">
+              Device
+              <select
+                value={chosenViewport}
+                onChange={(e) => setViewport(e.target.value as ViewportName)}
+                className="mt-1 block appearance-none rounded-[7px] border border-rule bg-card py-1.5 pl-2.5 pr-7 font-mono text-xs text-ink hover:border-accent"
+              >
+                {shared.map((v) => (
+                  <option key={v} value={v}>
+                    {VIEWPORT_LABEL[v]}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : null}
+        </div>
+
+        <div className="mt-4 grid gap-4 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
           <RunPicker
             label="Before"
             value={beforeId}
@@ -127,46 +166,14 @@ export function RecordedCompare() {
             onChange={setBeforeId}
           />
           <RunPicker label="After" value={afterId} options={index ?? []} onChange={setAfterId} />
-          <div className="flex items-end gap-3">
-            <label className="text-xs text-muted">
-              Site
-              <select
-                value={site}
-                onChange={(e) => setSite(e.target.value as Brand)}
-                className="mt-1 block w-full appearance-none rounded-[7px] border border-rule bg-card py-1.5 pl-2 pr-6 font-mono text-xs text-ink hover:border-accent"
-              >
-                {BRANDS.map((b) => (
-                  <option key={b} value={b}>
-                    {BRAND_LABEL[b]}
-                  </option>
-                ))}
-              </select>
-            </label>
-            {shared.length > 1 ? (
-              <label className="text-xs text-muted">
-                Device
-                <select
-                  value={chosenViewport}
-                  onChange={(e) => setViewport(e.target.value as ViewportName)}
-                  className="mt-1 block w-full appearance-none rounded-[7px] border border-rule bg-card py-1.5 pl-2 pr-6 font-mono text-xs text-ink hover:border-accent"
-                >
-                  {shared.map((v) => (
-                    <option key={v} value={v}>
-                      {VIEWPORT_LABEL[v]}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            ) : null}
-            <button
-              type="button"
-              onClick={load}
-              disabled={busy || !before || !after || !!mismatch || !chosenViewport}
-              className="rounded-card bg-accent px-4 py-2 text-sm font-medium text-paper shadow-card hover:bg-accent/90 disabled:cursor-not-allowed disabled:opacity-55"
-            >
-              {busy ? 'Loading…' : 'Compare'}
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={load}
+            disabled={busy || !before || !after || !!mismatch || !chosenViewport}
+            className="rounded-card bg-accent px-4 py-2 text-sm font-medium text-paper shadow-card hover:bg-accent/90 disabled:cursor-not-allowed disabled:opacity-55"
+          >
+            {busy ? 'Loading…' : 'Compare'}
+          </button>
         </div>
 
         {index !== null && index.length < 2 ? (
