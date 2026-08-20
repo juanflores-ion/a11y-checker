@@ -18,6 +18,16 @@ const RUNS_DIR = path.join(process.cwd(), 'data', 'runs');
  * same series. That silent kind of mismatch is exactly how ten 404s once read
  * as a 47% improvement.
  */
+/**
+ * A run file, in the shape the rest of the app reads. Exported because runs no
+ * longer only come off disk: one taken from the hosted dashboard is kept in the
+ * KV store and has to arrive here by the same door, or the two sources would
+ * drift in what a `Run` even is.
+ */
+export function normaliseRun(id: string, parsed: RunFile): Run {
+  return normalise(`${id}.json`, parsed);
+}
+
 function normalise(file: string, parsed: RunFile): Run {
   const byViewport: Partial<Record<ViewportName, BrandResults>> = {};
 

@@ -14,7 +14,7 @@ import {
   type ViewportSpec,
 } from '@/lib/model';
 import { stagingTwin } from '@/lib/sites';
-import { Arrow, Eyebrow } from './Primitives';
+import { Eyebrow } from './Primitives';
 import { endpoints, useScanner } from './scan/useScanner';
 import { ServerStatus } from './scan/ServerStatus';
 
@@ -127,7 +127,7 @@ export function FullScanRunner({ targets }: { targets: ScanTarget[] }) {
   const [runFile, setRunFile] = useState<string | null>(null);
   /** Which site to scan. 'all' keeps the run a whole-estate baseline. */
   const [site, setSite] = useState<'all' | Brand>('all');
-  const [saved, setSaved] = useState<{ path: string } | null>(null);
+  const [saved, setSaved] = useState<{ where: string; path?: string } | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [label, setLabel] = useState('');
   const [engine, setEngine] = useState<RunProvenance | null>(null);
@@ -380,9 +380,9 @@ export function FullScanRunner({ targets }: { targets: ScanTarget[] }) {
           body: JSON.stringify({ id, run }),
         });
         const body = (await res.json().catch(() => null)) as
-          | { saved?: boolean; path?: string; error?: string }
+          | { saved?: boolean; where?: string; path?: string; error?: string }
           | null;
-        if (res.ok && body?.saved) setSaved({ path: body.path ?? `data/runs/${id}.json` });
+        if (res.ok && body?.saved) setSaved({ where: body.where ?? 'store', path: body.path });
         else setSaveError(body?.error ?? 'Could not save the run file.');
       } catch {
         setSaveError('Could not reach this site to save the run file.');
@@ -432,15 +432,12 @@ export function FullScanRunner({ targets }: { targets: ScanTarget[] }) {
 
   return (
     <section className="rounded-lg border border-rule bg-card p-4 shadow-card">
-      <p className="text-sm text-ink">
-        Scans every tracked page on both sites, {endpoints(scanner.serverUrl).maxUrls} at a time,
-        and hands back a run file. <strong className="text-ink">A baseline is one run per
-        environment</strong>: take production, then switch Measure to Staging and take that
-        one too, so a later deploy has something of its own to be compared against.{' '}
-        <span className="text-muted">
-          Drop it in <code className="font-mono text-xs">data/runs/</code> and commit it. Takes a
-          couple of minutes, so keep this tab open.
-        </span>
+      <p className="mt-3 max-w-measure text-sm leading-relaxed text-muted">
+        Scans every tracked page of the chosen site, 10 at a time, and saves the run. A baseline is
+        one run per environment: take <strong className="font-medium text-ink">Production</strong>,
+        then switch Measure to <strong className="font-medium text-ink">Staging</strong> and take
+        that one too, so a later deploy has something of its own to be compared against. Takes a
+        couple of minutes, so keep this tab open.
       </p>
 
       <div className="mt-4 flex flex-wrap items-start justify-between gap-4 border-b border-rule pb-4">
@@ -478,7 +475,7 @@ export function FullScanRunner({ targets }: { targets: ScanTarget[] }) {
           <p className="pb-1.5 text-[11.5px] text-faint">
             {target === 'production'
               ? `${scanTargets.length} pages on the live sites.`
-              : `${scanTargets.length} pages on the preview origins. Needs a scanner inside the network.`}
+              : `${scanTargets.length} pages on the preview origins.`}
           </p>
         </div>
 
@@ -614,8 +611,14 @@ export function FullScanRunner({ targets }: { targets: ScanTarget[] }) {
           ) : null}
           {saved ? (
             <p className="mt-3 rounded-card border border-good/25 bg-good/[0.05] px-3 py-2 text-sm text-good">
-              Saved to <span className="font-mono text-xs">{saved.path}</span>. It is on the run
-              picker now; commit the file to keep it.
+              Saved. It is on the run picker now.
+              {saved.where === 'file' ? (
+                <>
+                  {' '}
+                  Written to <span className="font-mono text-xs">{saved.path}</span>; commit it to
+                  keep it past the next deploy.
+                </>
+              ) : null}
             </p>
           ) : saveError ? (
             <p className="mt-3 rounded-card border border-serious/25 bg-serious/[0.05] px-3 py-2 text-sm text-serious">
@@ -631,9 +634,7 @@ export function FullScanRunner({ targets }: { targets: ScanTarget[] }) {
             >
               Download run file
             </button>
-            <code className="inline-flex items-center gap-1.5 font-mono text-xs text-muted">
-              <Arrow /> data/runs/ <Arrow /> commit <Arrow /> push
-            </code>
+            <span className="text-xs text-muted">A copy for the repo, if you want one.</span>
           </div>
         </div>
       ) : null}
