@@ -7,7 +7,7 @@ import type { ResolvedMetric } from '@/lib/aggregate';
 import { cellTone, NOT_MEASURABLE_TITLE, NOT_MEASURED_TITLE } from '@/lib/format';
 import { ISSUES, SEVERITY_LABEL, sortIssues, type Issue, type Severity } from '@/lib/issues';
 import type { Brand } from '@/lib/model';
-import { CodeSample } from '../Primitives';
+import { Arrow, CodeSample } from '../Primitives';
 import { useRuns } from '../RunContext';
 import { StatusDot, type DotTone } from '../ui/StatusDot';
 import { FIGURE_CLASS, Table, TBody, Td, Th, THead, GroupRow } from '../ui/Table';
@@ -338,7 +338,7 @@ function IssueDetail({
             <Block title="Verify">
               <p className="text-muted">
                 {issue.verify}{' '}
-                <Link href="/scan?mode=compare" className="text-accent underline underline-offset-2">Scan → Before / after</Link>{' '}
+                <Link href="/scan?mode=compare" className="text-accent underline underline-offset-2">Scan <Arrow className="mx-0.5" /> Before / after</Link>{' '}
                 shows whether it moved.
               </p>
             </Block>

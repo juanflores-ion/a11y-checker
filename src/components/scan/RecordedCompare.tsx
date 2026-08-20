@@ -17,6 +17,7 @@ import {
 import { CompareCard } from '../CompareCard';
 
 import { SectionHead } from '../ui/SectionHead';
+import { Arrow } from '../Primitives';
 
 interface RunIndexEntry {
   id: string;
@@ -190,13 +191,15 @@ export function RecordedCompare() {
         */}
         {before && after && !mismatch && before.probeVersion !== after.probeVersion ? (
           <p className="mt-4 text-xs text-serious">
-            Different scanner versions ({before.probeVersion ?? 'not recorded'} →{' '}
+            Different scanner versions ({before.probeVersion ?? 'not recorded'}{' '}
+            <Arrow className="mx-0.5" />{' '}
             {after.probeVersion ?? 'not recorded'}). Some movement may be the scanner, not the site.
           </p>
         ) : null}
         {before && after && !mismatch && before.browserVersion !== after.browserVersion ? (
           <p className="mt-2 text-xs text-serious">
-            Different browsers ({before.browserVersion ?? 'not recorded'} →{' '}
+            Different browsers ({before.browserVersion ?? 'not recorded'}{' '}
+            <Arrow className="mx-0.5" />{' '}
             {after.browserVersion ?? 'not recorded'}). A browser upgrade can move counts on its own.
           </p>
         ) : null}

@@ -8,6 +8,7 @@ import { IssuesTable } from './IssuesTable';
 import { Readiness } from './Readiness';
 import { Scorecard } from './Scorecard';
 import type { OverviewSnapshots } from './types';
+import { Arrow } from '../Primitives';
 
 export function OverviewClient({ snapshots }: { snapshots: OverviewSnapshots }) {
   const { currentKey, compareKey } = useRuns();
@@ -19,7 +20,7 @@ export function OverviewClient({ snapshots }: { snapshots: OverviewSnapshots }) 
       <>
         <PageHeader title="Overview" description="Where Insureon and TechInsurance stand for an AI agent." />
         <p className="text-sm text-muted">
-          No scan on file. Take one from Scan → Full run, or run <code className="font-mono text-xs">npm run scan</code>.
+          No scan on file. Take one from Scan <Arrow className="mx-0.5 text-muted" /> Full run, or run <code className="font-mono text-xs">npm run scan</code>.
         </p>
       </>
     );
