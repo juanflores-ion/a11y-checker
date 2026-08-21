@@ -55,7 +55,7 @@ export function ThemeToggle() {
       onClick={() => choose(next)}
       aria-label={name}
       title={name}
-      className="ml-auto flex h-7 w-7 shrink-0 items-center justify-center rounded-[7px] border border-rule bg-card text-muted transition-colors hover:border-accent hover:text-ink"
+      className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[7px] border border-rule bg-card text-muted transition-colors hover:border-accent hover:text-ink"
     >
       <ThemeMark />
     </button>

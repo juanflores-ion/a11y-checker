@@ -71,7 +71,7 @@ export function IssuesTable({
   const visible = tracked.filter((i) => i.brands.includes(site));
 
   return (
-    <section aria-labelledby="issues">
+    <section aria-labelledby="issues" data-tour="issues">
       <SectionHead
         id="issues"
         title="What’s wrong, and what would fix it"

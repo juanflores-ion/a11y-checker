@@ -47,6 +47,9 @@
 
   /* The native select arrow, drawn in `muted` so it belongs to the control. */
   --select-arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M3 4.5L6 8l3-3.5' stroke='%2398A2B3' stroke-width='1.4' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+
+  --c-scrim: 3 6 12;
+  --scrim-alpha: 0.72;
 }
 
 :root[data-theme='light'] {
@@ -97,6 +100,9 @@
   --shadow-focus: 0 0 0 3px rgba(59, 79, 209, 0.28);
 
   --select-arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M3 4.5L6 8l3-3.5' stroke='%2357606E' stroke-width='1.4' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+
+  --c-scrim: 16 24 40;
+  --scrim-alpha: 0.45;
 }
 
 html {
@@ -226,4 +232,31 @@ table {
 :root[data-theme='light'] .theme-rays {
   transform: rotate(0deg) scale(1);
   opacity: 1;
+}
+
+/*
+ * The scrim behind the welcome card. Darker on the dark theme than the light
+ * one needs: on a near-black page a 50% wash barely reads as a wash.
+ */
+.tour-scrim {
+  background: rgb(var(--c-scrim) / var(--scrim-alpha));
+}
+
+/*
+ * The tour's dim, and the hole in it.
+ *
+ * One box with a spread shadow big enough to cover any viewport: the element
+ * under it stays lit and everything around it darkens, in one paint. The
+ * dark theme needs a heavier wash than the light one, because on a near-black
+ * page a 45% dim barely reads as a dim at all.
+ */
+.tour-scrim {
+  background: rgb(var(--c-scrim) / var(--scrim-alpha));
+}
+
+.tour-spot {
+  box-shadow: 0 0 0 100vmax rgb(var(--c-scrim) / var(--scrim-alpha));
+  outline: 2px solid rgb(var(--c-accent) / 0.9);
+  outline-offset: 0;
+  transition: top 220ms ease, left 220ms ease, width 220ms ease, height 220ms ease;
 }

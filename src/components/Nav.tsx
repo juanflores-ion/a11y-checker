@@ -38,7 +38,7 @@ export function Nav() {
   const pathname = usePathname() ?? '/';
 
   return (
-    <nav aria-label="Sections" className="flex flex-1 items-center gap-0.5">
+    <nav aria-label="Sections" data-tour="nav" className="flex flex-1 items-center gap-0.5">
       {PRIMARY.map((link) => {
         const active = isActive(pathname, link.href);
         return (
@@ -61,6 +61,7 @@ export function Nav() {
       <Link
         href={HELP.href}
         title={HELP.hint}
+        data-tour="help"
         aria-current={isActive(pathname, HELP.href) ? 'page' : undefined}
         className={`ml-auto inline-flex items-center gap-1.5 rounded-card px-2.5 py-1.5 text-sm transition-colors ${
           isActive(pathname, HELP.href)

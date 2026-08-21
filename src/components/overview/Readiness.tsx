@@ -27,7 +27,7 @@ export function Readiness({
 }) {
   const { site, setSite } = useRuns();
   return (
-    <section aria-label="Readiness" className="rounded-lg border border-rule bg-card shadow-card">
+    <section aria-label="Readiness" data-tour="readiness" className="rounded-lg border border-rule bg-card shadow-card">
       {BRANDS.map((b, i) => {
         const selected = site === b;
         const { passed, total } = now[b].passRatio;

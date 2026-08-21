@@ -82,7 +82,7 @@ export function ContextBar() {
 
   return (
     <div className="border-t border-rule bg-card/60">
-      <div className="mx-auto flex min-h-[38px] max-w-6xl flex-wrap items-center gap-x-5 gap-y-1.5 px-5 py-1.5 text-xs text-muted sm:px-8">
+      <div data-tour="context" className="mx-auto flex min-h-[38px] max-w-6xl flex-wrap items-center gap-x-5 gap-y-1.5 px-5 py-1.5 text-xs text-muted sm:px-8">
         <Field label="Run">
           {!current ? (
             <span className="font-mono text-xs text-serious">

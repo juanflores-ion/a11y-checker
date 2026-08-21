@@ -32,7 +32,7 @@ export function Scorecard({
   const failed = BRANDS.reduce((n, b) => n + now[b].failed.length, 0);
 
   return (
-    <section aria-labelledby="against-target">
+    <section aria-labelledby="against-target" data-tour="scorecard">
       <SectionHead
         id="against-target"
         title="Against target"

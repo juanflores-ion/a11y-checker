@@ -6,6 +6,7 @@ import { ContextBar } from '@/components/ContextBar';
 import { Nav } from '@/components/Nav';
 import { RunProvider, RunSummary } from '@/components/RunContext';
 import { ThemeToggle } from '@/components/ThemeToggle';
+import { TourHost } from '@/components/tour/TourHost';
 import { THEME_KEY } from '@/lib/theme';
 import { formatRunShort, formatRunTime } from '@/lib/loadRuns';
 import { sitesCovered } from '@/lib/model';
@@ -80,7 +81,10 @@ export default async function RootLayout({ children }: { children: React.ReactNo
                   </span>
                 </Link>
                 <Nav />
-                <ThemeToggle />
+                <span className="ml-auto flex shrink-0 items-center gap-1.5">
+                  <TourHost />
+                  <ThemeToggle />
+                </span>
               </div>
               <ContextBar />
             </header>
