@@ -175,13 +175,55 @@ table {
 }
 
 /*
- * Theme-conditional bits of the toggle itself.
+ * The theme mark: a disc that becomes a moon or a sun.
  *
- * Keyed off the attribute rather than React state so the button paints the
- * right face on the first frame, before hydration — the pre-paint script has
- * already set the attribute by then.
+ * Driven by the attribute rather than React state, so the mark is already
+ * correct on the first frame — the pre-paint script sets the attribute before
+ * anything is drawn, and hydration only ever confirms it. `r`, `cx` and `cy`
+ * are animatable CSS properties on SVG geometry, which is what lets the disc
+ * resize and the bite slide without a keyframe rig.
+ *
+ * The reduced-motion rule above already flattens all three transitions, so a
+ * reader who asked for less motion gets the same two states, instantly.
  */
-:root:not([data-theme='light']) .theme-only-light,
-:root[data-theme='light'] .theme-only-dark {
-  display: none;
+.theme-orb,
+.theme-bite,
+.theme-rays {
+  transition:
+    r 280ms cubic-bezier(0.4, 0, 0.2, 1),
+    cx 280ms cubic-bezier(0.4, 0, 0.2, 1),
+    cy 280ms cubic-bezier(0.4, 0, 0.2, 1),
+    transform 280ms cubic-bezier(0.4, 0, 0.2, 1),
+    opacity 200ms linear;
+}
+
+.theme-rays {
+  transform-box: view-box;
+  transform-origin: 8px 8px;
+}
+
+/* Dark: a full disc with a bite out of its top-right, and no rays. */
+:root:not([data-theme='light']) .theme-orb {
+  r: 5.6px;
+}
+:root:not([data-theme='light']) .theme-bite {
+  cx: 11.6px;
+  cy: 3.4px;
+}
+:root:not([data-theme='light']) .theme-rays {
+  transform: rotate(-70deg) scale(0.35);
+  opacity: 0;
+}
+
+/* Light: a small disc, the bite parked off-canvas, rays out. */
+:root[data-theme='light'] .theme-orb {
+  r: 3.4px;
+}
+:root[data-theme='light'] .theme-bite {
+  cx: 24px;
+  cy: -8px;
+}
+:root[data-theme='light'] .theme-rays {
+  transform: rotate(0deg) scale(1);
+  opacity: 1;
 }
