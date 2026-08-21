@@ -66,7 +66,9 @@ export function ContextBar() {
   const stamp = current
     ? [
         current.axeVersion ? `axe-core ${current.axeVersion}` : 'axe-core not recorded',
-        current.probeVersion ? `scanner ${current.probeVersion}` : 'scanner not recorded',
+        current.probeVersion
+          ? `scanner ${current.probeVersion}${current.probeVersionInferred ? ' (inferred, not recorded by the run)' : ''}`
+          : 'scanner not recorded',
         current.browserVersion ?? 'browser not recorded',
       ]
     : [];

@@ -60,6 +60,7 @@ export default async function HowItWorksPage() {
       // undefined and renders as "not recorded".
       axeVersion: subject.meta.axeVersion,
       probeVersion: subject.meta.probeVersion,
+      probeVersionInferred: subject.meta.probeVersionInferred,
       browserVersion: subject.meta.browserVersion,
       variants: scanned ? variantFigures(scanned) : null,
       identityAttempts: scanned?.identityAttempts ?? null,
