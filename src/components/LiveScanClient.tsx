@@ -57,7 +57,7 @@ function parseUrlLines(text: string): { urls: string[]; invalid: string | null }
 }
 
 /**
- * Scan → Single URL: point a scanner at any address and read what it found.
+ * Scan → Any URL: point a scanner at any address and read what it found.
  *
  * This used to carry a second mode, Before / after, which scanned production
  * and staging live and diffed them. That comparison is retired — the two
