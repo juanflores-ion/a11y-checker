@@ -62,7 +62,10 @@ function ScanShell({ mode, targets }: { mode: ScanMode; targets: ScanTarget[] })
             ariaLabel="Scan modes"
             items={[
               { href: '/scan', label: 'Compare runs', active: mode === 'runs' },
-              { href: '/scan?mode=single', label: 'Single URL', active: mode === 'single' },
+              // `?mode=single` outlived the label: the tab took a list of URLs
+              // long before it was renamed. The value stays so older links keep
+              // resolving.
+              { href: '/scan?mode=single', label: 'Any URL', active: mode === 'single' },
               { href: '/scan?mode=full', label: `Full run · ${targets.length} pages`, active: mode === 'full' },
             ]}
           />

@@ -137,7 +137,7 @@ function parseEntries(input: unknown): { entries: ScanEntry[]; error?: string } 
   const entries: ScanEntry[] = [];
   for (const item of input) {
     /**
-     * Two shapes, because Scan → Single URL sends bare strings for pages
+     * Two shapes, because Scan → Any URL sends bare strings for pages
      * that are nobody's tracked target, and the full run sends the target
      * it is scanning. Neither caller should have to care about the other's
      * needs.
