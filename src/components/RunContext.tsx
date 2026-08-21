@@ -28,8 +28,6 @@ export interface RunSummary {
   axeVersion?: string;
   /** Instrument stamp for the context bar. Absent = the run did not record it. */
   probeVersion?: string;
-  /** True when that stamp was worked out afterwards rather than recorded. */
-  probeVersionInferred?: boolean;
   browserVersion?: string;
   display: string;
   short: string;

@@ -36,7 +36,6 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     finishedAt: r.meta.finishedAt,
     axeVersion: r.meta.axeVersion,
     probeVersion: r.meta.probeVersion,
-    probeVersionInferred: r.meta.probeVersionInferred,
     browserVersion: r.meta.browserVersion,
     display: formatRunTime(r),
     short: formatRunShort(r),

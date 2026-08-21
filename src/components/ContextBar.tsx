@@ -16,8 +16,17 @@ const selectClass =
  * is supposed to say briefly which measurement is on screen. So the label
  * shows where you choose a run, and hovers on the plain-text case.
  */
+/**
+ * Every run names its environment, production included.
+ *
+ * Production used to be the unmarked case, on the reasoning that staging is
+ * the exception worth flagging. In a list where the other entries all say
+ * "Staging", an entry saying nothing reads as missing information rather than
+ * as production: "19 Aug, 16:07 UTC" next to three labelled runs is a question,
+ * not an answer. Compare runs has always named both sides; this now matches it.
+ */
 function runText(run: { display: string; label?: string; environment?: Environment }) {
-  const env = run.environment && run.environment !== 'production' ? `${ENVIRONMENT_LABEL[run.environment]} · ` : '';
+  const env = run.environment ? `${ENVIRONMENT_LABEL[run.environment]} · ` : '';
   return run.label ? `${env}${run.display} · ${run.label}` : `${env}${run.display}`;
 }
 
@@ -66,9 +75,7 @@ export function ContextBar() {
   const stamp = current
     ? [
         current.axeVersion ? `axe-core ${current.axeVersion}` : 'axe-core not recorded',
-        current.probeVersion
-          ? `scanner ${current.probeVersion}${current.probeVersionInferred ? ' (inferred, not recorded by the run)' : ''}`
-          : 'scanner not recorded',
+        current.probeVersion ? `scanner ${current.probeVersion}` : 'scanner not recorded',
         current.browserVersion ?? 'browser not recorded',
       ]
     : [];
@@ -96,8 +103,14 @@ export function ContextBar() {
             </select>
           ) : (
             <span className="truncate font-mono text-xs text-ink" title={current.label ?? undefined}>
-              {current.environment && current.environment !== 'production' ? (
-                <span className="mr-1.5 rounded-[5px] border border-serious/40 bg-serious/10 px-1.5 py-0.5 text-[10.5px] font-medium text-serious">
+              {current.environment ? (
+                <span
+                  className={`mr-1.5 rounded-[5px] border px-1.5 py-0.5 text-[10.5px] font-medium ${
+                    current.environment === 'production'
+                      ? 'border-rule bg-paper text-muted'
+                      : 'border-serious/40 bg-serious/10 text-serious'
+                  }`}
+                >
                   {ENVIRONMENT_LABEL[current.environment]}
                 </span>
               ) : null}
