@@ -63,12 +63,32 @@ export function Tour({ onClose }: { onClose: () => void }) {
   const next = useCallback(() => setI((n) => Math.min(n + 1, steps.length - 1)), [steps.length]);
   const back = useCallback(() => setI((n) => Math.max(0, n - 1)), []);
 
-  /** Bring the anchor into view before measuring, or the card is drawn off screen. */
+  /**
+   * Bring the anchor into view before measuring, or the card is drawn off
+   * screen.
+   *
+   * Centring only works for something that fits. Centring the issues section,
+   * which is about 1950px tall, puts its middle at the middle of the screen
+   * and its top hundreds of pixels above it — so the lit area, which is the
+   * top of the block, was off screen and the reader had to scroll up to find
+   * what the step was pointing at.
+   *
+   * Anything taller than the room available is aligned by its top instead,
+   * just under the sticky header rather than flush with the viewport, which
+   * would put it behind the header.
+   */
   useEffect(() => {
     if (!step?.target) return;
-    document
-      .querySelector(`[data-tour="${step.target}"]`)
-      ?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    const el = document.querySelector(`[data-tour="${step.target}"]`);
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    const room = window.innerHeight - CARD_H - GAP * 4;
+    if (r.height <= room) {
+      el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      return;
+    }
+    const header = document.querySelector('header')?.getBoundingClientRect().height ?? 0;
+    window.scrollTo({ top: window.scrollY + r.top - header - GAP * 2, behavior: 'smooth' });
   }, [step?.target]);
 
   /**
