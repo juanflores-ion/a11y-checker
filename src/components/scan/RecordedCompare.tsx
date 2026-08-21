@@ -309,7 +309,7 @@ export function RecordedCompare() {
                   type="button"
                   onClick={() => setOpen(open === row.key ? null : row.key)}
                   aria-expanded={open === row.key}
-                  className="grid w-full grid-cols-[1fr_auto_auto_auto] items-center gap-4 px-4 py-2.5 text-left transition-colors hover:bg-white/[0.03]"
+                  className="grid w-full grid-cols-[1fr_auto_auto_auto] items-center gap-4 px-4 py-2.5 text-left transition-colors hover:bg-tint/[0.03]"
                 >
                   <span className="text-sm text-ink">
                     {row.title}

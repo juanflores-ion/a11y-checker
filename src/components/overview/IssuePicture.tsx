@@ -222,6 +222,15 @@ function Page({ variant, fixed }: { variant: 'main' | 'regions'; fixed: boolean 
   );
 }
 
+/**
+ * Deliberately not themed.
+ *
+ * These two draw a piece of the real website, which is white with dark text
+ * whatever theme the dashboard is in. The greys are the exact ones the
+ * contrast finding is about — #84829c on white is the 3.7:1 being reported —
+ * so swapping them for tokens would destroy the thing the picture exists to
+ * demonstrate.
+ */
 function Text({ variant, fixed }: { variant: 'contrast' | 'link-colour'; fixed: boolean }) {
   if (variant === 'contrast') {
     return (

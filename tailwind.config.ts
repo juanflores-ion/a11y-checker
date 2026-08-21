@@ -11,8 +11,12 @@ import type { Config } from 'tailwindcss';
  * faint indigo glow, one electric-indigo accent, elevation by hairline and
  * inset highlight rather than drop shadow, and colour reserved almost
  * entirely for severity — so when something turns red it means something.
- * Severity hues are the softened dark-mode variants; they still read as
- * red/orange/green without glaring on the dark ground.
+ *
+ * Two themes now. Dark is the default and the one the system was drawn for;
+ * light exists because this gets read in daylight and screenshotted into
+ * Slack. Light is not an inversion: severity hues are re-picked so every token
+ * clears 4.5:1 against both the page and the card, which a naive flip does not.
+ * The values live in globals.css; this file names them.
  *
  * Token *names* are unchanged from the previous system on purpose: every
  * component already references them, so the whole surface restyles from
@@ -22,32 +26,47 @@ const config: Config = {
   content: ['./src/**/*.{ts,tsx}'],
   theme: {
     extend: {
+      /**
+       * Every colour is a CSS variable, resolved per theme in globals.css.
+       *
+       * The `<alpha-value>` form is not decoration: the surface leans on alpha
+       * modifiers (`bg-paper/60`, `border-critical/25`, `bg-tint/[0.045]`) and
+       * a plain `var(--x)` breaks every one of them.
+       */
       colors: {
-        paper: '#0B0F17',
-        card: '#111827',
-        ink: '#E7ECF3',
-        muted: '#98A2B3',
-        faint: '#5F6B7A',
-        rule: '#1E2735',
+        paper: 'rgb(var(--c-paper) / <alpha-value>)',
+        card: 'rgb(var(--c-card) / <alpha-value>)',
+        ink: 'rgb(var(--c-ink) / <alpha-value>)',
+        muted: 'rgb(var(--c-muted) / <alpha-value>)',
+        faint: 'rgb(var(--c-faint) / <alpha-value>)',
+        rule: 'rgb(var(--c-rule) / <alpha-value>)',
+
+        /**
+         * The hover and open-row wash. White on the dark ground, black on the
+         * light one — the same 3-6% lift in both, which is why it is a token
+         * and not the literal `bg-white/[0.045]` this replaced. On a light
+         * surface that literal was invisible.
+         */
+        tint: 'rgb(var(--c-tint) / <alpha-value>)',
 
         // Severity. The only colours allowed to carry alarm.
-        critical: '#F0655C',
-        serious: '#F59E4B',
-        moderate: '#9AA4B2',
-        minor: '#6B7280',
-        good: '#34D399',
+        critical: 'rgb(var(--c-critical) / <alpha-value>)',
+        serious: 'rgb(var(--c-serious) / <alpha-value>)',
+        moderate: 'rgb(var(--c-moderate) / <alpha-value>)',
+        minor: 'rgb(var(--c-minor) / <alpha-value>)',
+        good: 'rgb(var(--c-good) / <alpha-value>)',
 
         // Structure and interaction.
-        accent: '#7C96FF',
+        accent: 'rgb(var(--c-accent) / <alpha-value>)',
         // Reserved exclusively for the phantom menu — the one finding that is
         // invisible on screen but loud in the accessibility tree.
-        phantom: '#A78BFA',
+        phantom: 'rgb(var(--c-phantom) / <alpha-value>)',
 
         // Brand identity in charts. Not severity colours: a brand is not a
         // problem, and red has to keep meaning one thing here. Mirrored as
         // literal values in BRAND_COLOR (model.ts), which the chart needs.
-        'brand-ion': '#7C96FF',
-        'brand-tig': '#2DD4BF',
+        'brand-ion': 'rgb(var(--c-brand-ion) / <alpha-value>)',
+        'brand-tig': 'rgb(var(--c-brand-tig) / <alpha-value>)',
       },
       fontFamily: {
         display: ['"Bricolage Grotesque"', 'Georgia', 'serif'],
@@ -65,11 +84,17 @@ const config: Config = {
         lg: '14px',
         pill: '999px',
       },
+      /**
+       * Elevation is theme-dependent in a way colour is not. The dark surface
+       * lifts a card with a white inset highlight and a deep shadow; on the
+       * light one the highlight is invisible and that shadow reads as dirt, so
+       * each theme supplies its own in globals.css.
+       */
       boxShadow: {
-        card: 'inset 0 1px 0 rgba(255,255,255,0.03), 0 8px 24px -12px rgba(0,0,0,0.6)',
-        raised: 'inset 0 1px 0 rgba(255,255,255,0.04), 0 16px 40px -16px rgba(0,0,0,0.7)',
-        pop: '0 16px 48px -12px rgba(0,0,0,0.8)',
-        focus: '0 0 0 3px rgba(124,150,255,0.35)',
+        card: 'var(--shadow-card)',
+        raised: 'var(--shadow-raised)',
+        pop: 'var(--shadow-pop)',
+        focus: 'var(--shadow-focus)',
       },
       maxWidth: { measure: '68ch' },
     },

@@ -40,7 +40,7 @@ export function Rail() {
                       className={`block rounded-[7px] border-l-2 px-2.5 py-1.5 text-[12.5px] leading-snug transition-colors ${
                         active === chapter.id
                           ? 'border-accent bg-accent/10 text-ink'
-                          : 'border-transparent text-muted hover:bg-white/[0.03] hover:text-ink'
+                          : 'border-transparent text-muted hover:bg-tint/[0.03] hover:text-ink'
                       }`}
                     >
                       <span className="font-mono text-[11px] text-faint">
