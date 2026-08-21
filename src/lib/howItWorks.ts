@@ -40,12 +40,15 @@ export interface HowItWorksFigures {
   profiles: string[];
   /**
    * Provenance, from `RunMeta`. Optional there because older runs predate the
-   * fields. Absent renders as "not recorded" — never as a version number
-   * somebody inferred, and never silently omitted: a missing stamp is the
-   * finding.
+   * fields. Absent renders as "not recorded", never silently omitted: a
+   * missing stamp is the finding.
+   *
+   * A version worked out after the fact is allowed, but only labelled. See
+   * `probeVersionInferred` on `RunMeta` for what was derived and how.
    */
   axeVersion?: string | null;
   probeVersion?: string | null;
+  probeVersionInferred?: boolean;
   browserVersion?: string | null;
   /** Every document the tracked homepage served, or null if it served one it could not name. */
   variants: VariantFigure[] | null;
