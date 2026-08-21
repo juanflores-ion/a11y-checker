@@ -564,12 +564,8 @@ function Stamp({ figures }: { figures: HowItWorksFigures | null }) {
         />
         <StampRow
           label="Scanner"
-          value={
-            figures?.probeVersion
-              ? `${figures.probeVersion}${figures.probeVersionInferred ? ' · inferred' : ''}`
-              : figures?.probeVersion
-          }
-          note="Which version of the scanner’s own checks ran. A change in the checks is not a change in the site. “Inferred” means the run did not record it and the version was worked out from what the scanner directory held at the time."
+          value={figures?.probeVersion}
+          note="Which version of the scanner’s own checks ran. A change in the checks is not a change in the site."
         />
         <StampRow
           label="Browser"

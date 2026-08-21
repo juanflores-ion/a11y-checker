@@ -20,8 +20,7 @@
     "probeVersion": "b11bc6a",
     "browserVersion": "Chromium 151.0.7922.138",
     "browserPath": "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
-    "scannedBy": "scan-server",
-    "probeVersionInferred": true
+    "scannedBy": "scan-server"
   },
   "byViewport": {
     "desktop": {

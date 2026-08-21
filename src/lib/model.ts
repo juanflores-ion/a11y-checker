@@ -339,22 +339,6 @@ export interface RunMeta {
    * ---------------------------------------------------------------- */
   /** Short git SHA of the `scanner/` directory contents at scan time. */
   probeVersion?: string;
-  /**
-   * True when `probeVersion` was worked out afterwards rather than recorded by
-   * the run itself.
-   *
-   * Four runs from 19-20 Aug 2026 predate the scan server recording the field
-   * at all. Their version is not a guess: `scanner/` changed at `b11bc6a` on
-   * 19 Aug and not again until `704ab1e` on 20 Aug 16:41, every one of those
-   * runs started inside that window, and the one taken after `704ab1e` still
-   * recorded nothing — which is what proves the scanner in use was the older
-   * checkout. So the value is derived from git history plus that observation.
-   *
-   * It is still not a measurement, and the flag exists so the UI can say so.
-   * A stamp nobody can tell apart from a recorded one is how a trend line ends
-   * up joining two instruments without anybody noticing.
-   */
-  probeVersionInferred?: boolean;
   /** Full browser version string, e.g. "Chromium 149.0.7827.55". */
   browserVersion?: string;
   /** The executable actually launched — the default download or an override. */
